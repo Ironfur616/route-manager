@@ -1,0 +1,1395 @@
+:root {
+    --forest-green: #046635;
+    --deep-navy: #043960;
+    --sky-blue: #569DD6;
+    --white: #FFFFFF;
+    --drk-gray: #1A1A1A;
+}
+
+
+/* Mobile first: base styles target small screens.
+   Larger screens are layered on with min-width media queries. */
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    color: var(--drk-gray);
+    background-color: var(--white);
+}
+
+/* ---------- App header ---------- */
+/* Hamburger button + title, sticky at every breakpoint. Using the same
+   off-canvas drawer at every width avoids the old top-nav's link-wrapping
+   congestion when the window is resized between phone and desktop widths. */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--white);
+    border-bottom: 4px solid var(--forest-green);
+}
+
+.hero-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* ---------- Hamburger toggle ---------- */
+.nav-toggle,
+.nav-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.nav-toggle:hover,
+.nav-close:hover {
+    background-color: rgba(86, 157, 214, 0.15);
+}
+
+.nav-toggle:focus-visible,
+.nav-close:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.nav-toggle-bars,
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background-color: var(--deep-navy);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-toggle-bars {
+    position: relative;
+}
+
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+}
+
+.nav-toggle-bars::before {
+    top: -7px;
+}
+
+.nav-toggle-bars::after {
+    top: 7px;
+}
+
+/* Bars morph into an X while the drawer is open */
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars {
+    background-color: transparent;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bars::after {
+    top: 0;
+    transform: rotate(-45deg);
+}
+
+.nav-close {
+    font-size: 1.75rem;
+    line-height: 1;
+    color: var(--deep-navy);
+}
+
+/* ---------- Off-canvas nav drawer ---------- */
+.site-nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 200;
+    width: min(85vw, 320px);
+    overflow-y: auto;
+    background-color: var(--white);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+}
+
+.site-nav.is-open {
+    transform: translateX(0);
+}
+
+.site-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
+}
+
+.site-nav-heading {
+    color: var(--deep-navy);
+    font-weight: 700;
+}
+
+.nav-section {
+    padding: 0.125rem 1rem;
+}
+
+/* Section/subsection headings are buttons that expand/collapse the content
+   below them (see nav.js). A shared caret rotates via [aria-expanded]. */
+.nav-section-title,
+.nav-subsection-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    border: none;
+    background-color: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.nav-section-title:hover,
+.nav-subsection-title:hover {
+    background-color: rgba(86, 157, 214, 0.12);
+}
+
+.nav-section-title:focus-visible,
+.nav-subsection-title:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+/* Margin under the heading only while its panel is open, so collapsed headings sit close together */
+.nav-section-title[aria-expanded="true"] {
+    margin-bottom: 0.25rem;
+}
+
+.nav-section-title {
+    margin: 0;
+    min-height: 40px;
+    padding: 0 0 0.125rem;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 2px solid var(--forest-green);
+}
+
+.nav-caret {
+    flex-shrink: 0;
+    width: 0;
+    height: 0;
+    margin-left: 0.75rem;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid currentColor;
+    transition: transform 0.2s ease;
+}
+
+/* Collapsed state: caret points right instead of down */
+[aria-expanded="false"] .nav-caret {
+    transform: rotate(-90deg);
+}
+
+/* Smooth height animation without measuring in JS: the grid row goes from
+   0fr (collapsed) to 1fr (open), and the inner wrapper clips overflow. */
+.nav-section-body,
+.nav-subsection-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+}
+
+.nav-section-body.is-open,
+.nav-subsection-body.is-open {
+    grid-template-rows: 1fr;
+}
+
+.nav-section-body-inner,
+.nav-subsection-body-inner {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.nav-subsection + .nav-subsection {
+    margin-top: 0;
+}
+
+.nav-subsection-title {
+    margin: 0;
+    min-height: 36px;
+    padding: 0 0.25rem;
+    color: var(--forest-green);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Reusable link-list look: used both for a subsection's links (Residential,
+   Commercial) and for links sitting directly in a section with no
+   subsection layer (e.g. Safety > Safety Lane). */
+.nav-link-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nav-link-list li + li {
+    border-top: 1px solid rgba(4, 57, 96, 0.1);
+}
+
+.nav-link-list a {
+    display: block;
+    padding: 0.5rem;
+    min-height: 40px;
+    color: var(--drk-gray);
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-link-list a:hover {
+    background-color: rgba(86, 157, 214, 0.15);
+}
+
+.nav-link-list a:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+/* Current page: add aria-current="page" to that page's link */
+.nav-link-list a[aria-current="page"] {
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+/* Saved PDFs: a plain (non-collapsible) section holding one action button */
+.nav-section-plain {
+    margin: 0 0 0.75rem;
+    padding: 0 0 0.5rem;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 2px solid var(--forest-green);
+}
+
+.nav-action {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--drk-gray);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.nav-action:hover {
+    background-color: rgba(86, 157, 214, 0.15);
+}
+
+.nav-action:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+.nav-action-hint {
+    margin: 0.25rem 0.5rem 0;
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+}
+
+/* Dims and blocks interaction with the page behind the open drawer */
+.nav-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background-color: rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.nav-scrim.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Keeps the page from scrolling behind the open drawer */
+body.nav-open {
+    overflow: hidden;
+}
+
+@media (min-width: 48em) {
+    .app-header {
+        padding: 0.75rem 1.5rem;
+    }
+
+    .hero-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* ---------- Employee info form ---------- */
+/* Mobile: single column, full-width fields, 44px+ touch targets.
+   Same palette cues as the nav: white surface, navy text, green bottom
+   border, sky-blue for hover/focus. */
+.emp-info-section,
+.obs-key-section {
+    padding: 1rem;
+}
+
+.emp-info fieldset {
+    margin: 0;
+    padding: 1rem;
+    min-width: 0;
+    border: 1px solid rgba(4, 57, 96, 0.15);
+    border-bottom: 4px solid var(--forest-green);
+    background-color: var(--white);
+}
+
+.emp-info legend {
+    padding: 0 0.5rem;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.emp-info .field + .field {
+    margin-top: 1rem;
+}
+
+.emp-info .field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+/* 16px font stops iOS Safari from zooming in when a field is focused */
+.emp-info .field input,
+.emp-info .field textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1rem;
+    transition: border-color 0.15s ease;
+}
+
+.emp-info .field textarea {
+    resize: vertical;
+}
+
+/* Label stays available to screen readers; the legend already names the field visually */
+.emp-info .field .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.emp-info .field input:hover,
+.emp-info .field textarea:hover {
+    border-color: var(--sky-blue);
+}
+
+.emp-info .field input:focus,
+.emp-info .field textarea:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+/* Signature pads */
+.signature-field,
+.emp-info .field + .signature-field {
+    margin-top: 1rem;
+}
+
+/* Auto-filled name reads as fixed text, not an editable field */
+.emp-info .field input[readonly] {
+    background-color: rgba(4, 57, 96, 0.06);
+}
+
+.signature-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+/* touch-action: none keeps the page from scrolling while signing */
+.signature-pad {
+    display: block;
+    width: 100%;
+    height: 10rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.signature-clear {
+    min-height: 44px;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--deep-navy);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.signature-clear:hover,
+.signature-clear:focus-visible {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+/* Generate PDF + Send buttons, side by side */
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.generate-pdf,
+.send-email {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 4px;
+    background-color: var(--forest-green);
+    color: var(--white);
+    font: inherit;
+    font-size: 1.125rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.send-email {
+    background-color: var(--deep-navy);
+}
+
+.generate-pdf:hover {
+    background-color: var(--deep-navy);
+}
+
+.send-email:hover {
+    background-color: var(--forest-green);
+}
+
+.generate-pdf:disabled,
+.send-email:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.generate-pdf:focus-visible,
+.send-email:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+/* Send dialog */
+.send-dialog {
+    width: calc(100% - 2rem);
+    max-width: 28rem;
+    padding: 1.25rem;
+    border: 0;
+    border-top: 4px solid var(--forest-green);
+    border-radius: 6px;
+    color: var(--drk-gray);
+}
+
+.send-dialog::backdrop {
+    background-color: rgba(4, 57, 96, 0.55);
+}
+
+.send-form h2 {
+    margin: 0 0 0.25rem;
+    color: var(--deep-navy);
+    font-size: 1.25rem;
+}
+
+.send-help {
+    margin: 0 0 1rem;
+    color: var(--drk-gray);
+}
+
+.send-field + .send-field {
+    margin-top: 1rem;
+}
+
+.send-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+/* 16px font stops iOS Safari from zooming in when a field is focused */
+.send-field input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.send-field input:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+.send-error {
+    margin: 1rem 0 0;
+    color: #b22222;
+    font-weight: 600;
+}
+
+.send-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.send-cancel,
+.send-submit {
+    flex: 1 1 0;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.send-cancel {
+    border: 1px solid var(--deep-navy);
+    background-color: var(--white);
+    color: var(--deep-navy);
+}
+
+.send-submit {
+    border: 0;
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+.send-cancel:focus-visible,
+.send-submit:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+/* Tablet and up: two-column grid, form kept to a readable width */
+@media (min-width: 48em) {
+    .emp-info-section,
+    .obs-key-section {
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .emp-info fieldset {
+        padding: 1.5rem;
+    }
+
+    /* Only the employee info fieldset uses the two-column field grid */
+    .emp-info .emp-fields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem 1.5rem;
+    }
+
+    /* Grid gap handles spacing here, so drop the stacked-layout margin */
+    .emp-info .field + .field {
+        margin-top: 0;
+    }
+
+    /* Name spans both columns; Date/Time and Location/Unit pair up below */
+    .emp-info .field-wide {
+        grid-column: 1 / -1;
+    }
+}
+
+
+/* ---------- Observed practices key ---------- */
+/* Reads as a card in the same family as the employee info fieldset.
+   The symbol badges carry the meaning, so it works without color. */
+.obs-key-section {
+    padding-top: 0;
+}
+
+.obs-key {
+    padding: 1rem;
+    border: 1px solid rgba(4, 57, 96, 0.15);
+    border-bottom: 4px solid var(--forest-green);
+    background-color: var(--white);
+}
+
+.obs-key h2 {
+    margin: 0 0 0.75rem;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.obs-key dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+}
+
+.obs-key dl > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.obs-key dt {
+    min-width: 2.75rem;
+    padding: 0.25rem 0.5rem;
+    border: 2px solid var(--deep-navy);
+    border-radius: 4px;
+    color: var(--deep-navy);
+    font-weight: 700;
+    text-align: center;
+}
+
+.obs-key dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+@media (min-width: 48em) {
+    .obs-key {
+        padding: 1.5rem;
+    }
+}
+
+
+/* ---------- Practice rows (GENERAL) ---------- */
+/* Each row: three checkboxes (+ / - / N/O) followed by the practice text.
+   A header row of + / - / N/O sits above and shares the same grid. */
+.emp-info fieldset + fieldset {
+    margin-top: 1rem;
+}
+
+.practice {
+    display: grid;
+    grid-template-columns: repeat(3, 2.75rem) 1fr;
+    align-items: center;
+    min-height: 44px;
+}
+
+.practice + .practice {
+    border-top: 1px solid rgba(4, 57, 96, 0.15);
+}
+
+.practice-head span {
+    color: var(--deep-navy);
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Whole 44px cell is the tap target, the box itself is centred in it */
+.check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.check:hover {
+    background-color: rgba(86, 157, 214, 0.15);
+}
+
+.check input {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    accent-color: var(--forest-green);
+    cursor: pointer;
+}
+
+.check input:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.practice-text {
+    padding: 0.5rem 0 0.5rem 0.5rem;
+    color: var(--drk-gray);
+}
+/* Stays inline with the practice text it belongs to, at 75% size */
+#note {
+    font-size: 0.75em;
+}
+
+/* ---------- PIN lock gate ---------- */
+/* html.pin-locked is added by an inline script in <head>, before first
+   paint, so the page underneath never flashes into view. pin-lock.js then
+   builds #pin-lock-overlay and removes the class once the PIN is correct. */
+html.pin-locked body > *:not(#pin-lock-overlay) {
+    display: none;
+}
+
+#pin-lock-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: var(--deep-navy);
+}
+
+.pin-lock-card {
+    width: 100%;
+    max-width: 20rem;
+    padding: 2rem 1.5rem;
+    border-bottom: 4px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--white);
+    text-align: center;
+}
+
+.pin-lock-logo {
+    width: 6.5rem;
+    height: auto;
+    margin: 0 auto 1rem;
+}
+
+.pin-lock-card h2 {
+    margin: 0 0 0.5rem;
+    color: var(--deep-navy);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.pin-lock-hint {
+    margin: 0 0 1.25rem;
+    color: var(--drk-gray);
+    font-size: 0.9rem;
+}
+
+#pin-lock-input {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+}
+
+#pin-lock-input:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+.pin-lock-error {
+    min-height: 1.25rem;
+    margin: 0.5rem 0 0;
+    color: #B3261E;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.pin-lock-submit {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--forest-green);
+    color: var(--white);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.pin-lock-submit:hover {
+    background-color: var(--deep-navy);
+}
+
+.pin-lock-submit:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.pin-lock-shake {
+    animation: pin-lock-shake 0.3s ease;
+}
+
+@keyframes pin-lock-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-0.5rem); }
+    75% { transform: translateX(0.5rem); }
+}
+
+@media (min-width: 48em) {
+    .pin-lock-card {
+        padding: 2.5rem 2rem;
+    }
+}
+
+/* ---------- Tabbed shell (index.html) ---------- */
+/* Each open form lives in its own iframe so its entries survive tab switches. */
+body.shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+}
+
+.tab-bar {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.25rem;
+    padding: 0.5rem 0.5rem 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--deep-navy);
+    background-color: #eef3f7;
+    scrollbar-width: thin;
+}
+
+.tab-bar[hidden] {
+    display: none;
+}
+
+.tab {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: stretch;
+    max-width: 14rem;
+    border: 1px solid rgba(4, 57, 96, 0.3);
+    border-bottom: 0;
+    border-radius: 6px 6px 0 0;
+    background-color: #dbe5ee;
+}
+
+.tab.is-active {
+    border-color: var(--deep-navy);
+    border-top: 3px solid var(--forest-green);
+    background-color: var(--white);
+    /* Covers the bar's bottom rule so the active tab joins its panel */
+    margin-bottom: -1px;
+}
+
+.tab-select {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0.5rem 0 0.75rem;
+    border: 0;
+    background: none;
+    color: var(--deep-navy);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.tab-close {
+    flex-shrink: 0;
+    width: 36px;
+    border: 0;
+    background: none;
+    color: var(--deep-navy);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.tab-close:hover {
+    background-color: rgba(4, 57, 96, 0.12);
+}
+
+.tab-select:focus-visible,
+.tab-close:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+.tab-panels {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.tab-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background-color: var(--white);
+}
+
+.tab-frame[hidden] {
+    display: none;
+}
+
+.tab-empty {
+    max-width: 30rem;
+    margin: 0;
+    padding: 2rem 1rem;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+}
+
+.tab-empty[hidden] {
+    display: none;
+}
+
+
+/* ---------- Trainee form: Driver / Helper choice ---------- */
+.emp-info .field-label,
+.emp-info .field select {
+    display: block;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+.emp-info .field-label {
+    margin-bottom: 0.25rem;
+}
+
+.role-options {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.role-option {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    color: var(--drk-gray);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.role-option:hover {
+    border-color: var(--sky-blue);
+}
+
+/* Beats the full-width, 44px-tall rule that styles text inputs inside .field */
+.emp-info .field .role-option input {
+    display: inline-block;
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    accent-color: var(--forest-green);
+}
+
+.emp-info .field select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.emp-info .field select:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+/* Sections for the role that was not picked */
+.emp-info fieldset.role-locked {
+    opacity: 0.45;
+    background-color: rgba(4, 57, 96, 0.06);
+    border-bottom-color: rgba(4, 57, 96, 0.3);
+}
+
+.emp-info fieldset.role-locked .check,
+.emp-info fieldset.role-locked .check input {
+    cursor: not-allowed;
+}
+
+.emp-info fieldset.role-locked .check:hover {
+    background-color: transparent;
+}
+
+
+/* Stand-alone checkbox fields (e.g. Front Load / Roll Off): small box beside its label.
+   Beats the full-width, 44px-tall rule that styles text inputs inside .field. */
+.emp-info .field:has(> input[type="checkbox"], > input[type="radio"]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.emp-info .field:has(> input[type="checkbox"], > input[type="radio"]) label {
+    margin-bottom: 0;
+    order: 2;
+}
+
+.emp-info .field > input[type="checkbox"],
+.emp-info .field > input[type="radio"] {
+    order: 1;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    accent-color: var(--forest-green);
+    cursor: pointer;
+}
+
+/* Keeps the Front Load / Roll Off checkboxes side by side at every width */
+.emp-info .field-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+}
+
+.emp-info .field-row .field + .field {
+    margin-top: 0;
+}
+
+.emp-info .emp-fields > .field-row + .field {
+    margin-top: 1rem;
+}
+
+
+/* ---------- Route Tracking: missed collections ---------- */
+/* Reuses the .emp-info form look. Mobile first: stacked cards, full-width controls. */
+.mt-section {
+    padding-top: 0;
+}
+
+.mt-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding-top: 1rem;
+}
+
+.mt-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 0.25rem;
+    border: 1px solid rgba(4, 57, 96, 0.15);
+    border-bottom: 4px solid var(--forest-green);
+    text-align: center;
+}
+
+.mt-stat-num {
+    color: var(--deep-navy);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.mt-stat-label {
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mt-warning {
+    margin: 0.75rem 0 0;
+    color: #B3261E;
+    font-weight: 600;
+}
+
+.mt-hint {
+    margin: 0.25rem 0 0;
+    color: #8A4B00;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mt-hint:empty {
+    display: none;
+}
+
+.mt-message {
+    min-height: 1.5rem;
+    margin: 0.75rem 0 0;
+    color: var(--forest-green);
+    font-weight: 600;
+}
+
+.mt-filters .field + .field {
+    margin-top: 1rem;
+}
+
+.mt-count {
+    margin: 1rem 0 0.75rem;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+.mt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.mt-entry {
+    padding: 0.75rem;
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 6px solid #B3261E;
+    border-radius: 4px;
+    background-color: var(--white);
+}
+
+.mt-entry.mt-status-notified {
+    border-left-color: var(--sky-blue);
+}
+
+.mt-entry.mt-status-resolved {
+    border-left-color: var(--forest-green);
+}
+
+.mt-entry-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+}
+
+.mt-entry-address {
+    margin: 0;
+    color: var(--deep-navy);
+    font-size: 1.0625rem;
+    overflow-wrap: anywhere;
+}
+
+.mt-entry-date {
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+}
+
+.mt-chip {
+    padding: 0.125rem 0.5rem;
+    border: 1px solid rgba(4, 57, 96, 0.35);
+    border-radius: 999px;
+    color: var(--deep-navy);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.mt-chip-reason {
+    background-color: var(--deep-navy);
+    color: var(--white);
+}
+
+.mt-chip-repeat {
+    border-color: #8A4B00;
+    color: #8A4B00;
+}
+
+.mt-entry-meta,
+.mt-entry-notes {
+    margin: 0.5rem 0 0;
+    overflow-wrap: anywhere;
+}
+
+.mt-entry-meta {
+    color: var(--deep-navy);
+    font-size: 0.9rem;
+}
+
+.mt-entry-notes {
+    white-space: pre-wrap;
+}
+
+.mt-entry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.mt-entry-status {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.mt-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--deep-navy);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mt-btn-danger {
+    border-color: #B3261E;
+    color: #B3261E;
+}
+
+.mt-btn:hover,
+.mt-entry-status:hover {
+    border-color: var(--sky-blue);
+}
+
+.mt-btn:focus-visible,
+.mt-entry-status:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+/* [hidden] loses to .send-email's display rules otherwise */
+.form-actions [hidden] {
+    display: none;
+}
+
+.mt-filters + .mt-count + .mt-list + .form-actions {
+    margin-top: 1rem;
+}
+
+.send-email:disabled {
+    cursor: not-allowed;
+}
+
+@media (min-width: 48em) {
+    .mt-stats,
+    .mt-warning {
+        max-width: 48rem;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .mt-stat-num {
+        font-size: 2rem;
+    }
+
+    .mt-filters {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem 1.5rem;
+    }
+
+    .mt-filters .field + .field {
+        margin-top: 0;
+    }
+
+    .mt-entry-status {
+        flex: 1 1 12rem;
+    }
+
+    .mt-btn {
+        flex: 0 0 auto;
+    }
+}

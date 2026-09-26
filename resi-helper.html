@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+    (function () {
+        try {
+            if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                document.documentElement.classList.add("pin-locked");
+            }
+        } catch (e) {
+            document.documentElement.classList.add("pin-locked");
+        }
+    })();
+</script>
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#046635">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Route Manager System">
+<title>Residential Helper · Earthwise Route Manager System</title>
+
+<body>
+    <section class="obs-key-section">
+        <div class="obs-key" role="group" aria-labelledby="obs-key-title">
+            <h2 id="obs-key-title">Observed Practices Legend</h2>
+            <dl>
+                <div>
+                    <dt>+</dt>
+                    <dd>Safe</dd>
+                </div>
+                <div>
+                    <dt>&minus;</dt>
+                    <dd>At Risk</dd>
+                </div>
+                <div>
+                    <dt>N/O</dt>
+                    <dd>Not Observed</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+    <section class="emp-info-section">
+        <form class="emp-info" data-title="Residential Helper Observation">
+            <fieldset class="emp-fields">
+                <legend>EMPLOYEE INFORMATION</legend>
+
+                <div class="field field-wide">
+                    <label for="emp-name">Name</label>
+                    <input type="text" id="emp-name" name="emp-name" autocomplete="off" required>
+                </div>
+
+                <div class="field">
+                    <label for="obs-date">Date of Observation</label>
+                    <input type="date" id="obs-date" name="obs-date">
+                </div>
+
+                <div class="field">
+                    <label for="obs-time">Time of Observation</label>
+                    <input type="time" id="obs-time" name="obs-time">
+                </div>
+
+                <div class="field">
+                    <label for="obs-location">Location of Observation</label>
+                    <input type="text" id="obs-location" name="obs-location" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="unit">Unit Type &amp; Number</label>
+                    <input type="text" id="unit" name="unit" autocomplete="off">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>GENERAL</legend>
+
+                <div class="practices">
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="general-1" value="safe" aria-label="Wears Seat Belt: Safe"></label>
+                        <label class="check"><input type="checkbox" name="general-1" value="at-risk" aria-label="Wears Seat Belt: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="general-1" value="not-observed" aria-label="Wears Seat Belt: Not Observed"></label>
+                        <span class="practice-text">Wears Seat Belt</span>
+                    </div>
+
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="general-2" value="safe" aria-label="Waits for Vehicle to Stop before Exiting: Safe"></label>
+                        <label class="check"><input type="checkbox" name="general-2" value="at-risk" aria-label="Waits for Vehicle to Stop before Exiting: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="general-2" value="not-observed" aria-label="Waits for Vehicle to Stop before Exiting: Not Observed"></label>
+                        <span class="practice-text">Waits for Vehicle to Stop before Exiting</span>
+                    </div>
+
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="general-3" value="safe" aria-label="3 Points of Contact when Entering / Exiting the Vehicle: Safe"></label>
+                        <label class="check"><input type="checkbox" name="general-3" value="at-risk" aria-label="3 Points of Contact when Entering / Exiting the Vehicle: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="general-3" value="not-observed" aria-label="3 Points of Contact when Entering / Exiting the Vehicle: Not Observed"></label>
+                        <span class="practice-text">3 Points of Contact when Entering / Exiting the Vehicle</span>
+                    </div>
+
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="general-4" value="safe" aria-label="Rides on Step (&lt; 2/10 miles and &lt; 10 mph): Safe"></label>
+                        <label class="check"><input type="checkbox" name="general-4" value="at-risk" aria-label="Rides on Step (&lt; 2/10 miles and &lt; 10 mph): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="general-4" value="not-observed" aria-label="Rides on Step (&lt; 2/10 miles and &lt; 10 mph): Not Observed"></label>
+                        <span class="practice-text">Rides on Step <span id="note"> (< 2/10 miles and < 10 mph)</span></span>
+                    </div>
+
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="general-5" value="safe" aria-label="Only Stands on Right Step of the Vehicle: Safe"></label>
+                        <label class="check"><input type="checkbox" name="general-5" value="at-risk" aria-label="Only Stands on Right Step of the Vehicle: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="general-5" value="not-observed" aria-label="Only Stands on Right Step of the Vehicle: Not Observed"></label>
+                        <span class="practice-text">Only Stands on Right Step of the Vehicle</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>COLLECTION ACTIVITY</legend>
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+                <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-1" value="safe" aria-label="Collects From the Right Side Only, No Double Siding: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-1" value="at-risk" aria-label="Collects From the Right Side Only, No Double Siding: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-1" value="not-observed" aria-label="Collects From the Right Side Only, No Double Siding: Not Observed"></label>
+                        <span class="practice-text">Collects From the Right Side Only, No Double Siding</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-2" value="safe" aria-label="Does Not Stand Behind the Hopper when Packing: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-2" value="at-risk" aria-label="Does Not Stand Behind the Hopper when Packing: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-2" value="not-observed" aria-label="Does Not Stand Behind the Hopper when Packing: Not Observed"></label>
+                        <span class="practice-text">Does Not Stand Behind the Hopper when Packing</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-3" value="safe" aria-label="Does Not Pack while Vehicle is in Motion: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-3" value="at-risk" aria-label="Does Not Pack while Vehicle is in Motion: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-3" value="not-observed" aria-label="Does Not Pack while Vehicle is in Motion: Not Observed"></label>
+                        <span class="practice-text">Does Not Pack while Vehicle is in Motion</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-4" value="safe" aria-label="Does Not Leave Debris when Dumping Cans: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-4" value="at-risk" aria-label="Does Not Leave Debris when Dumping Cans: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-4" value="not-observed" aria-label="Does Not Leave Debris when Dumping Cans: Not Observed"></label>
+                        <span class="practice-text">Does Not Leave Debris when Dumping Cans</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-5" value="safe" aria-label="Aware of Surroundings, Constantly Scans Work Area: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-5" value="at-risk" aria-label="Aware of Surroundings, Constantly Scans Work Area: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-5" value="not-observed" aria-label="Aware of Surroundings, Constantly Scans Work Area: Not Observed"></label>
+                        <span class="practice-text">Aware of Surroundings, Constantly Scans Work Area</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="collection-6" value="safe" aria-label="Walks on Right Side of Vehicle Only: Safe"></label>
+                        <label class="check"><input type="checkbox" name="collection-6" value="at-risk" aria-label="Walks on Right Side of Vehicle Only: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="collection-6" value="not-observed" aria-label="Walks on Right Side of Vehicle Only: Not Observed"></label>
+                        <span class="practice-text">Walks on Right Side of Vehicle Only</span>
+                    </div>
+            </fieldset>
+            <fieldset>
+                <legend>BACKING</legend>
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="backing-1" value="safe" aria-label="Assists Driver When Backing: Safe"></label>
+                        <label class="check"><input type="checkbox" name="backing-1" value="at-risk" aria-label="Assists Driver When Backing: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="backing-1" value="not-observed" aria-label="Assists Driver When Backing: Not Observed"></label>
+                        <span class="practice-text">Assists Driver When Backing</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="backing-2" value="safe" aria-label="Uses Proper Hand Signals When Assisting with Backing: Safe"></label>
+                        <label class="check"><input type="checkbox" name="backing-2" value="at-risk" aria-label="Uses Proper Hand Signals When Assisting with Backing: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="backing-2" value="not-observed" aria-label="Uses Proper Hand Signals When Assisting with Backing: Not Observed"></label>
+                        <span class="practice-text">Uses Proper Hand Signals When Assisting with Backing</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="backing-3" value="safe" aria-label="Does Not Stand On Step When Vehicle is Backing: Safe"></label>
+                        <label class="check"><input type="checkbox" name="backing-3" value="at-risk" aria-label="Does Not Stand On Step When Vehicle is Backing: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="backing-3" value="not-observed" aria-label="Does Not Stand On Step When Vehicle is Backing: Not Observed"></label>
+                        <span class="practice-text">Does Not Stand On Step When Vehicle is Backing</span>
+                    </div>
+            </fieldset>
+            <fieldset>
+                <legend>MATERIAL HANDLING (BODY MECHANICS)</legend>
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-1" value="safe" aria-label="Checks object weight to be lifted / handled: Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-1" value="at-risk" aria-label="Checks object weight to be lifted / handled: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-1" value="not-observed" aria-label="Checks object weight to be lifted / handled: Not Observed"></label>
+                        <span class="practice-text">Checks object weight to be lifted / handled</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-2" value="safe" aria-label="Checks for Sharp Objects: Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-2" value="at-risk" aria-label="Checks for Sharp Objects: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-2" value="not-observed" aria-label="Checks for Sharp Objects: Not Observed"></label>
+                        <span class="practice-text">Checks for Sharp Objects</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-3" value="safe" aria-label="Uses Proper Footing for Lifting (Feet Apart): Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-3" value="at-risk" aria-label="Uses Proper Footing for Lifting (Feet Apart): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-3" value="not-observed" aria-label="Uses Proper Footing for Lifting (Feet Apart): Not Observed"></label>
+                        <span class="practice-text">Uses Proper Footing for Lifting <span id="note">(Feet Apart)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-4" value="safe" aria-label="Back Straight - Uses Proper Lifting Procedures (Lifts with Legs / Team Lift): Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-4" value="at-risk" aria-label="Back Straight - Uses Proper Lifting Procedures (Lifts with Legs / Team Lift): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-4" value="not-observed" aria-label="Back Straight - Uses Proper Lifting Procedures (Lifts with Legs / Team Lift): Not Observed"></label>
+                        <span class="practice-text">Back Straight - Uses Proper Lifting Procedures <span id="note">(Lifts with Legs / Team Lift)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-5" value="safe" aria-label="Pivots Whole Body when Turning (Avoids Twisting): Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-5" value="at-risk" aria-label="Pivots Whole Body when Turning (Avoids Twisting): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-5" value="not-observed" aria-label="Pivots Whole Body when Turning (Avoids Twisting): Not Observed"></label>
+                        <span class="practice-text">Pivots Whole Body when Turning <span id="note">(Avoids Twisting)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-6" value="safe" aria-label="Pushes Containers / Toters (Does not Pull): Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-6" value="at-risk" aria-label="Pushes Containers / Toters (Does not Pull): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-6" value="not-observed" aria-label="Pushes Containers / Toters (Does not Pull): Not Observed"></label>
+                        <span class="practice-text">Pushes Containers / Toters <span id="note">(Does not Pull)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="material-handling-7" value="safe" aria-label="Pushes with Legs: Safe"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-7" value="at-risk" aria-label="Pushes with Legs: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="material-handling-7" value="not-observed" aria-label="Pushes with Legs: Not Observed"></label>
+                        <span class="practice-text">Pushes with Legs</span>
+                    </div>
+            </fieldset>
+            <fieldset>
+                <legend>PPE/UNIFORM</legend>
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-1" value="safe" aria-label="Wears Gloves (Cut Resistant): Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-1" value="at-risk" aria-label="Wears Gloves (Cut Resistant): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-1" value="not-observed" aria-label="Wears Gloves (Cut Resistant): Not Observed"></label>
+                        <span class="practice-text">Wears Gloves <span id="note">(Cut Resistant)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-2" value="safe" aria-label="Wears Safety Glasses / Proper Protection: Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-2" value="at-risk" aria-label="Wears Safety Glasses / Proper Protection: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-2" value="not-observed" aria-label="Wears Safety Glasses / Proper Protection: Not Observed"></label>
+                        <span class="practice-text">Wears Safety Glasses / Proper Protection</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-3" value="safe" aria-label="Wears ANSI Class 2 Safety Vest / Hi Viz Apparel: Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-3" value="at-risk" aria-label="Wears ANSI Class 2 Safety Vest / Hi Viz Apparel: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-3" value="not-observed" aria-label="Wears ANSI Class 2 Safety Vest / Hi Viz Apparel: Not Observed"></label>
+                        <span class="practice-text">Wears ANSI Class 2 Safety Vest / Hi Viz Apparel</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-4" value="safe" aria-label="Wears 6in High Boots (Steel Toe or Composite Toe): Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-4" value="at-risk" aria-label="Wears 6in High Boots (Steel Toe or Composite Toe): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-4" value="not-observed" aria-label="Wears 6in High Boots (Steel Toe or Composite Toe): Not Observed"></label>
+                        <span class="practice-text">Wears 6" High Boots <span id="note">(Steel Toe or Composite Toe)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-5" value="safe" aria-label="Wears Hard Hat (When Necessary): Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-5" value="at-risk" aria-label="Wears Hard Hat (When Necessary): At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-5" value="not-observed" aria-label="Wears Hard Hat (When Necessary): Not Observed"></label>
+                        <span class="practice-text">Wears Hard Hat <span id="note">(When Necessary)</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="ppe-6" value="safe" aria-label="Wears Approved Earthwise Uniform: Safe"></label>
+                        <label class="check"><input type="checkbox" name="ppe-6" value="at-risk" aria-label="Wears Approved Earthwise Uniform: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="ppe-6" value="not-observed" aria-label="Wears Approved Earthwise Uniform: Not Observed"></label>
+                        <span class="practice-text">Wears Approved Earthwise Uniform</span>
+                    </div>
+            </fieldset>
+            <fieldset>
+                <legend>POST COLLECTION</legend>
+                    <div class="practice practice-head" aria-hidden="true">
+                        <span>+</span>
+                        <span>&minus;</span>
+                        <span>N/O</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="post-collection-1" value="safe" aria-label="Only One Person Out of Vehicle: Safe"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-1" value="at-risk" aria-label="Only One Person Out of Vehicle: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-1" value="not-observed" aria-label="Only One Person Out of Vehicle: Not Observed"></label>
+                        <span class="practice-text">Only One Person Out of Vehicle</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="post-collection-2" value="safe" aria-label="Helper Stays In Vehicle: Safe"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-2" value="at-risk" aria-label="Helper Stays In Vehicle: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-2" value="not-observed" aria-label="Helper Stays In Vehicle: Not Observed"></label>
+                        <span class="practice-text">Helper Stays In Vehicle</span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="post-collection-3" value="safe" aria-label="Wears Appropriate PPE: Safe"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-3" value="at-risk" aria-label="Wears Appropriate PPE: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-3" value="not-observed" aria-label="Wears Appropriate PPE: Not Observed"></label>
+                        <span class="practice-text">Wears Appropriate PPE</span></span>
+                    </div>
+                    <div class="practice">
+                        <label class="check"><input type="checkbox" name="post-collection-4" value="safe" aria-label="Follows Disposal Facility Rules: Safe"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-4" value="at-risk" aria-label="Follows Disposal Facility Rules: At Risk"></label>
+                        <label class="check"><input type="checkbox" name="post-collection-4" value="not-observed" aria-label="Follows Disposal Facility Rules: Not Observed"></label>
+                        <span class="practice-text">Follows Disposal Facility Rules</span>
+                    </div>
+            </fieldset>
+            <fieldset>
+                <legend>Comments / Corrective Actions <span id="note">(Must be Listed for Each "At Risk" Behavior)</span></legend>
+                <div class="field">
+                    <label for="comments" class="visually-hidden">Comments / Corrective Actions</label>
+                    <textarea id="comments" name="comments" rows="6" Placeholder="If None enter N/A"></textarea>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>SIGNATURES</legend>
+
+                <div class="field">
+                    <label for="observer-name">Observer Name</label>
+                    <input type="text" id="observer-name" name="observer-name" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="observer-date">Observer Date</label>
+                    <input type="date" id="observer-date" name="observer-date" data-mirror="obs-date" readonly>
+                </div>
+
+                <div class="field">
+                    <label for="observer-time">Observer Time</label>
+                    <input type="time" id="observer-time" name="observer-time" data-mirror="obs-time" readonly>
+                </div>
+
+                <div class="signature-field" data-signature>
+                    <span id="sig-observer-label">Observer Signature</span>
+                    <canvas class="signature-pad" role="img" aria-labelledby="sig-observer-label"></canvas>
+                    <input type="hidden" name="sig-observer">
+                    <button type="button" class="signature-clear">Clear</button>
+                </div>
+
+                <div class="field">
+                    <label for="employee-name-sig">Employee Name</label>
+                    <input type="text" id="employee-name-sig" name="employee-name-sig" data-mirror="emp-name" readonly>
+                </div>
+
+                <div class="field">
+                    <label for="employee-date">Employee Date</label>
+                    <input type="date" id="employee-date" name="employee-date" data-mirror="obs-date" readonly>
+                </div>
+
+                <div class="field">
+                    <label for="employee-time">Employee Time</label>
+                    <input type="time" id="employee-time" name="employee-time" data-mirror="obs-time" readonly>
+                </div>
+
+                <div class="signature-field" data-signature>
+                    <span id="sig-employee-label">Employee Signature</span>
+                    <canvas class="signature-pad" role="img" aria-labelledby="sig-employee-label"></canvas>
+                    <input type="hidden" name="sig-employee">
+                    <button type="button" class="signature-clear">Clear</button>
+                </div>
+            </fieldset>
+            <div class="form-actions">
+                <button type="button" class="generate-pdf" id="generate-pdf">Save Form</button>
+                <button type="button" class="send-email" id="send-email">Send</button>
+            </div>
+        </form>
+
+        <dialog class="send-dialog" id="send-dialog" aria-labelledby="send-dialog-title">
+            <form class="send-form" id="send-form" novalidate>
+                <h2 id="send-dialog-title">Send Report</h2>
+                <p class="send-help">Save the form first, then choose the saved PDF below.</p>
+
+                <div class="send-field">
+                    <label for="send-email-to">Email address</label>
+                    <input type="email" id="send-email-to" name="to" autocomplete="email" inputmode="email" required>
+                </div>
+
+                <div class="send-field">
+                    <label for="send-pdf">PDF report</label>
+                    <input type="file" id="send-pdf" name="pdf" accept="application/pdf,.pdf" required>
+                </div>
+
+                <p class="send-error" id="send-error" role="alert" hidden></p>
+
+                <div class="send-actions">
+                    <button type="button" class="send-cancel" id="send-cancel">Cancel</button>
+                    <button type="submit" class="send-submit">Create Email</button>
+                </div>
+            </form>
+        </dialog>
+
+    </section>
+    <script src="signature-pad.js" defer></script>
+    <script src="jspdf.umd.min.js" defer></script>
+    <script src="generate-pdf.js" defer></script>
+    <script src="pin-lock.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+
+</html>

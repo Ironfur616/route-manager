@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+    (function () {
+        try {
+            if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                document.documentElement.classList.add("pin-locked");
+            }
+        } catch (e) {
+            document.documentElement.classList.add("pin-locked");
+        }
+    })();
+</script>
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#046635">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Route Manager System">
+<!-- TODO: give this page a descriptive title, e.g. "Roll Off Driver · Earthwise Route Manager System" -->
+<title>Earthwise Route Manager System</title>
+
+<body>
+    <section>
+
+
+    </section>
+    <script src="pin-lock.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+
+</html>

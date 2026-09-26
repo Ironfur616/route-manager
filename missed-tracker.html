@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route Manager System">
+    <title>Missed Collections · Earthwise Route Manager System</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section" aria-label="Summary">
+        <div class="mt-stats" id="mt-stats">
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-open">0</span><span class="mt-stat-label">Open</span></div>
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-week">0</span><span class="mt-stat-label">Last 7 days</span></div>
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-repeat">0</span><span class="mt-stat-label">Repeat addresses</span></div>
+        </div>
+        <p class="mt-warning" id="mt-storage-warning" hidden>This browser is blocking storage, so entries cannot be saved. Export to CSV before closing.</p>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <form class="emp-info" id="mt-form" data-title="Missed Collection">
+            <fieldset class="emp-fields">
+                <legend id="mt-form-title">LOG A MISSED COLLECTION</legend>
+
+                <div class="field">
+                    <label for="mt-date">Date</label>
+                    <input type="date" id="mt-date" name="date" required>
+                </div>
+
+                <div class="field">
+                    <label for="mt-route">Route</label>
+                    <input type="text" id="mt-route" name="route" list="dl-route" autocomplete="off">
+                </div>
+
+                <div class="field field-wide">
+                    <label for="mt-address">Address / Location</label>
+                    <input type="text" id="mt-address" name="address" list="dl-address" autocomplete="off" required>
+                    <p class="mt-hint" id="mt-address-hint" aria-live="polite"></p>
+                </div>
+
+                <div class="field">
+                    <label for="mt-service">Service</label>
+                    <select id="mt-service" name="service" required></select>
+                </div>
+
+                <div class="field">
+                    <label for="mt-reason">Reason</label>
+                    <select id="mt-reason" name="reason" required></select>
+                </div>
+
+                <div class="field">
+                    <label for="mt-driver">Driver</label>
+                    <input type="text" id="mt-driver" name="driver" list="dl-driver" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="mt-unit">Unit</label>
+                    <input type="text" id="mt-unit" name="unit" list="dl-unit" autocomplete="off">
+                </div>
+
+                <div class="field field-wide">
+                    <label for="mt-status">Status</label>
+                    <select id="mt-status" name="status"></select>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="mt-notes">Notes</label>
+                    <textarea id="mt-notes" name="notes" rows="3"></textarea>
+                </div>
+            </fieldset>
+
+            <datalist id="dl-route"></datalist>
+            <datalist id="dl-address"></datalist>
+            <datalist id="dl-driver"></datalist>
+            <datalist id="dl-unit"></datalist>
+
+            <div class="form-actions">
+                <button type="button" class="send-email" id="mt-cancel" hidden>Cancel</button>
+                <button type="submit" class="generate-pdf" id="mt-submit">Save Entry</button>
+            </div>
+            <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>MISSED COLLECTIONS</legend>
+
+                <div class="mt-filters">
+                    <div class="field">
+                        <label for="mt-search">Search</label>
+                        <input type="search" id="mt-search" placeholder="Address, route, driver, notes" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="mt-filter-status">Status</label>
+                        <select id="mt-filter-status"></select>
+                    </div>
+                </div>
+
+                <p class="mt-count" id="mt-count" aria-live="polite"></p>
+                <div class="mt-list" id="mt-list"></div>
+
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="mt-export">Export CSV</button>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+
+    <script src="missed-tracker.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>
