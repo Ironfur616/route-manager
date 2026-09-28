@@ -12,9 +12,19 @@
         "Can not out",
         "Can out late",
         "Can blocked / no access",
-        "Can contaminated",
+        "Can contaminated (trash mixed with recycle)",
         "Overloaded / too heavy",
         "Wrong can out",
+        "Items not part of trash program",
+        "Not properly contained / bundled",
+        "No electronic devices",
+        "Yard Waste mixed with garbage",
+        "Construction material",
+        "Hazardous waste",
+        "Items not included in recycling program",
+        "Recyclables in bags",
+        "No batteries or lithium batteries",
+        "Recycle contains (hangers, hoses, wire, cords, rope, or chains)",
         "Other"
     ];
     var STATUSES = [

@@ -1268,9 +1268,11 @@ body.shell {
 }
 
 .mt-chip {
+    max-width: 100%;
     padding: 0.125rem 0.5rem;
     border: 1px solid rgba(4, 57, 96, 0.35);
     border-radius: 999px;
+    overflow-wrap: break-word;
     color: var(--deep-navy);
     font-size: 0.8rem;
     font-weight: 600;
