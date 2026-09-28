@@ -1,6 +1,6 @@
 {
-  "name": "Route Manager System",
-  "short_name": "FMS",
+  "name": "Earthwise Route IQ",
+  "short_name": "Route IQ",
   "description": "Earthwise Environmental Solutions route management tools",
   "start_url": "./index.html",
   "scope": "./",

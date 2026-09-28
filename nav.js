@@ -29,9 +29,9 @@
             '<button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Open menu">' +
                 '<span class="nav-toggle-bars" aria-hidden="true"></span>' +
             "</button>" +
-            '<h1 class="hero-title">Route Manager System</h1>' +
+            '<h1 class="hero-title">Route IQ</h1>' +
         "</header>" +
-        '<nav class="site-nav" id="site-nav" aria-label="Route Manager System navigation" aria-hidden="true">' +
+        '<nav class="site-nav" id="site-nav" aria-label="Route IQ navigation" aria-hidden="true">' +
             '<div class="site-nav-header">' +
                 '<span class="site-nav-heading">Menu</span>' +
                 '<button type="button" class="nav-close" id="nav-close" aria-label="Close menu">&times;</button>' +
