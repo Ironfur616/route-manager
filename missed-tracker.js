@@ -1,6 +1,6 @@
 /* Missed collection tracker (missed-tracker.html).
-   Unlike the observation forms, this is a running log, not a draft: entries are kept in
-   localStorage until they are deleted. The page opts out of the shell's draft handling with
+    Unlike the observation forms, this is a running log, not a draft: entries are kept in
+    localStorage until they are deleted. The page opts out of the shell's draft handling with
    data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step. */
 (function () {
     "use strict";
@@ -9,10 +9,10 @@
 
     var SERVICES = ["Residential", "Recycling", "Yard Waste", "Bulk", "Commercial", "Other"];
     var REASONS = [
-        "Can not out",
-        "Can out late",
+        "Trash / RCY not out",
+        "Trash / RCY out late",
         "Customer called in request for service",
-        "Can blocked / no access",
+        "Trash / RCY blocked / no access",
         "Can contaminated (trash mixed with recycle)",
         "Move out pile",
         "Overloaded / too heavy",
