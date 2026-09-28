@@ -11,10 +11,13 @@
     var REASONS = [
         "Can not out",
         "Can out late",
+        "Customer called in request for service",
         "Can blocked / no access",
         "Can contaminated (trash mixed with recycle)",
+        "Move out pile",
         "Overloaded / too heavy",
         "Wrong can out",
+        "Mattress not properly wrapped",
         "Items not part of trash program",
         "Not properly contained / bundled",
         "No electronic devices",
@@ -25,11 +28,12 @@
         "Recyclables in bags",
         "No batteries or lithium batteries",
         "Recycle contains (hangers, hoses, wire, cords, rope, or chains)",
-        "Other"
+        "Other (see notes)"
     ];
     var STATUSES = [
         { value: "open", label: "Open" },
         { value: "notified", label: "Customer notified" },
+        { value: "district_notified", label: "Collections area notified"},
         { value: "resolved", label: "Resolved" }
     ];
 

@@ -1235,6 +1235,10 @@ body.shell {
     border-left-color: var(--sky-blue);
 }
 
+.mt-entry.mt-status-district_notified {
+    border-left-color: var(--deep-navy);
+}
+
 .mt-entry.mt-status-resolved {
     border-left-color: var(--forest-green);
 }
