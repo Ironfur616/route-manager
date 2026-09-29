@@ -11,6 +11,7 @@
     var REASONS = [
         "Trash / RCY not out",
         "Trash / RCY out late",
+        "Customer issued a yellow tag",
         "Customer called in request for service",
         "Trash / RCY blocked / no access",
         "Can contaminated (trash mixed with recycle)",
@@ -43,12 +44,14 @@
         route: document.getElementById("mt-route"),
         address: document.getElementById("mt-address"),
         service: document.getElementById("mt-service"),
-        reason: document.getElementById("mt-reason"),
         driver: document.getElementById("mt-driver"),
         unit: document.getElementById("mt-unit"),
         status: document.getElementById("mt-status"),
         notes: document.getElementById("mt-notes")
     };
+    var reasonsContainer = document.getElementById("mt-reasons");
+    var reasonsCount = document.getElementById("mt-reasons-count");
+    var reasonsError = document.getElementById("mt-reasons-error");
     var submitBtn = document.getElementById("mt-submit");
     var cancelBtn = document.getElementById("mt-cancel");
     var formTitle = document.getElementById("mt-form-title");
@@ -123,6 +126,45 @@
         message.textContent = text;
     }
 
+    /* ---------- Reason chips (multi-select) ---------- */
+
+    function buildReasonChips() {
+        reasonsContainer.textContent = "";
+        REASONS.forEach(function (reason, i) {
+            var label = el("label", "mt-reason-chip");
+            var input = document.createElement("input");
+            input.type = "checkbox";
+            input.id = "mt-reason-" + i;
+            input.name = "reasons";
+            input.value = reason;
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(reason));
+            reasonsContainer.appendChild(label);
+        });
+    }
+
+    function getCheckedReasons() {
+        return Array.prototype.filter.call(reasonsContainer.querySelectorAll("input"), function (cb) {
+            return cb.checked;
+        }).map(function (cb) { return cb.value; });
+    }
+
+    function setCheckedReasons(reasons) {
+        var picked = {};
+        (reasons || []).forEach(function (r) { picked[r] = true; });
+        Array.prototype.forEach.call(reasonsContainer.querySelectorAll("input"), function (cb) {
+            cb.checked = !!picked[cb.value];
+        });
+    }
+
+    function updateReasonsCount() {
+        var n = getCheckedReasons().length;
+        reasonsCount.textContent = n ? n + " selected" : "";
+        if (n) reasonsError.hidden = true;
+    }
+
+    reasonsContainer.addEventListener("change", updateReasonsCount);
+
     /* ---------- Storage ---------- */
 
     function load() {
@@ -130,8 +172,14 @@
             var data = JSON.parse(localStorage.getItem(KEY) || "[]");
             if (!Array.isArray(data)) return [];
             return data.filter(function (e) { return e && e.id; }).map(function (e) {
-                // Entries saved before the reasons said "can" instead of "cart"
-                if (e.reason) e.reason = e.reason.replace(/^Cart /, "Can ").replace("Wrong cart out", "Wrong can out");
+                // Entries saved before reasons could be multi-select had a single "reason" string
+                if (!e.reasons) {
+                    var legacy = e.reason
+                        ? e.reason.replace(/^Cart /, "Can ").replace("Wrong cart out", "Wrong can out")
+                        : "";
+                    e.reasons = legacy ? [legacy] : [];
+                    delete e.reason;
+                }
                 return e;
             });
         } catch (e) {
@@ -197,7 +245,7 @@
 
     function matchesSearch(e, term) {
         if (!term) return true;
-        return [e.address, e.route, e.driver, e.unit, e.notes, e.reason, e.service].join(" ")
+        return [e.address, e.route, e.driver, e.unit, e.notes, e.service].concat(e.reasons || []).join(" ")
             .toLowerCase().indexOf(term) !== -1;
     }
 
@@ -210,7 +258,9 @@
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
-        chips.appendChild(el("span", "mt-chip mt-chip-reason", e.reason));
+        (e.reasons || []).forEach(function (r) {
+            chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
+        });
         chips.appendChild(el("span", "mt-chip", e.service));
         chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
         var times = counts[addressKey(e.address)];
@@ -293,7 +343,7 @@
             route: fields.route.value.trim(),
             address: fields.address.value.trim(),
             service: fields.service.value,
-            reason: fields.reason.value,
+            reasons: getCheckedReasons(),
             driver: fields.driver.value.trim(),
             unit: fields.unit.value.trim(),
             status: fields.status.value,
@@ -317,6 +367,8 @@
         if (keep.unit) fields.unit.value = keep.unit;
         fields.service.value = keep.service || SERVICES[0];
         fields.status.value = "open";
+        updateReasonsCount();
+        reasonsError.hidden = true;
         updateAddressHint();
     }
 
@@ -325,6 +377,9 @@
         if (!entry) return;
         editingId = id;
         Object.keys(fields).forEach(function (k) { fields[k].value = entry[k] || ""; });
+        setCheckedReasons(entry.reasons);
+        updateReasonsCount();
+        reasonsError.hidden = true;
         formTitle.textContent = "EDIT ENTRY";
         submitBtn.textContent = "Save Changes";
         cancelBtn.hidden = false;
@@ -340,8 +395,13 @@
 
     form.addEventListener("submit", function (ev) {
         ev.preventDefault();
-        var list = load();
         var data = readForm();
+        if (!data.reasons.length) {
+            reasonsError.hidden = false;
+            reasonsContainer.querySelector("input").focus();
+            return;
+        }
+        var list = load();
         var existing = editingId ? list.filter(function (e) { return e.id === editingId; })[0] : null;
 
         if (existing) {
@@ -407,10 +467,10 @@
     document.getElementById("mt-export").addEventListener("click", function () {
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
-        var rows = [["Date", "Route", "Address", "Service", "Reason", "Driver", "Unit", "Status",
+        var rows = [["Date", "Route", "Address", "Service", "Reasons", "Driver", "Unit", "Status",
             "Misses at address", "Notes"]];
         entries.forEach(function (e) {
-            rows.push([e.date, e.route, e.address, e.service, e.reason, e.driver, e.unit,
+            rows.push([e.date, e.route, e.address, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
                 labelFor(STATUSES, e.status), counts[addressKey(e.address)], e.notes]);
         });
         var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
@@ -433,7 +493,7 @@
     /* ---------- Start ---------- */
 
     fillSelect(fields.service, SERVICES);
-    fillSelect(fields.reason, REASONS, "Select a reason");
+    buildReasonChips();
     fillSelect(fields.status, STATUSES);
     fillSelect(filterStatus, STATUSES, "All statuses");
     resetForm(false);
