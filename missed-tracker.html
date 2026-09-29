@@ -63,10 +63,15 @@
                 </div>
 
                 <div class="field field-wide">
-                    <span class="field-label" id="mt-reasons-label">Reason(s) for Miss</span>
-                    <div class="mt-reason-chips" id="mt-reasons" role="group" aria-labelledby="mt-reasons-label"></div>
-                    <p class="mt-hint" id="mt-reasons-count" aria-live="polite"></p>
+                    <label for="mt-reasons">Reason(s)</label>
+                    <select id="mt-reasons" name="reasons" multiple size="8"></select>
+                    <p class="mt-hint" id="mt-reasons-count" aria-live="polite">Tap to select all that apply.</p>
                     <p class="send-error" id="mt-reasons-error" hidden>Select at least one reason.</p>
+                </div>
+
+                <div class="field">
+                    <input type="checkbox" id="mt-yellow-tag" name="yellow-tag">
+                    <label for="mt-yellow-tag">Customer issued a yellow tag</label>
                 </div>
 
                 <div class="field">

@@ -1214,54 +1214,33 @@ body.shell {
     display: none;
 }
 
-/* Reason(s) for Miss: multi-select toggle chips (checkboxes styled as pills) */
-.mt-reason-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
-}
-
-.mt-reason-chip {
-    position: relative;
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0.5rem 0.875rem;
+/* Reason(s): native multi-select listbox. Browsers render a [multiple] select as an
+   always-open scrollable list (not a closed dropdown), so sizing it well matters. */
+#mt-reasons {
+    width: 100%;
+    min-width: 0;
+    padding: 0.25rem;
     border: 1px solid var(--deep-navy);
-    border-radius: 999px;
-    color: var(--deep-navy);
-    font-weight: 600;
-    font-size: 0.875rem;
-    line-height: 1.2;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1rem;
 }
 
-.mt-reason-chip input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+#mt-reasons option {
+    padding: 0.5rem 0.5rem;
 }
 
-.mt-reason-chip:hover {
-    border-color: var(--sky-blue);
-}
-
-.mt-reason-chip:has(input:checked) {
+#mt-reasons option:checked {
     background-color: var(--forest-green);
-    border-color: var(--forest-green);
     color: var(--white);
 }
 
-.mt-reason-chip:has(input:focus-visible) {
+#mt-reasons:focus {
+    border-color: var(--sky-blue);
     outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
+    outline-offset: 0;
 }
 
 .mt-message {

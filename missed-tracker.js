@@ -11,7 +11,6 @@
     var REASONS = [
         "Trash / RCY not out",
         "Trash / RCY out late",
-        "Customer issued a yellow tag",
         "Customer called in request for service",
         "Trash / RCY blocked / no access",
         "Can contaminated (trash mixed with recycle)",
@@ -50,9 +49,10 @@
         status: document.getElementById("mt-status"),
         notes: document.getElementById("mt-notes")
     };
-    var reasonsContainer = document.getElementById("mt-reasons");
+    var reasonsSelect = document.getElementById("mt-reasons");
     var reasonsCount = document.getElementById("mt-reasons-count");
     var reasonsError = document.getElementById("mt-reasons-error");
+    var yellowTagCheckbox = document.getElementById("mt-yellow-tag");
     var submitBtn = document.getElementById("mt-submit");
     var cancelBtn = document.getElementById("mt-cancel");
     var formTitle = document.getElementById("mt-form-title");
@@ -132,44 +132,36 @@
         message.textContent = text;
     }
 
-    /* ---------- Reason chips (multi-select) ---------- */
-
-    function buildReasonChips() {
-        reasonsContainer.textContent = "";
-        REASONS.forEach(function (reason, i) {
-            var label = el("label", "mt-reason-chip");
-            var input = document.createElement("input");
-            input.type = "checkbox";
-            input.id = "mt-reason-" + i;
-            input.name = "reasons";
-            input.value = reason;
-            label.appendChild(input);
-            label.appendChild(document.createTextNode(reason));
-            reasonsContainer.appendChild(label);
-        });
-    }
+    /* ---------- Reasons: multi-select dropdown + a separate yellow-tag checkbox ---------- */
+    /* Yellow tag has its own checkbox (not an option in the dropdown) so it's quick to find
+       instead of buried in a long scrolling list. It still ends up in the same "reasons" array
+       under the hood, so hasYellowTag() and everything downstream needs no special-casing. */
 
     function getCheckedReasons() {
-        return Array.prototype.filter.call(reasonsContainer.querySelectorAll("input"), function (cb) {
-            return cb.checked;
-        }).map(function (cb) { return cb.value; });
+        var picked = Array.prototype.filter.call(reasonsSelect.options, function (o) {
+            return o.selected;
+        }).map(function (o) { return o.value; });
+        if (yellowTagCheckbox.checked) picked.push(YELLOW_TAG_REASON);
+        return picked;
     }
 
     function setCheckedReasons(reasons) {
         var picked = {};
         (reasons || []).forEach(function (r) { picked[r] = true; });
-        Array.prototype.forEach.call(reasonsContainer.querySelectorAll("input"), function (cb) {
-            cb.checked = !!picked[cb.value];
+        Array.prototype.forEach.call(reasonsSelect.options, function (o) {
+            o.selected = !!picked[o.value];
         });
+        yellowTagCheckbox.checked = !!picked[YELLOW_TAG_REASON];
     }
 
     function updateReasonsCount() {
         var n = getCheckedReasons().length;
-        reasonsCount.textContent = n ? n + " selected" : "";
+        reasonsCount.textContent = n ? n + " selected" : "Tap to select all that apply.";
         if (n) reasonsError.hidden = true;
     }
 
-    reasonsContainer.addEventListener("change", updateReasonsCount);
+    reasonsSelect.addEventListener("change", updateReasonsCount);
+    yellowTagCheckbox.addEventListener("change", updateReasonsCount);
 
     /* ---------- Storage ---------- */
 
@@ -409,7 +401,7 @@
         var data = readForm();
         if (!data.reasons.length) {
             reasonsError.hidden = false;
-            reasonsContainer.querySelector("input").focus();
+            reasonsSelect.focus();
             return;
         }
         var list = load();
@@ -505,7 +497,7 @@
     /* ---------- Start ---------- */
 
     fillSelect(fields.service, SERVICES);
-    buildReasonChips();
+    fillSelect(reasonsSelect, REASONS);
     fillSelect(fields.status, STATUSES);
     fillSelect(filterStatus, STATUSES, "All statuses");
     resetForm(false);
