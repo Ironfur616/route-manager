@@ -1155,9 +1155,23 @@ body.shell {
 
 .mt-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
     padding-top: 1rem;
+}
+
+@media (min-width: 30em) {
+    .mt-stats {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.mt-stat.mt-stat-yellow {
+    border-bottom-color: #F2B705;
+}
+
+.mt-stat-yellow .mt-stat-num {
+    color: #8A4B00;
 }
 
 .mt-stat {
@@ -1281,6 +1295,12 @@ body.shell {
     background-color: var(--white);
 }
 
+/* Yellow tag entries get a soft wash across the whole card, on top of the status border,
+   so they're easy to spot while scanning a long list */
+.mt-entry.mt-yellow-tag {
+    background-color: #FFFBEB;
+}
+
 .mt-entry.mt-status-notified {
     border-left-color: var(--sky-blue);
 }
@@ -1340,6 +1360,13 @@ body.shell {
 .mt-chip-repeat {
     border-color: #8A4B00;
     color: #8A4B00;
+}
+
+/* Yellow tag: a filled badge (not just an outlined chip) so it stands out at a glance */
+.mt-chip-yellow-tag {
+    border: none;
+    background-color: #F2B705;
+    color: #3D2B00;
 }
 
 .mt-entry-meta,
@@ -1433,8 +1460,15 @@ body.shell {
 
     .mt-filters {
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 2fr 1fr 1fr;
+        align-items: end;
         gap: 1rem 1.5rem;
+    }
+
+    /* The Yellow tags only checkbox field has no label row above it like the others,
+       so nudge it down to line up with the Search/Status inputs */
+    .mt-filters .field:has(> input[type="checkbox"]) {
+        padding-bottom: 0.625rem;
     }
 
     .mt-filters .field + .field {

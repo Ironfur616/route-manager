@@ -31,6 +31,7 @@
             <div class="mt-stat"><span class="mt-stat-num" id="stat-open">0</span><span class="mt-stat-label">Open</span></div>
             <div class="mt-stat"><span class="mt-stat-num" id="stat-week">0</span><span class="mt-stat-label">Last 7 days</span></div>
             <div class="mt-stat"><span class="mt-stat-num" id="stat-repeat">0</span><span class="mt-stat-label">Repeat addresses</span></div>
+            <div class="mt-stat mt-stat-yellow"><span class="mt-stat-num" id="stat-yellow">0</span><span class="mt-stat-label">Yellow tags</span></div>
         </div>
         <p class="mt-warning" id="mt-storage-warning" hidden>This browser is blocking storage, so entries cannot be saved. Export to CSV before closing.</p>
     </section>
@@ -115,6 +116,10 @@
                     <div class="field">
                         <label for="mt-filter-status">Status</label>
                         <select id="mt-filter-status"></select>
+                    </div>
+                    <div class="field">
+                        <input type="checkbox" id="mt-filter-yellow" name="filter-yellow">
+                        <label for="mt-filter-yellow">Yellow tags only</label>
                     </div>
                 </div>
 

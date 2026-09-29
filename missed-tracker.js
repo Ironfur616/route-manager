@@ -37,6 +37,7 @@
         { value: "district_notified", label: "Collections area notified"},
         { value: "resolved", label: "Resolved" }
     ];
+    var YELLOW_TAG_REASON = "Customer issued a yellow tag";
 
     var form = document.getElementById("mt-form");
     var fields = {
@@ -61,6 +62,7 @@
     var countEl = document.getElementById("mt-count");
     var searchEl = document.getElementById("mt-search");
     var filterStatus = document.getElementById("mt-filter-status");
+    var filterYellow = document.getElementById("mt-filter-yellow");
 
     var editingId = null;
 
@@ -99,6 +101,10 @@
     function addressKey(text) {
         return String(text).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean)
             .map(function (w) { return SUFFIXES[w] || w; }).join(" ");
+    }
+
+    function hasYellowTag(e) {
+        return (e.reasons || []).indexOf(YELLOW_TAG_REASON) !== -1;
     }
 
     function labelFor(list, value) {
@@ -225,6 +231,7 @@
         document.getElementById("stat-week").textContent =
             entries.filter(function (e) { return e.date >= cutoffStr; }).length;
         document.getElementById("stat-repeat").textContent = repeats;
+        document.getElementById("stat-yellow").textContent = entries.filter(hasYellowTag).length;
     }
 
     function renderDatalists(entries) {
@@ -250,7 +257,8 @@
     }
 
     function buildCard(e, counts) {
-        var card = el("article", "mt-entry mt-status-" + e.status);
+        var isYellow = hasYellowTag(e);
+        var card = el("article", "mt-entry mt-status-" + e.status + (isYellow ? " mt-yellow-tag" : ""));
 
         var head = el("div", "mt-entry-head");
         head.appendChild(el("h3", "mt-entry-address", e.address));
@@ -258,7 +266,9 @@
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
-        (e.reasons || []).forEach(function (r) {
+        if (isYellow) chips.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
+        // The yellow tag reason already gets its own badge above, so it's left out here to avoid repeating it
+        (e.reasons || []).filter(function (r) { return r !== YELLOW_TAG_REASON; }).forEach(function (r) {
             chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
         });
         chips.appendChild(el("span", "mt-chip", e.service));
@@ -301,13 +311,14 @@
         var counts = addressCounts(entries);
         var term = searchEl.value.trim().toLowerCase();
         var status = filterStatus.value;
+        var yellowOnly = filterYellow.checked;
 
         renderStats(entries, counts);
         renderDatalists(entries);
         updateAddressHint();
 
         var shown = entries.filter(function (e) {
-            return (!status || e.status === status) && matchesSearch(e, term);
+            return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) && matchesSearch(e, term);
         });
 
         listEl.textContent = "";
@@ -454,6 +465,7 @@
 
     searchEl.addEventListener("input", render);
     filterStatus.addEventListener("change", render);
+    filterYellow.addEventListener("change", render);
 
     /* ---------- CSV export ---------- */
 
