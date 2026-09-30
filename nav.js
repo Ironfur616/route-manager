@@ -48,8 +48,11 @@
                 ])) +
             section("panel-safety", "Safety",
                 '<ul class="nav-link-list">' + link("safety-lane.html", "Safety Lane") + "</ul>") +
-            section("panel-route-tracking", "Route Tracking",
-                '<ul class="nav-link-list">' + link("missed-tracker.html", "Missed Collections") + "</ul>") +
+            section("panel-route-management", "Route Management",
+                '<ul class="nav-link-list">' +
+                    link("missed-tracker.html", "Missed Collections") +
+                    link("new-customers.html", "New Customers") +
+                "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 
