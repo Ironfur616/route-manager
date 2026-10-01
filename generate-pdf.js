@@ -117,10 +117,13 @@
                 var v = input.value.trim();
                 pending.push(input.type === "date" ? fmtDate(v) : input.type === "time" ? fmtTime(v) : v);
             } else if (child.classList.contains("signature-field")) {
-                var titleLabel = child.querySelector("label");
+                // The title element isn't always a <label> (resi-helper uses a <span>), so
+                // follow the canvas's aria-labelledby - every form wires that up consistently.
+                var canvas = child.querySelector("canvas[aria-labelledby]");
+                var titleEl = canvas && document.getElementById(canvas.getAttribute("aria-labelledby"));
                 var hidden = child.querySelector('input[type="hidden"]');
                 signers.push({
-                    title: titleLabel ? titleLabel.textContent.trim() : "Signature",
+                    title: titleEl ? titleEl.textContent.trim() : "Signature",
                     values: pending,
                     sigName: hidden ? hidden.name : ""
                 });
