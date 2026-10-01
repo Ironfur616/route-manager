@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>Root Cause Assessment · Earthwise Route IQ</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section" aria-label="Summary">
+        <div class="mt-stats" id="rca-stats">
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-open">0</span><span class="mt-stat-label">Open</span></div>
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-investigating">0</span><span class="mt-stat-label">Investigating</span></div>
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-resolved">0</span><span class="mt-stat-label">Resolved</span></div>
+            <div class="mt-stat"><span class="mt-stat-num" id="stat-evidence">0</span><span class="mt-stat-label">Evidence logged</span></div>
+        </div>
+        <p class="mt-warning" id="rca-storage-warning" hidden>This browser is blocking storage, so cases cannot be saved. Export to CSV before closing.</p>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <form class="emp-info" id="rca-form" data-title="RCA Case">
+            <fieldset class="emp-fields">
+                <legend id="rca-form-title">OPEN NEW RCA CASE</legend>
+
+                <div class="field field-wide">
+                    <label for="rca-title">Problem / Case Title</label>
+                    <input type="text" id="rca-title" name="title" autocomplete="off" required>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="rca-description">Problem Description</label>
+                    <textarea id="rca-description" name="description" rows="3" required></textarea>
+                </div>
+
+                <div class="field">
+                    <label for="rca-route">Route</label>
+                    <input type="text" id="rca-route" name="route" list="dl-rca-route" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="rca-address">Address / Area</label>
+                    <input type="text" id="rca-address" name="address" list="dl-rca-address" autocomplete="off">
+                </div>
+            </fieldset>
+
+            <datalist id="dl-rca-route"></datalist>
+            <datalist id="dl-rca-address"></datalist>
+            <datalist id="dl-rca-source"></datalist>
+
+            <div class="form-actions">
+                <button type="button" class="send-email" id="rca-cancel" hidden>Cancel</button>
+                <button type="submit" class="generate-pdf" id="rca-submit">Save Entry</button>
+            </div>
+            <p class="mt-message" id="rca-message" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>RCA CASES</legend>
+
+                <div class="mt-filters rca-filters">
+                    <div class="field">
+                        <label for="rca-search">Search</label>
+                        <input type="search" id="rca-search" placeholder="Title, route, address, evidence" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="rca-filter-status">Status</label>
+                        <select id="rca-filter-status"></select>
+                    </div>
+                </div>
+
+                <p class="mt-count" id="rca-count" aria-live="polite"></p>
+                <div class="mt-list" id="rca-list"></div>
+
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="rca-export">Export CSV</button>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+
+    <script src="jspdf.umd.min.js" defer></script>
+    <script src="rca.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>

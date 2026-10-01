@@ -52,6 +52,7 @@
                 '<ul class="nav-link-list">' +
                     link("missed-tracker.html", "Missed Collections") +
                     link("new-customers.html", "New Customers") +
+                    link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';

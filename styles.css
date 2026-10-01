@@ -1580,3 +1580,134 @@ body.shell {
 .nc-established[open] summary {
     margin-bottom: 0.5rem;
 }
+
+
+/* ---------- Root Cause Assessment (RCA) ---------- */
+/* Reuses the same .mt-entry/.mt-chips/.nc-notes-field/.nc-checks classes as Missed Collections
+   and New Customers. Only what's unique to RCA lives here: the status-bar colors, the fishbone
+   category checklist layout, the evidence pool, and the add-evidence mini-form. */
+@media (min-width: 48em) {
+    .rca-filters {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+/* Open already matches .mt-entry's default red border-left, so only these two need overriding */
+.rca-case.rca-status-investigating {
+    border-left-color: var(--sky-blue);
+}
+
+.rca-case.rca-status-resolved {
+    border-left-color: var(--forest-green);
+}
+
+@media (min-width: 30em) {
+    .rca-cause-checks {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.25rem 1rem;
+    }
+}
+
+.rca-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(4, 57, 96, 0.15);
+}
+
+.rca-evidence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rca-evidence-item {
+    padding: 0.5rem 0.625rem;
+    border: 1px solid rgba(4, 57, 96, 0.15);
+    border-radius: 4px;
+    background-color: rgba(4, 57, 96, 0.04);
+}
+
+.rca-evidence-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.rca-evidence-date {
+    color: var(--deep-navy);
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.rca-evidence-source {
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.rca-evidence-desc {
+    margin: 0.375rem 0 0;
+    color: var(--drk-gray);
+    white-space: pre-wrap;
+}
+
+.rca-evidence-photo {
+    display: block;
+    max-width: 100%;
+    max-height: 10rem;
+    margin-top: 0.5rem;
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-radius: 4px;
+}
+
+.rca-evidence-remove {
+    min-height: 36px;
+    margin-top: 0.5rem;
+    padding: 0 0.75rem;
+    border: 1px solid #B3261E;
+    border-radius: 4px;
+    background-color: var(--white);
+    color: #B3261E;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.rca-evidence-remove:hover,
+.rca-evidence-remove:focus-visible {
+    background-color: rgba(179, 38, 30, 0.08);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rca-add-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.625rem;
+    border: 1px dashed rgba(4, 57, 96, 0.3);
+    border-radius: 4px;
+}
+
+.rca-add-evidence input[type="date"],
+.rca-add-evidence input[type="text"] {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.rca-add-evidence input[type="file"] {
+    font-size: 0.85rem;
+}
