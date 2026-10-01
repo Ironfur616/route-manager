@@ -1542,7 +1542,7 @@ body.shell {
 .nc-notes {
     width: 100%;
     min-width: 0;
-    min-height: 44px;
+    height: 4.5rem;
     padding: 0.5rem 0.625rem;
     border: 1px solid var(--deep-navy);
     border-radius: 4px;
@@ -1550,7 +1550,7 @@ body.shell {
     color: var(--drk-gray);
     font: inherit;
     font-size: 0.9rem;
-    resize: vertical;
+    resize: none;
 }
 
 .nc-notes:focus {
