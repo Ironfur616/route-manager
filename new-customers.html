@@ -1,33 +1,102 @@
 <!DOCTYPE html>
-<html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script>
-    (function () {
-        try {
-            if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
                 document.documentElement.classList.add("pin-locked");
             }
-        } catch (e) {
-            document.documentElement.classList.add("pin-locked");
-        }
-    })();
-</script>
-<link rel="stylesheet" href="styles.css">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<meta name="theme-color" content="#046635">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Route IQ">
-<title>New Customers · Earthwise Route IQ</title>
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>New Customers · Earthwise Route IQ</title>
+</head>
 
 <body>
-    <section class="obs-key-section">
-        <div class="obs-key" role="group" aria-labelledby="obs-key-title">
-            <h2>PLACEHOLDER FOR FORM</h2>
+    <section class="emp-info-section mt-section">
+        <form class="emp-info" id="nc-form" data-title="New Customer">
+            <fieldset class="emp-fields">
+                <legend id="nc-form-title">ADD NEW CUSTOMER</legend>
+
+                <div class="field field-wide">
+                    <label for="nc-address">Customer Address</label>
+                    <input type="text" id="nc-address" name="address" list="dl-nc-address" autocomplete="off" required>
+                </div>
+
+                <div class="field">
+                    <label for="nc-type">Type</label>
+                    <select id="nc-type" name="type" required></select>
+                </div>
+
+                <div class="field">
+                    <label for="nc-route">Route Number</label>
+                    <input type="text" id="nc-route" name="route" list="dl-nc-route" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="nc-driver">Driver</label>
+                    <input type="text" id="nc-driver" name="driver" list="dl-nc-driver" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="nc-first-day">1st Day of Service</label>
+                    <input type="date" id="nc-first-day" name="firstDay" required>
+                </div>
+            </fieldset>
+
+            <datalist id="dl-nc-address"></datalist>
+            <datalist id="dl-nc-route"></datalist>
+            <datalist id="dl-nc-driver"></datalist>
+
+            <div class="form-actions">
+                <button type="button" class="send-email" id="nc-cancel" hidden>Cancel</button>
+                <button type="submit" class="generate-pdf" id="nc-submit">Save Entry</button>
+            </div>
+            <p class="mt-message" id="nc-message" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>NEW CUSTOMERS</legend>
+
+                <div class="mt-filters nc-filters">
+                    <div class="field">
+                        <label for="nc-search">Search</label>
+                        <input type="search" id="nc-search" placeholder="Address, route, driver, notes" autocomplete="off">
+                    </div>
+                </div>
+
+                <p class="mt-count" id="nc-count" aria-live="polite"></p>
+                <div class="mt-list" id="nc-list"></div>
+
+                <details class="nc-established">
+                    <summary>Established Customers (<span id="stat-established">0</span>)</summary>
+                    <div class="mt-list" id="nc-established-list"></div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="nc-export">Export CSV</button>
+                </div>
+            </fieldset>
         </div>
     </section>
+
+    <script src="new-customers.js" defer></script>
+    <script src="sw-register.js" defer></script>
 </body>
 </html>
