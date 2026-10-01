@@ -33,6 +33,15 @@
         return el ? el.value.trim() : "";
     }
 
+    // Reads a field's own <label> text instead of hardcoding it, so forms with different
+    // wording for the same field (e.g. Safety Lane Check's "Date:" vs the observation
+    // forms' "Date of Observation") each print their own label.
+    function fieldLabel(id, fallback) {
+        var label = document.querySelector('label[for="' + id + '"]');
+        var text = label ? label.textContent.replace(/:\s*$/, "").trim() : "";
+        return text || fallback;
+    }
+
     function fmtDate(v) {
         var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
         return m ? m[2] + "/" + m[3] + "/" + m[1] : v;
@@ -168,11 +177,11 @@
            (e.g. Safety Lane Check has no Time/Location of Observation) doesn't print blank rows. */
         var GAP = 16;
         var ROW_SIZE = 3;
-        var allFields = [["Name", val("emp-name")]];
-        if (document.getElementById("obs-date")) allFields.push(["Date of Observation", fmtDate(val("obs-date"))]);
-        if (document.getElementById("obs-time")) allFields.push(["Time of Observation", fmtTime(val("obs-time"))]);
-        if (document.getElementById("obs-location")) allFields.push(["Location of Observation", val("obs-location")]);
-        if (document.getElementById("unit")) allFields.push(["Unit Type & Number", val("unit")]);
+        var allFields = [[fieldLabel("emp-name", "Name"), val("emp-name")]];
+        if (document.getElementById("obs-date")) allFields.push([fieldLabel("obs-date", "Date of Observation"), fmtDate(val("obs-date"))]);
+        if (document.getElementById("obs-time")) allFields.push([fieldLabel("obs-time", "Time of Observation"), fmtTime(val("obs-time"))]);
+        if (document.getElementById("obs-location")) allFields.push([fieldLabel("obs-location", "Location of Observation"), val("obs-location")]);
+        if (document.getElementById("unit")) allFields.push([fieldLabel("unit", "Unit Type & Number"), val("unit")]);
         var fields = [];
         for (var fi = 0; fi < allFields.length; fi += ROW_SIZE) fields.push(allFields.slice(fi, fi + ROW_SIZE));
 
