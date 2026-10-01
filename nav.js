@@ -47,7 +47,7 @@
                     link("com-trainee.html", "Commercial Trainee")
                 ])) +
             section("panel-safety", "Safety",
-                '<ul class="nav-link-list">' + link("safety-lane.html", "Safety Lane") + "</ul>") +
+                '<ul class="nav-link-list">' + link("safety-lane-ck.html", "Safety Lane") + "</ul>") +
             section("panel-route-management", "Route Management",
                 '<ul class="nav-link-list">' +
                     link("missed-tracker.html", "Missed Collections") +
