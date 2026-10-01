@@ -1669,18 +1669,39 @@ body.shell {
     border-radius: 4px;
 }
 
+.rca-evidence-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.rca-evidence-edit-btn,
 .rca-evidence-remove {
     min-height: 36px;
-    margin-top: 0.5rem;
     padding: 0 0.75rem;
-    border: 1px solid #B3261E;
     border-radius: 4px;
     background-color: var(--white);
-    color: #B3261E;
     font: inherit;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
+}
+
+.rca-evidence-edit-btn {
+    border: 1px solid var(--deep-navy);
+    color: var(--deep-navy);
+}
+
+.rca-evidence-edit-btn:hover,
+.rca-evidence-edit-btn:focus-visible {
+    background-color: rgba(4, 57, 96, 0.08);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rca-evidence-remove {
+    border: 1px solid #B3261E;
+    color: #B3261E;
 }
 
 .rca-evidence-remove:hover,
@@ -1688,6 +1709,11 @@ body.shell {
     background-color: rgba(179, 38, 30, 0.08);
     outline: 3px solid var(--sky-blue);
     outline-offset: 2px;
+}
+
+.rca-evidence-edit-actions {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .rca-add-evidence {

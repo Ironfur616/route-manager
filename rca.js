@@ -48,6 +48,7 @@
     var filterStatus = document.getElementById("rca-filter-status");
 
     var editingId = null;
+    var editingEvidence = null; // { caseId, evidenceId } of the one evidence entry being edited, if any
 
     /* ---------- Helpers ---------- */
 
@@ -250,30 +251,116 @@
         return ev.photo ? [ev.photo] : [];
     }
 
+    function evidencePhotosGallery(ev) {
+        var photos = photosFor(ev);
+        if (!photos.length) return null;
+        var gallery = el("div", "rca-evidence-photos");
+        photos.forEach(function (photoData) {
+            var link = document.createElement("a");
+            link.href = photoData;
+            link.target = "_blank";
+            link.rel = "noopener";
+            var img = document.createElement("img");
+            img.src = photoData;
+            img.alt = "Evidence photo";
+            img.className = "rca-evidence-photo";
+            link.appendChild(img);
+            gallery.appendChild(link);
+        });
+        return gallery;
+    }
+
+    // Edited in place rather than through a separate dialog, so fixing a typo is a quick
+    // date/description/source correction right where the entry already sits. Category and
+    // photos aren't editable here; delete and re-add the entry if those need to change.
+    function buildEvidenceEditForm(c, ev) {
+        var wrap = el("div", "rca-add-evidence rca-evidence-edit");
+
+        var dateInput = document.createElement("input");
+        dateInput.type = "date";
+        dateInput.value = ev.date || dateString(new Date());
+        dateInput.setAttribute("aria-label", "Evidence date");
+
+        var descInput = document.createElement("textarea");
+        descInput.rows = 2;
+        descInput.className = "nc-notes";
+        descInput.setAttribute("aria-label", "Evidence description");
+        descInput.value = ev.description || "";
+
+        var sourceInput = document.createElement("input");
+        sourceInput.type = "text";
+        sourceInput.placeholder = "Source (driver report, customer call, GPS log...)";
+        sourceInput.setAttribute("list", "dl-rca-source");
+        sourceInput.setAttribute("aria-label", "Evidence source");
+        sourceInput.autocomplete = "off";
+        sourceInput.value = ev.source || "";
+
+        var errorMsg = el("p", "mt-hint", "");
+
+        var gallery = evidencePhotosGallery(ev);
+
+        var actions = el("div", "rca-evidence-edit-actions");
+        var saveBtn = el("button", "mt-btn", "Save");
+        saveBtn.type = "button";
+        saveBtn.addEventListener("click", function () {
+            var description = descInput.value.trim();
+            if (!description) {
+                errorMsg.textContent = "Description can't be empty.";
+                descInput.focus();
+                return;
+            }
+            var evidence = (c.evidence || []).map(function (e) {
+                if (e.id !== ev.id) return e;
+                var updated = {};
+                Object.keys(e).forEach(function (k) { updated[k] = e[k]; });
+                updated.date = dateInput.value || dateString(new Date());
+                updated.description = description;
+                updated.source = sourceInput.value.trim();
+                return updated;
+            });
+            editingEvidence = null;
+            updateCase(c.id, { evidence: evidence });
+        });
+        var cancelBtn = el("button", "mt-btn", "Cancel");
+        cancelBtn.type = "button";
+        cancelBtn.addEventListener("click", function () {
+            editingEvidence = null;
+            render();
+        });
+        actions.appendChild(saveBtn);
+        actions.appendChild(cancelBtn);
+
+        wrap.appendChild(dateInput);
+        wrap.appendChild(descInput);
+        wrap.appendChild(sourceInput);
+        if (gallery) wrap.appendChild(gallery);
+        wrap.appendChild(errorMsg);
+        wrap.appendChild(actions);
+        return wrap;
+    }
+
     function buildEvidenceItem(c, ev) {
+        if (editingEvidence && editingEvidence.caseId === c.id && editingEvidence.evidenceId === ev.id) {
+            return buildEvidenceEditForm(c, ev);
+        }
+
         var item = el("div", "rca-evidence-item");
         var head = el("div", "rca-evidence-head");
         head.appendChild(el("span", "rca-evidence-date", prettyDate(ev.date)));
         if (ev.source) head.appendChild(el("span", "rca-evidence-source", ev.source));
         item.appendChild(head);
         if (ev.description) item.appendChild(el("p", "rca-evidence-desc", ev.description));
-        var photos = photosFor(ev);
-        if (photos.length) {
-            var gallery = el("div", "rca-evidence-photos");
-            photos.forEach(function (photoData) {
-                var link = document.createElement("a");
-                link.href = photoData;
-                link.target = "_blank";
-                link.rel = "noopener";
-                var img = document.createElement("img");
-                img.src = photoData;
-                img.alt = "Evidence photo";
-                img.className = "rca-evidence-photo";
-                link.appendChild(img);
-                gallery.appendChild(link);
-            });
-            item.appendChild(gallery);
-        }
+        var gallery = evidencePhotosGallery(ev);
+        if (gallery) item.appendChild(gallery);
+
+        var actions = el("div", "rca-evidence-item-actions");
+        var editBtn = el("button", "rca-evidence-edit-btn", "Edit");
+        editBtn.type = "button";
+        editBtn.setAttribute("aria-label", "Edit this evidence entry");
+        editBtn.addEventListener("click", function () {
+            editingEvidence = { caseId: c.id, evidenceId: ev.id };
+            render();
+        });
         var del = el("button", "rca-evidence-remove", "Remove");
         del.type = "button";
         del.setAttribute("aria-label", "Remove this evidence entry");
@@ -281,7 +368,9 @@
             if (!confirm("Remove this evidence entry? This cannot be undone.")) return;
             updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
         });
-        item.appendChild(del);
+        actions.appendChild(editBtn);
+        actions.appendChild(del);
+        item.appendChild(actions);
         return item;
     }
 
