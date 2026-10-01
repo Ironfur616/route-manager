@@ -342,7 +342,7 @@
         var statusLabel = el("label", "nc-notes-label", "Status");
         var statusSelectId = "rca-status-" + c.id;
         statusLabel.id = statusSelectId + "-label";
-        var statusSelect = el("select", "mt-entry-status");
+        var statusSelect = el("select", "mt-entry-status rca-status-select");
         statusSelect.setAttribute("aria-labelledby", statusSelectId + "-label");
         fillSelect(statusSelect, STATUSES);
         statusSelect.value = c.status;

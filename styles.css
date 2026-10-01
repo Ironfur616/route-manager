@@ -1601,6 +1601,13 @@ body.shell {
     border-left-color: var(--forest-green);
 }
 
+/* .nc-notes-field is a column flex container, which stretches its child to the full card
+   width by default. That's right for a textarea but makes the Status dropdown look oversized,
+   so it gets capped here instead. */
+.rca-status-select {
+    max-width: 14rem;
+}
+
 @media (min-width: 30em) {
     .rca-cause-checks {
         display: grid;
