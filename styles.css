@@ -1608,14 +1608,6 @@ body.shell {
     max-width: 14rem;
 }
 
-@media (min-width: 30em) {
-    .rca-cause-checks {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.25rem 1rem;
-    }
-}
-
 .rca-evidence {
     display: flex;
     flex-direction: column;
@@ -1662,11 +1654,17 @@ body.shell {
     white-space: pre-wrap;
 }
 
+.rca-evidence-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
 .rca-evidence-photo {
     display: block;
     max-width: 100%;
-    max-height: 10rem;
-    margin-top: 0.5rem;
+    max-height: 8rem;
     border: 1px solid rgba(4, 57, 96, 0.2);
     border-radius: 4px;
 }

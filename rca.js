@@ -3,17 +3,20 @@
    until deleted, not in a draft. The page opts out of the shell's draft handling with
    data-no-draft on <html>.
 
-   Structure: one CASE per ongoing problem. Evidence entries (date, description, source, an
-   optional photo) are logged under a case over time, building toward a root cause (tagged with
-   the standard fishbone categories) and a corrective action. A case's status (Open /
-   Investigating / Resolved) drives its left status bar, same visual language as Missed
-   Collections: red = unresolved, blue = being worked, green = done. */
+   Structure: one CASE per ongoing problem, with its root cause tagged against the standard
+   fishbone categories (People/Process/Equipment/Materials/Environment) and a corrective action.
+   Evidence (date, description, source, any number of photos) is logged under whichever category
+   it supports. There's no separate "mark this category as a cause" control: adding evidence to
+   a category IS what flags it, showing the same pill a manual check used to produce. A case's
+   status (Open/Investigating/Resolved) drives its left status bar, same visual language as
+   Missed Collections: red = unresolved, blue = being worked, green = done. */
 (function () {
     "use strict";
 
     var KEY = "fleetMgrRCA";
-    var MAX_PHOTO_DIM = 1000; // px, longest side after downscaling
-    var PHOTO_QUALITY = 0.72; // JPEG quality; keeps a phone photo down to roughly 100-300KB
+    var MAX_PHOTO_DIM = 1400; // px, longest side after downscaling
+    var PHOTO_QUALITY = 0.8; // JPEG quality; bigger/clearer than before for the PDF report,
+        // still compressed since several photos can now live on one evidence entry
 
     var STATUSES = [
         { value: "open", label: "Open" },
@@ -224,6 +227,12 @@
             .join(" ").toLowerCase().indexOf(term) !== -1;
     }
 
+    // Evidence saved before multi-photo support used a single "photo" field; this reads either
+    function photosFor(ev) {
+        if (ev.photos) return ev.photos;
+        return ev.photo ? [ev.photo] : [];
+    }
+
     function buildEvidenceItem(c, ev) {
         var item = el("div", "rca-evidence-item");
         var head = el("div", "rca-evidence-head");
@@ -231,17 +240,22 @@
         if (ev.source) head.appendChild(el("span", "rca-evidence-source", ev.source));
         item.appendChild(head);
         if (ev.description) item.appendChild(el("p", "rca-evidence-desc", ev.description));
-        if (ev.photo) {
-            var link = document.createElement("a");
-            link.href = ev.photo;
-            link.target = "_blank";
-            link.rel = "noopener";
-            var img = document.createElement("img");
-            img.src = ev.photo;
-            img.alt = "Evidence photo";
-            img.className = "rca-evidence-photo";
-            link.appendChild(img);
-            item.appendChild(link);
+        var photos = photosFor(ev);
+        if (photos.length) {
+            var gallery = el("div", "rca-evidence-photos");
+            photos.forEach(function (photoData) {
+                var link = document.createElement("a");
+                link.href = photoData;
+                link.target = "_blank";
+                link.rel = "noopener";
+                var img = document.createElement("img");
+                img.src = photoData;
+                img.alt = "Evidence photo";
+                img.className = "rca-evidence-photo";
+                link.appendChild(img);
+                gallery.appendChild(link);
+            });
+            item.appendChild(gallery);
         }
         var del = el("button", "rca-evidence-remove", "Remove");
         del.type = "button";
@@ -278,22 +292,25 @@
         var photoInput = document.createElement("input");
         photoInput.type = "file";
         photoInput.accept = "image/*";
-        photoInput.setAttribute("aria-label", "Attach a photo");
+        photoInput.multiple = true;
+        photoInput.setAttribute("aria-label", "Attach photos");
 
         var photoStatus = el("p", "mt-hint", "");
-        var pendingPhoto = null;
+        var pendingPhotos = [];
 
         photoInput.addEventListener("change", function () {
-            pendingPhoto = null;
-            photoStatus.textContent = "";
-            var file = photoInput.files && photoInput.files[0];
-            if (!file) return;
-            photoStatus.textContent = "Processing photo...";
-            downscalePhoto(file).then(function (dataUrl) {
-                pendingPhoto = dataUrl;
-                photoStatus.textContent = "Photo attached.";
+            pendingPhotos = [];
+            var files = photoInput.files ? Array.prototype.slice.call(photoInput.files) : [];
+            if (!files.length) {
+                photoStatus.textContent = "";
+                return;
+            }
+            photoStatus.textContent = "Processing " + files.length + " photo" + (files.length === 1 ? "" : "s") + "...";
+            Promise.all(files.map(downscalePhoto)).then(function (dataUrls) {
+                pendingPhotos = dataUrls;
+                photoStatus.textContent = dataUrls.length + " photo" + (dataUrls.length === 1 ? "" : "s") + " attached.";
             }).catch(function (err) {
-                photoStatus.textContent = err.message || "Could not attach that photo.";
+                photoStatus.textContent = err.message || "Could not attach one or more of those photos.";
             });
         });
 
@@ -311,7 +328,7 @@
                 date: dateInput.value || dateString(new Date()),
                 description: description,
                 source: sourceInput.value.trim(),
-                photo: pendingPhoto,
+                photos: pendingPhotos,
                 category: categoryKey,
                 created: Date.now()
             }]);
@@ -370,29 +387,6 @@
         statusField.appendChild(statusSelect);
         card.appendChild(statusField);
 
-        // Root cause: fishbone categories
-        var causeField = el("div", "nc-notes-field");
-        causeField.appendChild(el("span", "nc-notes-label", "Root Cause Category"));
-        var causeChecks = el("div", "nc-checks rca-cause-checks");
-        CAUSES.forEach(function (pair) {
-            var key = pair[0];
-            var label = el("label", "nc-check");
-            var input = document.createElement("input");
-            input.type = "checkbox";
-            input.checked = !!(c.causes && c.causes[key]);
-            input.addEventListener("change", function () {
-                var causes = {};
-                Object.keys(c.causes || {}).forEach(function (k) { causes[k] = c.causes[k]; });
-                causes[key] = input.checked;
-                updateCase(c.id, { causes: causes });
-            });
-            label.appendChild(input);
-            label.appendChild(document.createTextNode(pair[1]));
-            causeChecks.appendChild(label);
-        });
-        causeField.appendChild(causeChecks);
-        card.appendChild(causeField);
-
         // Root cause + corrective action text, saved on blur like New Customers' notes field
         [["rootCause", "Root Cause"], ["correctiveAction", "Corrective Action"]].forEach(function (pair) {
             var key = pair[0];
@@ -416,7 +410,7 @@
         });
 
         // Evidence pool: one section per fishbone category. Adding evidence to a category
-        // auto-flags its Root Cause Category checkbox/pill above (see buildAddEvidenceForm).
+        // auto-flags its category pill above (see buildAddEvidenceForm).
         var allEvidence = c.evidence || [];
         var evidenceSection = el("div", "rca-evidence");
         evidenceSection.appendChild(el("h4", "nc-notes-label", "Evidence (" + allEvidence.length + ")"));
@@ -593,7 +587,7 @@
     document.getElementById("rca-export").addEventListener("click", function () {
         var cases = load().sort(newest);
         var rows = [["Case", "Status", "Route", "Address", "Cause Categories", "Root Cause",
-            "Corrective Action", "Evidence Category", "Evidence Date", "Evidence Description", "Evidence Source", "Has Photo"]];
+            "Corrective Action", "Evidence Category", "Evidence Date", "Evidence Description", "Evidence Source", "Photo Count"]];
         cases.forEach(function (c) {
             var causeList = CAUSES.filter(function (p) { return c.causes && c.causes[p[0]]; }).map(function (p) { return p[1]; }).join("; ");
             var evidence = c.evidence || [];
@@ -602,7 +596,7 @@
             } else {
                 evidence.forEach(function (ev) {
                     rows.push([c.title, labelFor(STATUSES, c.status), c.route, c.address, causeList, c.rootCause, c.correctiveAction,
-                        ev.category ? causeLabel(ev.category) : "Uncategorized", ev.date, ev.description, ev.source, ev.photo ? "Yes" : "No"]);
+                        ev.category ? causeLabel(ev.category) : "Uncategorized", ev.date, ev.description, ev.source, photosFor(ev).length]);
                 });
             }
         });
@@ -731,21 +725,12 @@
         if (!evidence.length) {
             paragraph("No evidence logged.");
         } else {
-            evidence.forEach(function (ev, idx) {
+            evidence.forEach(function (ev) {
                 var headerText = prettyDate(ev.date) + "  ·  " + (ev.category ? causeLabel(ev.category) : "Uncategorized") +
                     (ev.source ? "  ·  " + ev.source : "");
                 var descLines = doc.splitTextToSize(ev.description || "", CONTENT_W - 12);
                 var textH = 14 + descLines.length * 12;
-                var imgDims = null;
-                if (ev.photo) {
-                    try {
-                        var props = doc.getImageProperties(ev.photo);
-                        var maxW = CONTENT_W - 12, maxH = 160;
-                        var scale = Math.min(maxW / props.width, maxH / props.height, 1);
-                        imgDims = { w: props.width * scale, h: props.height * scale };
-                    } catch (e) { imgDims = null; }
-                }
-                var blockH = textH + (imgDims ? imgDims.h + 8 : 0) + 14;
+                var blockH = textH + 14;
 
                 if (y + blockH > BOTTOM) { doc.addPage(); y = M; }
 
@@ -760,10 +745,21 @@
                 doc.setFontSize(9);
                 color("setTextColor", INK);
                 doc.text(descLines, M + 8, y + 28, { lineHeightFactor: 1.25 });
-                if (imgDims) {
-                    doc.addImage(ev.photo, "JPEG", M + 6, y + textH + 6, imgDims.w, imgDims.h);
-                }
                 y += blockH + 8;
+
+                // Each photo gets its own large, clear block of its own (not a cramped
+                // thumbnail wedged into the text box above), with its own page-break check
+                photosFor(ev).forEach(function (photoData) {
+                    try {
+                        var props = doc.getImageProperties(photoData);
+                        var maxW = CONTENT_W, maxH = 340;
+                        var scale = Math.min(maxW / props.width, maxH / props.height, 1);
+                        var w = props.width * scale, h = props.height * scale;
+                        if (y + h > BOTTOM) { doc.addPage(); y = M; }
+                        doc.addImage(photoData, "JPEG", M + (CONTENT_W - w) / 2, y, w, h);
+                        y += h + 10;
+                    } catch (e) { /* unreadable image: skip it rather than fail the whole report */ }
+                });
             });
         }
 
