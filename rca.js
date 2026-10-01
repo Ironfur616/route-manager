@@ -78,6 +78,13 @@
         return value;
     }
 
+    function causeLabel(key) {
+        for (var i = 0; i < CAUSES.length; i++) {
+            if (CAUSES[i][0] === key) return CAUSES[i][1];
+        }
+        return key || "";
+    }
+
     function fillSelect(select, options, placeholder) {
         select.textContent = "";
         if (placeholder) {
@@ -210,7 +217,9 @@
 
     function matchesSearch(c, term) {
         if (!term) return true;
-        var evidenceText = (c.evidence || []).map(function (ev) { return ev.description + " " + ev.source; }).join(" ");
+        var evidenceText = (c.evidence || []).map(function (ev) {
+            return ev.description + " " + ev.source + " " + causeLabel(ev.category);
+        }).join(" ");
         return [c.title, c.description, c.route, c.address, c.rootCause, c.correctiveAction, evidenceText]
             .join(" ").toLowerCase().indexOf(term) !== -1;
     }
@@ -245,9 +254,8 @@
         return item;
     }
 
-    function buildAddEvidenceForm(c) {
+    function buildAddEvidenceForm(c, categoryKey) {
         var wrap = el("div", "rca-add-evidence");
-        wrap.appendChild(el("h4", "nc-notes-label", "Add Evidence"));
 
         var dateInput = document.createElement("input");
         dateInput.type = "date";
@@ -304,9 +312,18 @@
                 description: description,
                 source: sourceInput.value.trim(),
                 photo: pendingPhoto,
+                category: categoryKey,
                 created: Date.now()
             }]);
-            updateCase(c.id, { evidence: evidence });
+            // Adding evidence to a category flags it the same way checking its Root Cause
+            // Category box would: once a category has supporting evidence, its pill shows.
+            // This only ever turns a category ON; removing evidence never un-flags it, since a
+            // conclusion already drawn from evidence shouldn't silently disappear because one
+            // piece of evidence (possibly among several) was deleted later.
+            var causes = {};
+            Object.keys(c.causes || {}).forEach(function (k) { causes[k] = c.causes[k]; });
+            causes[categoryKey] = true;
+            updateCase(c.id, { evidence: evidence, causes: causes });
         });
 
         wrap.appendChild(dateInput);
@@ -398,16 +415,49 @@
             card.appendChild(field);
         });
 
-        // Evidence pool
+        // Evidence pool: one section per fishbone category. Adding evidence to a category
+        // auto-flags its Root Cause Category checkbox/pill above (see buildAddEvidenceForm).
+        var allEvidence = c.evidence || [];
         var evidenceSection = el("div", "rca-evidence");
-        evidenceSection.appendChild(el("h4", "nc-notes-label", "Evidence (" + (c.evidence || []).length + ")"));
-        var evidenceList = el("div", "rca-evidence-list");
-        (c.evidence || []).slice().sort(function (a, b) {
+        evidenceSection.appendChild(el("h4", "nc-notes-label", "Evidence (" + allEvidence.length + ")"));
+
+        function byNewest(a, b) {
             return a.date < b.date ? 1 : a.date > b.date ? -1 : (b.created || 0) - (a.created || 0);
-        }).forEach(function (ev) { evidenceList.appendChild(buildEvidenceItem(c, ev)); });
-        if (!(c.evidence || []).length) evidenceList.appendChild(el("p", "mt-hint", "No evidence logged yet."));
-        evidenceSection.appendChild(evidenceList);
-        evidenceSection.appendChild(buildAddEvidenceForm(c));
+        }
+
+        CAUSES.forEach(function (pair) {
+            var key = pair[0], label = pair[1];
+            var catEvidence = allEvidence.filter(function (ev) { return ev.category === key; });
+
+            var sub = el("div", "rca-evidence-category");
+            var subHead = el("div", "rca-evidence-category-head");
+            subHead.appendChild(el("span", "rca-evidence-category-name", label));
+            subHead.appendChild(el("span", "rca-evidence-category-count", String(catEvidence.length)));
+            sub.appendChild(subHead);
+
+            var list = el("div", "rca-evidence-list");
+            catEvidence.slice().sort(byNewest).forEach(function (ev) { list.appendChild(buildEvidenceItem(c, ev)); });
+            if (!catEvidence.length) list.appendChild(el("p", "mt-hint", "No evidence yet."));
+            sub.appendChild(list);
+
+            sub.appendChild(buildAddEvidenceForm(c, key));
+            evidenceSection.appendChild(sub);
+        });
+
+        // Evidence saved before categories existed: kept visible rather than hidden/dropped
+        var uncategorized = allEvidence.filter(function (ev) { return !ev.category; });
+        if (uncategorized.length) {
+            var legacySub = el("div", "rca-evidence-category");
+            var legacyHead = el("div", "rca-evidence-category-head");
+            legacyHead.appendChild(el("span", "rca-evidence-category-name", "Uncategorized"));
+            legacyHead.appendChild(el("span", "rca-evidence-category-count", String(uncategorized.length)));
+            legacySub.appendChild(legacyHead);
+            var legacyList = el("div", "rca-evidence-list");
+            uncategorized.slice().sort(byNewest).forEach(function (ev) { legacyList.appendChild(buildEvidenceItem(c, ev)); });
+            legacySub.appendChild(legacyList);
+            evidenceSection.appendChild(legacySub);
+        }
+
         card.appendChild(evidenceSection);
 
         var actions = el("div", "mt-entry-actions");
@@ -543,16 +593,16 @@
     document.getElementById("rca-export").addEventListener("click", function () {
         var cases = load().sort(newest);
         var rows = [["Case", "Status", "Route", "Address", "Cause Categories", "Root Cause",
-            "Corrective Action", "Evidence Date", "Evidence Description", "Evidence Source", "Has Photo"]];
+            "Corrective Action", "Evidence Category", "Evidence Date", "Evidence Description", "Evidence Source", "Has Photo"]];
         cases.forEach(function (c) {
             var causeList = CAUSES.filter(function (p) { return c.causes && c.causes[p[0]]; }).map(function (p) { return p[1]; }).join("; ");
             var evidence = c.evidence || [];
             if (!evidence.length) {
-                rows.push([c.title, labelFor(STATUSES, c.status), c.route, c.address, causeList, c.rootCause, c.correctiveAction, "", "", "", ""]);
+                rows.push([c.title, labelFor(STATUSES, c.status), c.route, c.address, causeList, c.rootCause, c.correctiveAction, "", "", "", "", ""]);
             } else {
                 evidence.forEach(function (ev) {
                     rows.push([c.title, labelFor(STATUSES, c.status), c.route, c.address, causeList, c.rootCause, c.correctiveAction,
-                        ev.date, ev.description, ev.source, ev.photo ? "Yes" : "No"]);
+                        ev.category ? causeLabel(ev.category) : "Uncategorized", ev.date, ev.description, ev.source, ev.photo ? "Yes" : "No"]);
                 });
             }
         });
@@ -682,7 +732,8 @@
             paragraph("No evidence logged.");
         } else {
             evidence.forEach(function (ev, idx) {
-                var headerText = prettyDate(ev.date) + (ev.source ? "  ·  " + ev.source : "");
+                var headerText = prettyDate(ev.date) + "  ·  " + (ev.category ? causeLabel(ev.category) : "Uncategorized") +
+                    (ev.source ? "  ·  " + ev.source : "");
                 var descLines = doc.splitTextToSize(ev.description || "", CONTENT_W - 12);
                 var textH = 14 + descLines.length * 12;
                 var imgDims = null;

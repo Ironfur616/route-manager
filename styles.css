@@ -1718,3 +1718,39 @@ body.shell {
 .rca-add-evidence input[type="file"] {
     font-size: 0.85rem;
 }
+
+/* Evidence is grouped into one section per fishbone category. Adding evidence here flags the
+   matching Root Cause Category checkbox/pill above automatically (see rca.js). */
+.rca-evidence-category {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.625rem;
+    border: 1px solid rgba(4, 57, 96, 0.15);
+    border-radius: 4px;
+}
+
+.rca-evidence-category-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rca-evidence-category-name {
+    color: var(--deep-navy);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.rca-evidence-category-count {
+    min-width: 1.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background-color: rgba(4, 57, 96, 0.08);
+    color: var(--deep-navy);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+}
