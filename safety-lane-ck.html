@@ -26,7 +26,7 @@
 <body>
     
     <section class="emp-info-section">
-        <form class="emp-info" data-title="Safety Lane Check">
+        <form class="emp-info" data-title="Safety Lane Check" data-no-om-signature>
             <fieldset class="emp-fields">
                 <legend>INFORMATION</legend>
 
@@ -222,8 +222,8 @@
                 <legend>SIGNATURES</legend>
 
                 <div class="field">
-                    <label for="observer-name">Driver Name</label>
-                    <input type="text" id="driver-name" name="driver-name" autocomplete="off">
+                    <label for="driver-name-sig">Driver Name</label>
+                    <input type="text" id="driver-name-sig" name="driver-name-sig" data-mirror="emp-name" readonly>
                 </div>
 
                 <div class="signature-field" data-signature>
@@ -235,7 +235,7 @@
 
                 <div class="field">
                     <label for="employee-name-sig">Inspector Name</label>
-                    <input type="text" id="employee-name-sig" name="employee-name-sig" data-mirror="emp-name" readonly>
+                    <input type="text" id="employee-name-sig" name="employee-name-sig" autocomplete="off">
                 </div>
 
                 <div class="signature-field" data-signature>

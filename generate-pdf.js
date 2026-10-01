@@ -97,6 +97,39 @@
         return sections;
     }
 
+    /* Pull the signers out of the SIGNATURES fieldset generically: whatever .field inputs
+       (Name, and Date/Time where the form has them) sit before a given signature pad belong
+       to that signer. This lets a leaner form like Safety Lane Check - Name only, no Date/Time
+       rows - print correctly without the PDF needing to know which form it's on. */
+    function readSigners() {
+        var fieldsets = document.querySelectorAll("form.emp-info fieldset");
+        var sigFieldset = Array.prototype.filter.call(fieldsets, function (fs) {
+            return fs.querySelector("[data-signature]");
+        })[0];
+        if (!sigFieldset) return [];
+
+        var signers = [];
+        var pending = [];
+        Array.prototype.forEach.call(sigFieldset.children, function (child) {
+            if (child.classList.contains("field")) {
+                var input = child.querySelector("input, textarea");
+                if (!input) return;
+                var v = input.value.trim();
+                pending.push(input.type === "date" ? fmtDate(v) : input.type === "time" ? fmtTime(v) : v);
+            } else if (child.classList.contains("signature-field")) {
+                var titleLabel = child.querySelector("label");
+                var hidden = child.querySelector('input[type="hidden"]');
+                signers.push({
+                    title: titleLabel ? titleLabel.textContent.trim() : "Signature",
+                    values: pending,
+                    sigName: hidden ? hidden.name : ""
+                });
+                pending = [];
+            }
+        });
+        return signers;
+    }
+
     function build(jsPDF, logo) {
         var doc = new jsPDF({ unit: "pt", format: "letter" });
         var y = M;
@@ -127,12 +160,19 @@
         doc.rect(M, y, CONTENT_W, 2, "F");
         y += 8;
 
-        /* ---- Employee information ---- */
+        /* ---- Employee information ----
+           Only fields that actually exist on the current form are shown, so a leaner form
+           (e.g. Safety Lane Check has no Time/Location of Observation) doesn't print blank rows. */
         var GAP = 16;
-        var fields = [
-            [["Name", val("emp-name")], ["Date of Observation", fmtDate(val("obs-date"))], ["Time of Observation", fmtTime(val("obs-time"))]],
-            [["Location of Observation", val("obs-location")], ["Unit Type & Number", val("unit")]]
-        ];
+        var ROW_SIZE = 3;
+        var allFields = [["Name", val("emp-name")]];
+        if (document.getElementById("obs-date")) allFields.push(["Date of Observation", fmtDate(val("obs-date"))]);
+        if (document.getElementById("obs-time")) allFields.push(["Time of Observation", fmtTime(val("obs-time"))]);
+        if (document.getElementById("obs-location")) allFields.push(["Location of Observation", val("obs-location")]);
+        if (document.getElementById("unit")) allFields.push(["Unit Type & Number", val("unit")]);
+        var fields = [];
+        for (var fi = 0; fi < allFields.length; fi += ROW_SIZE) fields.push(allFields.slice(fi, fi + ROW_SIZE));
+
         // Trainee form only: Driver / Helper and the training period
         var roleEl = document.querySelector('input[name="role"]:checked');
         var periodEl = document.getElementById("training-period");
@@ -169,7 +209,10 @@
         });
         y += infoH + 8;
 
-        /* ---- Key with totals ---- */
+        /* ---- Key with totals ----
+           The column symbols (and what they mean) come from the form's own practice-head row,
+           so Safety Lane Check's Pass/Fail/N-A reads correctly instead of the observation
+           forms' Safe/At-Risk/Not-Observed wording. */
         var totals = { safe: 0, risk: 0, na: 0 };
         sections.forEach(function (s) {
             s.rows.forEach(function (r) {
@@ -178,16 +221,21 @@
                 if (r.na) totals.na++;
             });
         });
+        var headEl = document.querySelector("form.emp-info .practice-head");
+        var HEADERS = headEl
+            ? Array.prototype.map.call(headEl.querySelectorAll("span"), function (s) { return s.textContent.trim(); })
+            : ["+", "−", "N/O"];
+        var KEY_LABELS = { "+": "Safe", "−": "At Risk", "–": "At Risk", "-": "At Risk", "N/O": "Not Observed", "P": "Pass", "F": "Fail", "N/A": "N/A" };
         var keys = [
-            ["+", "Safe", totals.safe],
-            ["–", "At Risk", totals.risk],
-            ["N/O", "Not Observed", totals.na]
+            [HEADERS[0], KEY_LABELS[HEADERS[0]] || HEADERS[0], totals.safe],
+            [HEADERS[1], KEY_LABELS[HEADERS[1]] || HEADERS[1], totals.risk],
+            [HEADERS[2], KEY_LABELS[HEADERS[2]] || HEADERS[2], totals.na]
         ];
         var kx = M;
         keys.forEach(function (k) {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(7);
-            var badgeW = k[0] === "N/O" ? 18 : 12;
+            var badgeW = k[0].length > 1 ? 18 : 12;
             color("setDrawColor", NAVY);
             doc.setLineWidth(0.8);
             doc.roundedRect(kx, y, badgeW, 11, 2, 2, "S");
@@ -214,7 +262,7 @@
             doc.setFont("helvetica", "bold");
             doc.setFontSize(7);
             color("setTextColor", [255, 255, 255]);
-            ["+", "–", "N/O"].forEach(function (h, i) {
+            HEADERS.forEach(function (h, i) {
                 doc.text(h, M + i * BOX_STEP + BOX_STEP / 2, y + 9.5, { align: "center" });
             });
             doc.setFontSize(8);
@@ -342,16 +390,14 @@
         var SIG_H = 78;
         ensure(SIG_H + 14);
         var sigW = (CONTENT_W - 18) / 2;
-        var signers = [
-            ["Observer", val("observer-name"), val("observer-date"), val("observer-time"), "sig-observer"],
-            ["Employee", val("employee-name-sig"), val("employee-date"), val("employee-time"), "sig-employee"]
-        ];
+        var DETAIL_LABELS = ["Printed Name", "Date", "Time"];
+        var signers = readSigners();
         signers.forEach(function (s, i) {
             var sx = M + i * (sigW + 18);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(6.5);
             color("setTextColor", NAVY);
-            doc.text((s[0] + " Signature").toUpperCase(), sx, y + 6);
+            doc.text(s.title.toUpperCase(), sx, y + 6);
 
             var boxY = y + 9;
             var boxH = 34;
@@ -359,7 +405,7 @@
             doc.setLineWidth(0.6);
             doc.rect(sx, boxY, sigW, boxH, "S");
 
-            var data = (document.querySelector('input[name="' + s[4] + '"]') || {}).value;
+            var data = (document.querySelector('input[name="' + s.sigName + '"]') || {}).value;
             if (data) {
                 var p = doc.getImageProperties(data);
                 var scale = Math.min((sigW - 10) / p.width, (boxH - 6) / p.height);
@@ -371,21 +417,16 @@
             doc.setLineWidth(0.6);
             doc.line(sx + 4, boxY + boxH - 7, sx + sigW - 4, boxY + boxH - 7);
 
-            var detail = [
-                ["Printed Name", s[1]],
-                ["Date", fmtDate(s[2])],
-                ["Time", fmtTime(s[3])]
-            ];
             var dy = boxY + boxH + 4;
-            detail.forEach(function (d, di) {
+            s.values.forEach(function (v, di) {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(6);
                 color("setTextColor", GRAY);
-                doc.text(d[0].toUpperCase(), sx, dy + 6 + di * 9.5);
+                doc.text((DETAIL_LABELS[di] || "").toUpperCase(), sx, dy + 6 + di * 9.5);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(8);
                 color("setTextColor", INK);
-                doc.text(d[1] || "", sx + 52, dy + 6 + di * 9.5);
+                doc.text(v || "", sx + 52, dy + 6 + di * 9.5);
             });
         });
 
@@ -394,26 +435,30 @@
 
         /* ---- OM/GM review: blank lines, signed by hand on the printed copy ----
            Sits at the bottom of the page, but slides down (into the footer margin) if the
-           signatures ran long, so it only moves to a new page when it truly can't fit. */
-        var OM_LINE_MIN = y + 14;
-        var OM_LINE_MAX = PAGE_H - 40;
-        var lineY = BOTTOM - 10;
-        if (OM_LINE_MIN > OM_LINE_MAX) {
-            doc.addPage();
-        } else if (OM_LINE_MIN > lineY) {
-            lineY = OM_LINE_MIN;
+           signatures ran long, so it only moves to a new page when it truly can't fit.
+           A form opts out with data-no-om-signature when it already carries all the sign-off
+           it needs (Safety Lane Check has its own digital Driver + Inspector signatures). */
+        if (!formEl || !formEl.hasAttribute("data-no-om-signature")) {
+            var OM_LINE_MIN = y + 14;
+            var OM_LINE_MAX = PAGE_H - 40;
+            var lineY = BOTTOM - 10;
+            if (OM_LINE_MIN > OM_LINE_MAX) {
+                doc.addPage();
+            } else if (OM_LINE_MIN > lineY) {
+                lineY = OM_LINE_MIN;
+            }
+            var dateW = 90;
+            var omSigW = CONTENT_W - dateW - 18;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(6.5);
+            color("setTextColor", NAVY);
+            doc.text("OM / GM SIGNATURE", M, lineY + 8);
+            doc.text("DATE", M + omSigW + 18, lineY + 8);
+            color("setDrawColor", NAVY);
+            doc.setLineWidth(0.6);
+            doc.line(M, lineY, M + omSigW, lineY);
+            doc.line(M + omSigW + 18, lineY, M + CONTENT_W, lineY);
         }
-        var dateW = 90;
-        var omSigW = CONTENT_W - dateW - 18;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6.5);
-        color("setTextColor", NAVY);
-        doc.text("OM / GM SIGNATURE", M, lineY + 8);
-        doc.text("DATE", M + omSigW + 18, lineY + 8);
-        color("setDrawColor", NAVY);
-        doc.setLineWidth(0.6);
-        doc.line(M, lineY, M + omSigW, lineY);
-        doc.line(M + omSigW + 18, lineY, M + CONTENT_W, lineY);
 
         /* ---- Footer on every page ---- */
         var pages = doc.getNumberOfPages();
