@@ -1,7 +1,7 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v45";
+var CACHE_NAME = "fleet-mgr-v46";
 
 var PRECACHE_URLS = [
     "./",
@@ -11,7 +11,7 @@ var PRECACHE_URLS = [
     "./resi-trainee.html",
     "./com-driver.html",
     "./com-trainee.html",
-    "./safety-lane.html",
+    "./safety-lane-ck.html",
     "./missed-tracker.html",
     "./missed-tracker.js",
     "./new-customers.html",
