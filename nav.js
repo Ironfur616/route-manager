@@ -52,6 +52,7 @@
                 '<ul class="nav-link-list">' +
                     link("missed-tracker.html", "Missed Collections") +
                     link("new-customers.html", "New Customers") +
+                    link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
         "</nav>" +

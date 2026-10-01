@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>Bulk Pickup Requests · Earthwise Route IQ</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section">
+        <form class="emp-info" id="bp-form" data-title="Bulk Pickup Request">
+            <fieldset class="emp-fields">
+                <legend id="bp-form-title">ADD BULK PICKUP REQUEST</legend>
+
+                <div class="field field-wide">
+                    <label for="bp-address">Customer Address</label>
+                    <input type="text" id="bp-address" name="address" list="dl-bp-address" autocomplete="off" required>
+                </div>
+
+                <div class="field">
+                    <label for="bp-route">Route Number</label>
+                    <input type="text" id="bp-route" name="route" list="dl-bp-route" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="bp-driver">Driver</label>
+                    <input type="text" id="bp-driver" name="driver" list="dl-bp-driver" autocomplete="off">
+                </div>
+
+                <div class="field">
+                    <label for="bp-date">Scheduled Pickup Date</label>
+                    <input type="date" id="bp-date" name="pickupDate" required>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="bp-items">Items / Description</label>
+                    <textarea id="bp-items" name="items" rows="2"></textarea>
+                </div>
+            </fieldset>
+
+            <datalist id="dl-bp-address"></datalist>
+            <datalist id="dl-bp-route"></datalist>
+            <datalist id="dl-bp-driver"></datalist>
+
+            <div class="form-actions">
+                <button type="button" class="send-email" id="bp-cancel" hidden>Cancel</button>
+                <button type="submit" class="generate-pdf" id="bp-submit">Save Entry</button>
+            </div>
+            <p class="mt-message" id="bp-message" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>BULK PICKUP REQUESTS</legend>
+
+                <div class="mt-filters nc-filters">
+                    <div class="field">
+                        <label for="bp-search">Search</label>
+                        <input type="search" id="bp-search" placeholder="Address, route, driver, items, notes" autocomplete="off">
+                    </div>
+                </div>
+
+                <p class="mt-count" id="bp-count" aria-live="polite"></p>
+                <div class="mt-list" id="bp-list"></div>
+
+                <details class="nc-established">
+                    <summary>Completed Pickups (<span id="stat-completed">0</span>)</summary>
+                    <div class="mt-list" id="bp-completed-list"></div>
+                </details>
+
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="bp-export">Export CSV</button>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+
+    <script src="bulk-pickup.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>

@@ -1778,3 +1778,13 @@ body.shell {
     font-weight: 700;
     text-align: center;
 }
+
+
+/* ---------- Bulk Pickup Requests ---------- */
+/* Reuses the Missed Collections/New Customers card and list classes. No status colors here -
+   just plain cards (resetting .mt-entry's default red left bar, which is meant to mean
+   "unresolved" on Missed Collections and would be a misleading alarm color here) split between
+   the main list (upcoming) and the Completed Pickups disclosure once the date has passed. */
+.bp-entry {
+    border-left: 1px solid rgba(4, 57, 96, 0.2);
+}
