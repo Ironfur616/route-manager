@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+    (function () {
+        try {
+            if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                document.documentElement.classList.add("pin-locked");
+            }
+        } catch (e) {
+            document.documentElement.classList.add("pin-locked");
+        }
+    })();
+</script>
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#046635">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Route IQ">
+<title>Safety Lane Check · Earthwise Route IQ</title>
+
+<body>
+    
+    <section class="emp-info-section">
+        <form class="emp-info" data-title="Residential Driver Observation">
+            <fieldset class="emp-fields">
+                <legend>INFORMATION</legend>
+
+                <div class="field field-wide">
+                    <label for="emp-name">Driver Name:</label>
+                    <input type="text" id="emp-name" name="emp-name" autocomplete="off" required>
+                </div>
+
+                <div class="field">
+                    <label for="obs-date">Date:</label>
+                    <input type="date" id="obs-date" name="obs-date">
+                </div>
+
+                <div class="field">
+                    <label for="unit">Truck:  &amp; Number</label>
+                    <input type="text" id="unit" name="unit" autocomplete="off">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>Inspection Areas</legend>
+
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-1" value="pass" aria-label="CDL on person / valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-1" value="fail" aria-label="CDL on person / valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-1" value="n/a" aria-label="CDL on person / valid: N/A"></label>
+                        <span class="inspection-text">CDL on person / valid</span>
+                    </div>
+
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-2" value="pass" aria-label="Medical Card Current: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-2" value="fail" aria-label="Medical Card Current: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-2" value="n/a" aria-label="Medical Card Current: N/A"></label>
+                        <span class="inspection-text">Medical Card Current</span>
+                    </div>
+
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-3" value="pass" aria-label="Truck Paperwork Current & Valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-3" value="fail" aria-label="Truck Paperwork Current & Valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-3" value="n/a" aria-label="Truck Paperwork Current & Valid: N/A"></label>
+                        <span class="inspection-text">Truck Paperwork Current & Valid</span>
+                    </div>
+
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-4" value="pass" aria-label="Inspection Sticker - Up to Date / Valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-4" value="fail" aria-label="Inspection Sticker - Up to Date / Valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-4" value="n/a" aria-label="Inspection Sticker - Up to Date / Valid: N/A"></label>
+                        <span class="inspection-text">Inspection Sticker - up to date</span>
+                    </div>
+
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-5" value="pass" aria-label="Cab Condition - Clean / Valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-5" value="fail" aria-label="Cab Condition - Clean / Valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-5" value="n/a" aria-label="Cab Condition - Clean / Valid: N/A"></label>
+                        <span class="inspection-text">Cab Condition - Clean</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-6" value="pass" aria-label="License Plate / Valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-6" value="fail" aria-label="License Plate / Valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-6" value="n/a" aria-label="License Plate / Valid: N/A"></label>
+                        <span class="inspection-text">License Plate</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-7" value="pass" aria-label="Emergency Equipment - Triangles / Valid: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-7" value="fail" aria-label="Emergency Equipment - Triangles / Valid: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-7" value="n/a" aria-label="Emergency Equipment - Triangles / Valid: N/A"></label>
+                        <span class="practice-text">Emergency Equipment - Triangles</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-8" value="pass" aria-label="Emergency Equipment - Spill Kit: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-8" value="fail" aria-label="Emergency Equipment - Spill Kit: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-8" value="n/a" aria-label="Emergency Equipment - Spill Kit: N/A"></label>
+                        <span class="inspection-text">Emergency Equipment - Spill Kit</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-9" value="pass" aria-label="Emergency Equipment - First Aid Kit: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-9" value="fail" aria-label="Emergency Equipment - First Aid Kit: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-9" value="n/a" aria-label="Emergency Equipment - First Aid Kit: N/A"></label>
+                        <span class="inspection-text">Emergency Equipment - First Aid Kit</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-10" value="pass" aria-label="DVIR Pre/Post Trip Completed: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-10" value="fail" aria-label="DVIR Pre/Post Trip Completed: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-10" value="n/a" aria-label="DVIR Pre/Post Trip Completed: N/A"></label>
+                        <span class="inspection-text">DVIR Pre/Post Trip Completed</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-11" value="pass" aria-label="Tire Condition: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-11" value="fail" aria-label="Tire Condition: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-11" value="n/a" aria-label="Tire Condition: N/A"></label>
+                        <span class="inspection-text">Tire Condition</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-12" value="pass" aria-label="Steer Tire Hub Oil Level: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-12" value="fail" aria-label="Steer Tire Hub Oil Level: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-12" value="n/a" aria-label="Steer Tire Hub Oil Level: N/A"></label>
+                        <span class="inspection-text">Steer Tire Hub Oil Level</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-13" value="pass" aria-label="All Oil Levels: Engine & Transmission: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-13" value="fail" aria-label="All Oil Levels: Engine & Transmission: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-13" value="n/a" aria-label="All Oil Levels: Engine & Transmission: N/A"></label>
+                        <span class="inspection-text">All Oil Levels: Engine & Transmission</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-14" value="pass" aria-label="Frame Damage: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-14" value="fail" aria-label="Frame Damage: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-14" value="n/a" aria-label="Frame Damage: N/A"></label>
+                        <span class="inspection-text">Frame Damage</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-15" value="pass" aria-label="Lights: Brake, 4-Way Flashers, Strobe: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-15" value="fail" aria-label="Lights: Brake, 4-Way Flashers, Strobe: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-15" value="n/a" aria-label="Lights: Brake, 4-Way Flashers, Strobe: N/A"></label>
+                        <span class="inspection-text">Lights: Brake, 4-Way Flashers, Strobe</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-16" value="pass" aria-label="Back-up Alarm Working: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-16" value="fail" aria-label="Back-up Alarm Working: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-16" value="n/a" aria-label="Back-up Alarm Working: N/A"></label>
+                        <span class="inspection-text">Back-up Alarm Working</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-17" value="pass" aria-label="Windows - Clean / Not Broken: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-17" value="fail" aria-label="Windows - Clean / Not Broken: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-17" value="n/a" aria-label="Windows - Clean / Not Broken: N/A"></label>
+                        <span class="inspection-text">Windows - Clean / Not Broken</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-18" value="pass" aria-label="Mirrors - Clean / Not Broken, Damaged or Missing: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-18" value="fail" aria-label="Mirrors - Clean / Not Broken, Damaged or Missing: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-18" value="n/a" aria-label="Mirrors - Clean / Not Broken, Damaged or Missing: N/A"></label>
+                        <span class="inspection-text">Mirrors - Clean / Not Broken, Damaged or Missing</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-19" value="pass" aria-label="No Audible Air Leaks: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-19" value="fail" aria-label="No Audible Air Leaks: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-19" value="n/a" aria-label="No Audible Air Leaks: N/A"></label>
+                        <span class="inspection-text">No Audible Air Leaks</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-20" value="pass" aria-label="Behind the Blade - Clean: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-20" value="fail" aria-label="Behind the Blade - Clean: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-20" value="n/a" aria-label="Behind the Blade - Clean: N/A"></label>
+                        <span class="inspection-text">Behind the Blade - Clean</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-21" value="pass" aria-label="Tail Gate Seal - Not Leaking: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-21" value="fail" aria-label="Tail Gate Seal - Not Leaking: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-21" value="n/a" aria-label="Tail Gate Seal - Not Leaking: N/A"></label>
+                        <span class="inspection-text">Tail Gate Seal - Not Leaking</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-22" value="pass" aria-label="CC Bar: Secured, Not Broken or Missing: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-22" value="fail" aria-label="CC Bar: Secured, Not Broken or Missing: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-22" value="n/a" aria-label="CC Bar: Secured, Not Broken or Missing: N/A"></label>
+                        <span class="inspection-text">CC Bar: Secured, Not Broken or Missing</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-23" value="pass" aria-label="Roll-off Straps: Good Condition, Not Ripped, Torn or Frayed: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-23" value="fail" aria-label="Roll-off Straps: Good Condition, Not Ripped, Torn or Frayed: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-23" value="n/a" aria-label="Roll-off Straps: Good Condition, Not Ripped, Torn or Frayed: N/A"></label>
+                        <span class="inspection-text">Roll-off Straps: Good Condition, Not Ripped, Torn or Frayed</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-24" value="pass" aria-label="Roll-off Cable: Properly Secured, Not Damaged or Broken: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-24" value="fail" aria-label="Roll-off Cable: Properly Secured, Not Damaged or Broken: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-24" value="n/a" aria-label="Roll-off Cable: Properly Secured, Not Damaged or Broken: N/A"></label>
+                        <span class="inspection-text">Roll-off Cable: Properly Secured, Not Damaged or Broken</span>
+                    </div>
+                    <div class="inspection">
+                        <label class="check"><input type="checkbox" name="inspection-area-25" value="pass" aria-label="Fuel Level: Pass"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-25" value="fail" aria-label="Fuel Level: Fail"></label>
+                        <label class="check"><input type="checkbox" name="inspection-area-25" value="n/a" aria-label="Fuel Level: N/A"></label>
+                        <span class="inspection-text">Fuel Level</span>
+                    </div>
+                </div>
+            <fieldset>
+                <legend>Comments</legend>
+                <div class="field">
+                    <label for="comments" class="visually-hidden">Comments</label>
+                    <textarea id="comments" name="comments" rows="6" Placeholder="If None enter N/A"></textarea>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>SIGNATURES</legend>
+
+                <div class="field">
+                    <label for="observer-name">Driver Name</label>
+                    <input type="text" id="driver-name" name="driver-name" autocomplete="off">
+                </div>
+
+                <div class="signature-field" data-signature>
+                    <label id="sig-observer-label">Driver Signature</label>
+                    <canvas class="signature-pad" role="img" aria-labelledby="sig-observer-label"></canvas>
+                    <input type="hidden" name="sig-observer">
+                    <button type="button" class="signature-clear">Clear</button>
+                </div>
+
+                <div class="field">
+                    <label for="employee-name-sig">Inspector Name</label>
+                    <input type="text" id="employee-name-sig" name="employee-name-sig" data-mirror="emp-name" readonly>
+                </div>
+
+                <div class="signature-field" data-signature>
+                    <label id="sig-employee-label">Inspector Signature</label>
+                    <canvas class="signature-pad" role="img" aria-labelledby="sig-employee-label"></canvas>
+                    <input type="hidden" name="sig-employee">
+                    <button type="button" class="signature-clear">Clear</button>
+                </div>
+            </fieldset>
+            <div class="form-actions">
+                <button type="button" class="generate-pdf" id="generate-pdf">Save Form</button>
+            </div>
+        </form>
+
+    </section>
+    <script src="signature-pad.js" defer></script>
+    <script src="jspdf.umd.min.js" defer></script>
+    <script src="generate-pdf.js" defer></script>
+    <script src="pin-lock.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+
+</html>
