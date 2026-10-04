@@ -8,12 +8,10 @@
         return '<li><a href="' + href + '">' + label + "</a></li>";
     }
 
-    function subsection(id, title, links) {
-        return '<div class="nav-subsection">' +
-            '<h3><button type="button" class="nav-subsection-title" aria-expanded="false" aria-controls="' + id + '">' +
-            title + '<span class="nav-caret" aria-hidden="true"></span></button></h3>' +
-            '<div class="nav-subsection-body" id="' + id + '"><div class="nav-subsection-body-inner">' +
-            '<ul class="nav-link-list">' + links.join("") + "</ul></div></div></div>";
+    // A plain divider within a link list (e.g. "Residential" above the residential forms) -
+    // not a button, nothing to expand, just groups related links visually.
+    function groupLabel(text) {
+        return '<li class="nav-group-label" role="presentation">' + text + "</li>";
     }
 
     function section(id, title, content) {
@@ -37,15 +35,15 @@
                 '<button type="button" class="nav-close" id="nav-close" aria-label="Close menu">&times;</button>' +
             "</div>" +
             section("panel-observations", "Observations",
-                subsection("panel-residential", "Residential", [
-                    link("resi-driver.html", "Residential Driver"),
-                    link("resi-helper.html", "Residential Helper"),
-                    link("resi-trainee.html", "Residential Trainee")
-                ]) +
-                subsection("panel-commercial", "Commercial", [
-                    link("com-driver.html", "Commercial Driver"),
-                    link("com-trainee.html", "Commercial Trainee")
-                ])) +
+                '<ul class="nav-link-list">' +
+                    groupLabel("Residential") +
+                    link("resi-driver.html", "Residential Driver") +
+                    link("resi-helper.html", "Residential Helper") +
+                    link("resi-trainee.html", "Residential Trainee") +
+                    groupLabel("Commercial") +
+                    link("com-driver.html", "Commercial Driver") +
+                    link("com-trainee.html", "Commercial Trainee") +
+                "</ul>") +
             section("panel-safety", "Safety",
                 '<ul class="nav-link-list">' + link("safety-lane-ck.html", "Safety Lane") + "</ul>") +
             section("panel-route-management", "Route Management",
@@ -55,6 +53,7 @@
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
+            '<div class="site-nav-footer" id="site-nav-footer"></div>' +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 
@@ -129,8 +128,8 @@
 (function () {
     "use strict";
 
-    var nav = document.getElementById("site-nav");
-    if (!nav) {
+    var footer = document.getElementById("site-nav-footer");
+    if (!footer) {
         return;
     }
 
@@ -140,7 +139,7 @@
         '<h2 class="nav-section-plain">Saved Files</h2>' +
         '<button type="button" class="nav-action" id="open-saved-pdfs">Open Saved PDFs</button>' +
         '<p class="nav-action-hint">Browse to the folder your PDFs were saved to (usually Downloads) and pick one to view it.</p>';
-    nav.appendChild(section);
+    footer.appendChild(section);
 
     var input = document.createElement("input");
     input.type = "file";
@@ -185,13 +184,13 @@
     });
 })();
 
-// Collapsible Observations section + Residential/Commercial subsections.
-// Each heading is a button (aria-expanded/aria-controls) toggling the
-// .is-open class on its panel; styles.css animates the height.
+// Collapsible nav sections (Observations, Safety, Route Management). Each heading is a
+// button (aria-expanded/aria-controls) toggling the .is-open class on its panel;
+// styles.css animates the height.
 (function () {
     "use strict";
 
-    var toggles = document.querySelectorAll(".nav-section-title, .nav-subsection-title");
+    var toggles = document.querySelectorAll(".nav-section-title");
 
     toggles.forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -212,8 +211,8 @@
 (function () {
     "use strict";
 
-    var nav = document.getElementById("site-nav");
-    if (!nav) {
+    var footer = document.getElementById("site-nav-footer");
+    if (!footer) {
         return;
     }
 
@@ -223,7 +222,7 @@
         '<h2 class="nav-section-plain">Account</h2>' +
         '<p class="nav-action-hint" id="account-email"></p>' +
         '<button type="button" class="nav-action" id="sign-out">Sign Out</button>';
-    nav.appendChild(section);
+    footer.appendChild(section);
 
     var emailEl = document.getElementById("account-email");
     var signOutBtn = document.getElementById("sign-out");

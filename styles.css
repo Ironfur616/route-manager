@@ -222,31 +222,26 @@ body {
 
 /* Smooth height animation without measuring in JS: the grid row goes from
    0fr (collapsed) to 1fr (open), and the inner wrapper clips overflow. */
-.nav-section-body,
-.nav-subsection-body {
+.nav-section-body {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.25s ease;
 }
 
-.nav-section-body.is-open,
-.nav-subsection-body.is-open {
+.nav-section-body.is-open {
     grid-template-rows: 1fr;
 }
 
-.nav-section-body-inner,
-.nav-subsection-body-inner {
+.nav-section-body-inner {
     overflow: hidden;
     min-height: 0;
 }
 
-.nav-subsection + .nav-subsection {
-    margin-top: 0;
-}
-
-.nav-subsection-title {
-    margin: 0;
-    min-height: 36px;
+/* Non-interactive divider within a link list, grouping related links
+   (e.g. "Residential" above the residential forms) without an extra
+   expand/collapse level. */
+.nav-group-label {
+    margin-top: 0.5rem;
     padding: 0 0.25rem;
     color: var(--forest-green);
     font-size: 0.8rem;
@@ -255,16 +250,19 @@ body {
     letter-spacing: 0.04em;
 }
 
-/* Reusable link-list look: used both for a subsection's links (Residential,
-   Commercial) and for links sitting directly in a section with no
-   subsection layer (e.g. Safety > Safety Lane). */
+.nav-group-label:first-child {
+    margin-top: 0;
+}
+
+/* Reusable link-list look: links sitting directly in a section, optionally
+   grouped by .nav-group-label dividers (e.g. Observations > Residential/Commercial). */
 .nav-link-list {
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.nav-link-list li + li {
+.nav-link-list li:not(.nav-group-label) + li:not(.nav-group-label) {
     border-top: 1px solid rgba(4, 57, 96, 0.1);
 }
 
@@ -294,7 +292,21 @@ body {
     color: var(--white);
 }
 
-/* Saved PDFs: a plain (non-collapsible) section holding one action button */
+/* Drawer footer: app-level actions (Saved Files, Account) rather than navigation, so it's
+   set apart from the nav sections above with its own background and a stronger divider -
+   otherwise it reads as just another section and gets lost among the real nav links. */
+.site-nav-footer {
+    margin-top: 0.5rem;
+    padding: 0.75rem 0;
+    background-color: rgba(4, 57, 96, 0.04);
+    border-top: 1px solid rgba(4, 57, 96, 0.15);
+}
+
+.site-nav-footer .nav-section + .nav-section {
+    margin-top: 1rem;
+}
+
+/* A plain (non-collapsible) section within the footer, holding one action button */
 .nav-section-plain {
     margin: 0 0 0.75rem;
     padding: 0 0 0.5rem;
