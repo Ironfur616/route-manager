@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Start permissive-but-gated: any signed-in user can read/write. Tighten this once
+    // roles exist (e.g. only the submitting driver + route managers can read a given entry).
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
