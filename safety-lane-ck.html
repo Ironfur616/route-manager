@@ -26,7 +26,7 @@
 <body>
     
     <section class="emp-info-section">
-        <form class="emp-info" data-title="Safety Lane Check" data-no-om-signature>
+        <form class="emp-info" data-title="Safety Lane Check" data-no-om-signature data-pdf-fields="emp-name obs-date unit">
             <fieldset class="emp-fields">
                 <legend>INFORMATION</legend>
 
@@ -50,9 +50,9 @@
 
                 <div class="practices">
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>P</span>
-                        <span>F</span>
-                        <span>N/A</span>
+                        <span data-label="Pass">P</span>
+                        <span data-label="Fail">F</span>
+                        <span data-label="N/A">N/A</span>
                     </div>
 
                     <div class="practice">
@@ -226,7 +226,7 @@
                     <input type="text" id="driver-name-sig" name="driver-name-sig" data-mirror="emp-name" readonly>
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Driver Signature">
                     <label id="sig-observer-label">Driver Signature</label>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-observer-label"></canvas>
                     <input type="hidden" name="sig-observer">
@@ -238,7 +238,7 @@
                     <input type="text" id="employee-name-sig" name="employee-name-sig" autocomplete="off">
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Inspector Signature">
                     <label id="sig-employee-label">Inspector Signature</label>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-employee-label"></canvas>
                     <input type="hidden" name="sig-employee">

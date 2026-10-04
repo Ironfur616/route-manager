@@ -42,6 +42,17 @@
         return text || fallback;
     }
 
+    // Reads a field's value formatted for its own input type, so a form doesn't have to
+    // name a field "obs-date" just to get date formatting - any <input type="date"> does.
+    function fieldValue(id) {
+        var el = document.getElementById(id);
+        if (!el) return null;
+        if (el.type === "date") return fmtDate(el.value.trim());
+        if (el.type === "time") return fmtTime(el.value.trim());
+        if (el.tagName === "SELECT") return (el.options[el.selectedIndex] || {}).text || "";
+        return el.value.trim();
+    }
+
     function fmtDate(v) {
         var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
         return m ? m[2] + "/" + m[3] + "/" + m[1] : v;
@@ -126,16 +137,17 @@
                 var v = input.value.trim();
                 pending.push(input.type === "date" ? fmtDate(v) : input.type === "time" ? fmtTime(v) : v);
             } else if (child.classList.contains("signature-field")) {
-                // The title element isn't always a <label> (resi-helper uses a <span>), so
-                // follow the canvas's aria-labelledby - every form wires that up consistently.
-                var canvas = child.querySelector("canvas[aria-labelledby]");
-                var titleEl = canvas && document.getElementById(canvas.getAttribute("aria-labelledby"));
+                // Preferred: the field names its own print title via data-signer-title, so the
+                // PDF never has to guess whether the on-page title is a <label> or a <span>.
+                // Falls back to the old aria-labelledby lookup for forms not yet migrated.
                 var hidden = child.querySelector('input[type="hidden"]');
-                signers.push({
-                    title: titleEl ? titleEl.textContent.trim() : "Signature",
-                    values: pending,
-                    sigName: hidden ? hidden.name : ""
-                });
+                var title = child.getAttribute("data-signer-title");
+                if (!title) {
+                    var canvas = child.querySelector("canvas[aria-labelledby]");
+                    var titleEl = canvas && document.getElementById(canvas.getAttribute("aria-labelledby"));
+                    title = titleEl ? titleEl.textContent.trim() : "Signature";
+                }
+                signers.push({ title: title, values: pending, sigName: hidden ? hidden.name : "" });
                 pending = [];
             }
         });
@@ -173,15 +185,23 @@
         y += 8;
 
         /* ---- Employee information ----
-           Only fields that actually exist on the current form are shown, so a leaner form
-           (e.g. Safety Lane Check has no Time/Location of Observation) doesn't print blank rows. */
+           A form lists which fields to print, and in what order, via
+           data-pdf-fields="id id id" on <form class="emp-info">. Each id's own <label> supplies
+           the printed field name and its <input> type supplies the formatting (date/time/select),
+           so a new form opts in without generate-pdf.js needing to know its field names.
+           Forms that haven't set data-pdf-fields fall back to the original fixed list, so
+           nothing breaks until they're migrated. */
+        var DEFAULT_FIELD_IDS = ["emp-name", "obs-date", "obs-time", "obs-location", "unit"];
+        var configuredIds = formEl && formEl.getAttribute("data-pdf-fields");
+        var fieldIds = configuredIds ? configuredIds.trim().split(/\s+/) : DEFAULT_FIELD_IDS;
+
         var GAP = 16;
         var ROW_SIZE = 3;
-        var allFields = [[fieldLabel("emp-name", "Name"), val("emp-name")]];
-        if (document.getElementById("obs-date")) allFields.push([fieldLabel("obs-date", "Date of Observation"), fmtDate(val("obs-date"))]);
-        if (document.getElementById("obs-time")) allFields.push([fieldLabel("obs-time", "Time of Observation"), fmtTime(val("obs-time"))]);
-        if (document.getElementById("obs-location")) allFields.push([fieldLabel("obs-location", "Location of Observation"), val("obs-location")]);
-        if (document.getElementById("unit")) allFields.push([fieldLabel("unit", "Unit Type & Number"), val("unit")]);
+        var allFields = [];
+        fieldIds.forEach(function (id) {
+            var v = fieldValue(id);
+            if (v !== null) allFields.push([fieldLabel(id, id), v]);
+        });
         var fields = [];
         for (var fi = 0; fi < allFields.length; fi += ROW_SIZE) fields.push(allFields.slice(fi, fi + ROW_SIZE));
 
@@ -233,15 +253,24 @@
                 if (r.na) totals.na++;
             });
         });
+        // Each header glyph carries its own readable label via data-label, e.g.
+        // <span data-label="Pass">P</span>, so the key never has to guess what a glyph means.
+        // Falls back to the old guess-from-glyph dictionary for forms not yet migrated.
         var headEl = document.querySelector("form.emp-info .practice-head");
-        var HEADERS = headEl
-            ? Array.prototype.map.call(headEl.querySelectorAll("span"), function (s) { return s.textContent.trim(); })
-            : ["+", "−", "N/O"];
+        var headSpans = headEl ? headEl.querySelectorAll("span") : [];
         var KEY_LABELS = { "+": "Safe", "−": "At Risk", "–": "At Risk", "-": "At Risk", "N/O": "Not Observed", "P": "Pass", "F": "Fail", "N/A": "N/A" };
+        var HEADERS = headSpans.length
+            ? Array.prototype.map.call(headSpans, function (s) { return s.textContent.trim(); })
+            : ["+", "−", "N/O"];
+        var HEADER_LABELS = headSpans.length
+            ? Array.prototype.map.call(headSpans, function (s) {
+                return s.getAttribute("data-label") || KEY_LABELS[s.textContent.trim()] || s.textContent.trim();
+            })
+            : ["Safe", "At Risk", "Not Observed"];
         var keys = [
-            [HEADERS[0], KEY_LABELS[HEADERS[0]] || HEADERS[0], totals.safe],
-            [HEADERS[1], KEY_LABELS[HEADERS[1]] || HEADERS[1], totals.risk],
-            [HEADERS[2], KEY_LABELS[HEADERS[2]] || HEADERS[2], totals.na]
+            [HEADERS[0], HEADER_LABELS[0], totals.safe],
+            [HEADERS[1], HEADER_LABELS[1], totals.risk],
+            [HEADERS[2], HEADER_LABELS[2], totals.na]
         ];
         var kx = M;
         keys.forEach(function (k) {
@@ -519,7 +548,7 @@
         if (sendButton) sendButton.disabled = true;
         btn.textContent = busyText;
 
-        loadImage("assets/icons/icon-192.png")
+        loadImage("assets/icons/ew-logo-192.png")
             .then(function (logo) {
                 done(build(window.jspdf.jsPDF, logo));
             })

@@ -44,7 +44,7 @@
         </div>
     </section>
     <section class="emp-info-section">
-        <form class="emp-info" data-title="Residential Helper Observation">
+        <form class="emp-info" data-title="Residential Helper Observation" data-pdf-fields="emp-name obs-date obs-time obs-location unit">
             <fieldset class="emp-fields">
                 <legend>EMPLOYEE INFORMATION</legend>
 
@@ -78,9 +78,9 @@
 
                 <div class="practices">
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
 
                     <div class="practice">
@@ -123,9 +123,9 @@
             <fieldset>
                 <legend>COLLECTION ACTIVITY</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                 <div class="practice">
                         <label class="check"><input type="checkbox" name="collection-1" value="safe" aria-label="Collects From the Right Side Only, No Double Siding: Safe"></label>
@@ -167,9 +167,9 @@
             <fieldset>
                 <legend>BACKING</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="backing-1" value="safe" aria-label="Assists Driver When Backing: Safe"></label>
@@ -193,9 +193,9 @@
             <fieldset>
                 <legend>MATERIAL HANDLING (BODY MECHANICS)</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="material-handling-1" value="safe" aria-label="Checks object weight to be lifted / handled: Safe"></label>
@@ -243,9 +243,9 @@
             <fieldset>
                 <legend>PPE/UNIFORM</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="ppe-1" value="safe" aria-label="Wears Gloves (Cut Resistant): Safe"></label>
@@ -287,9 +287,9 @@
             <fieldset>
                 <legend>POST COLLECTION</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="post-collection-1" value="safe" aria-label="Only One Person Out of Vehicle: Safe"></label>
@@ -341,7 +341,7 @@
                     <input type="time" id="observer-time" name="observer-time" data-mirror="obs-time" readonly>
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Observer Signature">
                     <span id="sig-observer-label">Observer Signature</span>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-observer-label"></canvas>
                     <input type="hidden" name="sig-observer">
@@ -363,7 +363,7 @@
                     <input type="time" id="employee-time" name="employee-time" data-mirror="obs-time" readonly>
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Employee Signature">
                     <span id="sig-employee-label">Employee Signature</span>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-employee-label"></canvas>
                     <input type="hidden" name="sig-employee">

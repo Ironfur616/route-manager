@@ -44,7 +44,7 @@
         </div>
     </section>
     <section class="emp-info-section">
-        <form class="emp-info" data-title="Commercial Driver Observation">
+        <form class="emp-info" data-title="Commercial Driver Observation" data-pdf-fields="emp-name obs-date obs-time obs-location unit">
             <fieldset class="emp-fields">
                 <legend>EMPLOYEE INFORMATION</legend>
 
@@ -89,9 +89,9 @@
 
                 <div class="practices">
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
 
                     <div class="practice">
@@ -134,9 +134,9 @@
                 <legend>DRIVING / OPERATIONS</legend>
                 <div class="practices">
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
 
                     <div class="practice">
@@ -185,9 +185,9 @@
             <fieldset>
                 <legend>DISTRACTIONS WHILE OPERATING EQUIPMENT</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="distractions-1" value="safe" aria-label="Cell Phone / Radio Use: Safe"></label>
@@ -223,9 +223,9 @@
             <fieldset>
                 <legend>COLLECTION ACTIVITY</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                 <div class="practice">
                         <label class="check"><input type="checkbox" name="collections-1" value="safe" aria-label="Does not Snake, Zig-Zag or Cross Street: Safe"></label>
@@ -261,9 +261,9 @@
             <fieldset>
                 <legend>BACKING</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="backing-1" value="safe" aria-label="Avoids Backing: Safe"></label>
@@ -287,9 +287,9 @@
             <fieldset>
                 <legend>COMPACTOR OPERATIONS / LOAD SECUREMENT</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="compactor-1" value="safe" aria-label="Proper Hand / Arm Placement when Dumping Containers: Safe"></label>
@@ -313,9 +313,9 @@
             <fieldset>
                 <legend>VEHICLE</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="vehicle-ops-1" value="safe" aria-label="Vehicle Doors Closed Traveling / From Route: Safe"></label>
@@ -363,9 +363,9 @@
             <fieldset>
                 <legend>CREW SAFETY</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="crew-1" value="safe" aria-label="Helper was on Step (&lt; 2/10 miles and &lt; 10 mph): Safe"></label>
@@ -395,9 +395,9 @@
             <fieldset>
                 <legend>MATERIAL HANDLING (BODY MECHANICS)</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="material-handling-1" value="safe" aria-label="Checks object weight to be lifted / handled: Safe"></label>
@@ -445,9 +445,9 @@
             <fieldset>
                 <legend>PPE/UNIFORM</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="ppe-1" value="safe" aria-label="Wears Gloves (Cut Resistant): Safe"></label>
@@ -495,9 +495,9 @@
             <fieldset>
                 <legend>POST COLLECTION</legend>
                     <div class="practice practice-head" aria-hidden="true">
-                        <span>+</span>
-                        <span>&minus;</span>
-                        <span>N/O</span>
+                        <span data-label="Safe">+</span>
+                        <span data-label="At Risk">&minus;</span>
+                        <span data-label="Not Observed">N/O</span>
                     </div>
                     <div class="practice">
                         <label class="check"><input type="checkbox" name="post-collection-1" value="safe" aria-label="Stays Close to Vehicle Away from Raised Tailgate: Safe"></label>
@@ -555,7 +555,7 @@
                     <input type="time" id="observer-time" name="observer-time" data-mirror="obs-time" readonly>
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Observer Signature">
                     <label id="sig-observer-label">Observer Signature</label>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-observer-label"></canvas>
                     <input type="hidden" name="sig-observer">
@@ -577,7 +577,7 @@
                     <input type="time" id="employee-time" name="employee-time" data-mirror="obs-time" readonly>
                 </div>
 
-                <div class="signature-field" data-signature>
+                <div class="signature-field" data-signature data-signer-title="Employee Signature">
                     <label id="sig-employee-label">Employee Signature</label>
                     <canvas class="signature-pad" role="img" aria-labelledby="sig-employee-label"></canvas>
                     <input type="hidden" name="sig-employee">
