@@ -1,7 +1,7 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v52";
+var CACHE_NAME = "fleet-mgr-v54";
 
 var PRECACHE_URLS = [
     "./",
@@ -27,9 +27,13 @@ var PRECACHE_URLS = [
     "./jspdf.umd.min.js",
     "./generate-pdf.js",
     "./trainee-role.js",
-    "./pin-lock.js",
+    "./firebase-init.js",
+    "./auth-gate.js",
     "./sw-register.js",
     "./manifest.webmanifest",
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js",
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js",
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js",
     "./assets/ew-logo.svg",
     "./assets/icons/ew-logo-192.png",
     "./assets/icons/icon-192.png",
@@ -108,7 +112,10 @@ self.addEventListener("fetch", function (event) {
                 return cached;
             }
             return fetch(request).then(function (response) {
-                if (response && response.status === 200 && response.type === "basic") {
+                // "cors" here covers the Firebase SDK files from gstatic.com - same-origin
+                // assets come back "basic", cross-origin CDN assets with CORS enabled come
+                // back "cors"; both are safe and necessary to cache for offline use.
+                if (response && response.status === 200 && (response.type === "basic" || response.type === "cors")) {
                     var copy = response.clone();
                     caches.open(CACHE_NAME).then(function (cache) {
                         cache.put(request, copy);

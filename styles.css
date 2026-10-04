@@ -911,6 +911,41 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     }
 }
 
+/* ---------- Auth gate (auth-gate.js) ----------
+   Shares #pin-lock-overlay/.pin-lock-card/.pin-lock-error/.pin-lock-submit with the old
+   PIN lock above; only the email/password fields themselves need their own styling. */
+.auth-gate-field {
+    margin-top: 0.75rem;
+    text-align: left;
+}
+
+.auth-gate-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.auth-gate-input {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    background-color: var(--white);
+    color: var(--drk-gray);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.auth-gate-input:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
 /* ---------- Tabbed shell (index.html) ---------- */
 /* Each open form lives in its own iframe so its entries survive tab switches. */
 body.shell {

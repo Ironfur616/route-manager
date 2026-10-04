@@ -205,3 +205,42 @@
         });
     });
 })();
+
+// "Account" menu item: shows who's signed in and a way to sign out. Real per-user login
+// (auth-gate.js) replaced the old shared PIN, which had no concept of a logged-in user and
+// so never needed this.
+(function () {
+    "use strict";
+
+    var nav = document.getElementById("site-nav");
+    if (!nav) {
+        return;
+    }
+
+    var section = document.createElement("div");
+    section.className = "nav-section";
+    section.innerHTML =
+        '<h2 class="nav-section-plain">Account</h2>' +
+        '<p class="nav-action-hint" id="account-email"></p>' +
+        '<button type="button" class="nav-action" id="sign-out">Sign Out</button>';
+    nav.appendChild(section);
+
+    var emailEl = document.getElementById("account-email");
+    var signOutBtn = document.getElementById("sign-out");
+
+    function onFirebaseReady() {
+        var fb = window.RouteIQFirebase;
+        fb.onAuthStateChanged(fb.auth, function (user) {
+            emailEl.textContent = user ? user.email : "";
+        });
+        signOutBtn.addEventListener("click", function () {
+            fb.signOut(fb.auth);
+        });
+    }
+
+    if (window.RouteIQFirebase) {
+        onFirebaseReady();
+    } else {
+        document.addEventListener("firebase-ready", onFirebaseReady, { once: true });
+    }
+})();
