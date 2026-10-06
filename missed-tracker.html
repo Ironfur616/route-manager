@@ -34,12 +34,20 @@
             <div class="mt-stat mt-stat-yellow"><span class="mt-stat-num" id="stat-yellow">0</span><span class="mt-stat-label">Yellow tags</span></div>
         </div>
         <p class="mt-warning" id="mt-storage-warning" hidden>This browser is blocking storage, so entries cannot be saved. Export to CSV before closing.</p>
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="mt-open">+ Log Missed Collection</button>
+        </div>
     </section>
 
-    <section class="emp-info-section mt-section">
+    <dialog class="send-dialog mt-dialog" id="mt-dialog" aria-labelledby="mt-form-title">
         <form class="emp-info" id="mt-form" data-title="Missed Collection">
+            <div class="mt-dialog-head">
+                <h2 id="mt-form-title">Log a Missed Collection</h2>
+                <button type="button" class="mt-dialog-close" id="mt-close" aria-label="Close">&times;</button>
+            </div>
+
             <fieldset class="emp-fields">
-                <legend id="mt-form-title">LOG A MISSED COLLECTION</legend>
+                <legend class="visually-hidden">Missed collection details</legend>
 
                 <div class="field">
                     <label for="mt-date">Date</label>
@@ -100,13 +108,13 @@
             <datalist id="dl-driver"></datalist>
             <datalist id="dl-unit"></datalist>
 
-            <div class="form-actions">
-                <button type="button" class="send-email" id="mt-cancel" hidden>Cancel</button>
+            <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" id="mt-cancel">Close</button>
                 <button type="submit" class="generate-pdf" id="mt-submit">Save Entry</button>
             </div>
-            <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
         </form>
-    </section>
+    </dialog>
 
     <section class="emp-info-section mt-section">
         <div class="emp-info">

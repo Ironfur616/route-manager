@@ -38,6 +38,7 @@
     ];
     var YELLOW_TAG_REASON = "Customer issued a yellow tag";
 
+    var dialog = document.getElementById("mt-dialog");
     var form = document.getElementById("mt-form");
     var fields = {
         date: document.getElementById("mt-date"),
@@ -259,6 +260,7 @@
 
         var chips = el("div", "mt-chips");
         if (isYellow) chips.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
+        if (e.contactedBoro) chips.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
         // The yellow tag reason already gets its own badge above, so it's left out here to avoid repeating it
         (e.reasons || []).filter(function (r) { return r !== YELLOW_TAG_REASON; }).forEach(function (r) {
             chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
@@ -277,6 +279,17 @@
         if (e.notes) card.appendChild(el("p", "mt-entry-notes", e.notes));
 
         var actions = el("div", "mt-entry-actions");
+        var contactedId = "mt-boro-" + e.id;
+        var contacted = el("div", "mt-entry-contacted");
+        var contactedBox = el("input");
+        contactedBox.type = "checkbox";
+        contactedBox.id = contactedId;
+        contactedBox.checked = !!e.contactedBoro;
+        contactedBox.addEventListener("change", function () { setContacted(e.id, contactedBox.checked); });
+        var contactedLabel = el("label", null, "Contacted Boro / Twp");
+        contactedLabel.htmlFor = contactedId;
+        contacted.appendChild(contactedBox);
+        contacted.appendChild(contactedLabel);
         var status = el("select", "mt-entry-status");
         status.setAttribute("aria-label", "Status for " + e.address);
         fillSelect(status, STATUSES);
@@ -290,6 +303,7 @@
         del.type = "button";
         del.setAttribute("aria-label", "Delete " + e.address);
         del.addEventListener("click", function () { remove(e.id); });
+        actions.appendChild(contacted);
         actions.appendChild(status);
         actions.appendChild(edit);
         actions.appendChild(del);
@@ -317,7 +331,7 @@
         shown.forEach(function (e) { listEl.appendChild(buildCard(e, counts)); });
 
         if (!entries.length) {
-            countEl.textContent = "No missed collections logged yet. Use the form above to add the first one.";
+            countEl.textContent = "No missed collections logged yet. Tap Log Missed Collection to add the first one.";
         } else if (!shown.length) {
             countEl.textContent = "Nothing matches the current search or filter.";
         } else {
@@ -358,9 +372,8 @@
     // misses from the same route in a row. Only the parts that differ per stop are cleared.
     function resetForm(keepContext) {
         editingId = null;
-        formTitle.textContent = "LOG A MISSED COLLECTION";
+        formTitle.textContent = "Log a Missed Collection";
         submitBtn.textContent = "Save Entry";
-        cancelBtn.hidden = true;
 
         var keep = keepContext ? readForm() : {};
         form.reset();
@@ -383,14 +396,33 @@
         setCheckedReasons(entry.reasons);
         updateReasonsCount();
         reasonsError.hidden = true;
-        formTitle.textContent = "EDIT ENTRY";
+        formTitle.textContent = "Edit Entry";
         submitBtn.textContent = "Save Changes";
-        cancelBtn.hidden = false;
         say("");
         updateAddressHint();
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        fields.address.focus({ preventScroll: true });
+        openDialog();
     }
+
+    /* ---------- Dialog ---------- */
+
+    function openDialog() {
+        if (!dialog.open) dialog.showModal();
+        dialog.scrollTop = 0;
+        fields.address.focus();
+    }
+
+    // Close, the X and Escape all land here. A half-typed new entry is dropped, but the
+    // date/route/driver/unit stay filled in for the next one; an unsaved edit is discarded.
+    dialog.addEventListener("close", function () {
+        resetForm(!editingId);
+        say("");
+    });
+
+    document.getElementById("mt-open").addEventListener("click", function () {
+        say("");
+        openDialog();
+    });
+    document.getElementById("mt-close").addEventListener("click", function () { dialog.close(); });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -420,17 +452,20 @@
             return;
         }
 
-        var wasEdit = !!existing;
-        resetForm(!wasEdit);
         render();
-        say(wasEdit ? "Changes saved." : "Entry saved. Route and driver kept for the next stop.");
-        if (!wasEdit) fields.address.focus();
+        // An edit is done once saved. A new entry leaves the dialog open: a manager usually
+        // logs several misses from the same route in a row.
+        if (existing) {
+            dialog.close();
+            return;
+        }
+        resetForm(true);
+        say("Entry saved. Route and driver kept for the next stop.");
+        dialog.scrollTop = 0;
+        fields.address.focus();
     });
 
-    cancelBtn.addEventListener("click", function () {
-        resetForm(false);
-        say("");
-    });
+    cancelBtn.addEventListener("click", function () { dialog.close(); });
 
     fields.address.addEventListener("input", updateAddressHint);
 
@@ -441,6 +476,19 @@
         list.forEach(function (e) {
             if (e.id === id) {
                 e.status = value;
+                e.updated = Date.now();
+            }
+        });
+        save(list);
+        render();
+    }
+
+    // Saved on the entry rather than in the edit form, so it's one tap from the list
+    function setContacted(id, value) {
+        var list = load();
+        list.forEach(function (e) {
+            if (e.id === id) {
+                e.contactedBoro = value;
                 e.updated = Date.now();
             }
         });
@@ -472,10 +520,10 @@
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
         var rows = [["Date", "Route", "Address", "Service", "Reasons", "Driver", "Unit", "Status",
-            "Misses at address", "Notes"]];
+            "Contacted Boro / Twp", "Misses at address", "Notes"]];
         entries.forEach(function (e) {
             rows.push([e.date, e.route, e.address, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
-                labelFor(STATUSES, e.status), counts[addressKey(e.address)], e.notes]);
+                labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)], e.notes]);
         });
         var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
 
