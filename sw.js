@@ -1,7 +1,7 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v54";
+var CACHE_NAME = "fleet-mgr-v55";
 
 var PRECACHE_URLS = [
     "./",
@@ -44,7 +44,12 @@ self.addEventListener("install", function (event) {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(function (cache) {
-                return cache.addAll(PRECACHE_URLS);
+                // cache: "reload" skips the browser's HTTP cache. GitHub Pages sends max-age=600,
+                // so without it a new version could precache 10-minute-old copies of the files
+                // it was meant to replace, and then keep serving them.
+                return cache.addAll(PRECACHE_URLS.map(function (url) {
+                    return new Request(url, { cache: "reload" });
+                }));
             })
             .then(function () {
                 return self.skipWaiting();
@@ -79,28 +84,36 @@ self.addEventListener("fetch", function (event) {
         return;
     }
 
-    // Page navigations: try the network first so field crews always get the
-    // latest form when online, falling back to the cached copy offline.
-    if (request.mode === "navigate") {
+    // Pages, scripts and styles: network first so field crews always get the latest
+    // code when online, falling back to the cached copy offline. "no-cache" makes the
+    // browser check with the server (a cheap 304 when nothing changed) instead of
+    // reusing its own copy for up to 10 minutes.
+    var isCode = request.mode === "navigate" ||
+        request.destination === "script" || request.destination === "style";
+    if (isCode && new URL(request.url).origin === self.location.origin) {
         event.respondWith(
-            fetch(request)
+            fetch(request.url, { cache: "no-cache", credentials: "same-origin" })
                 .then(function (response) {
-                    var copy = response.clone();
-                    caches.open(CACHE_NAME).then(function (cache) {
-                        cache.put(request, copy);
-                    });
+                    if (response && response.ok) {
+                        var copy = response.clone();
+                        caches.open(CACHE_NAME).then(function (cache) {
+                            cache.put(request, copy);
+                        });
+                    }
                     return response;
                 })
                 .catch(function () {
-                    return caches.match(request).then(function (cached) {
-                        return cached || caches.match("./index.html");
+                    return caches.match(request, { ignoreSearch: true }).then(function (cached) {
+                        if (cached) return cached;
+                        if (request.mode === "navigate") return caches.match("./index.html");
+                        return Response.error();
                     });
                 })
         );
         return;
     }
 
-    // Everything else (CSS, JS, icons, fonts): cache-first, filling in and
+    // Everything else (icons, images, fonts): cache-first, filling in and
     // refreshing the cache from the network when a new asset is requested.
     event.respondWith(
         caches.match(request).then(function (cached) {
