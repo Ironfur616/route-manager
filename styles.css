@@ -1444,9 +1444,12 @@ body.shell {
 
 /* Log / edit entry dialog. Reuses .send-dialog's frame; the form inside keeps the .emp-info
    field styles. Mobile first: nearly full screen, one column, Save/Close pinned to the bottom. */
+/* scroll-padding keeps a focused field clear of the pinned header and Save bar */
 .mt-dialog {
     max-height: calc(100% - 2rem);
     padding: 0;
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 6rem;
 }
 
 .mt-dialog-head {

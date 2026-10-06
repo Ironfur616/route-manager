@@ -406,14 +406,73 @@
     /* ---------- Dialog ---------- */
 
     function openDialog() {
-        if (!dialog.open) dialog.showModal();
+        if (!dialog.open) {
+            dialog.showModal();
+            watchViewport(true);
+        }
         dialog.scrollTop = 0;
         fields.address.focus();
     }
 
+    /* The on-screen keyboard covers the page without shrinking it (always on iPad; on Android
+       unless the browser honors interactive-widget=resizes-content), so the dialog would keep its
+       full height and its lower fields would sit under the keyboard. While it's open, fit it to
+       the part of this frame that's still visible above the keyboard. */
+    function topViewport() {
+        try {
+            return window.top.visualViewport || window.visualViewport;
+        } catch (e) {
+            return window.visualViewport;
+        }
+    }
+
+    function fitDialog() {
+        var vv = topViewport();
+        if (!dialog.open || !vv) return;
+        var frameTop = 0;
+        try {
+            if (window.frameElement) frameTop = window.frameElement.getBoundingClientRect().top;
+        } catch (e) { /* not framed by this app */ }
+        var visibleTop = Math.max(0, vv.offsetTop - frameTop);
+        var visibleBottom = Math.min(window.innerHeight, vv.offsetTop + vv.height - frameTop);
+        var room = visibleBottom - visibleTop;
+
+        if (room >= window.innerHeight - 1) {
+            // Nothing covered: let the stylesheet center it as usual
+            dialog.style.marginTop = "";
+            dialog.style.marginBottom = "";
+            dialog.style.maxHeight = "";
+        } else {
+            dialog.style.marginTop = (visibleTop + 8) + "px";
+            dialog.style.marginBottom = "auto";
+            dialog.style.maxHeight = Math.max(160, room - 16) + "px";
+        }
+
+        // Keep the field being typed in above the keyboard and clear of the pinned Save bar
+        var active = document.activeElement;
+        if (active && active !== dialog && dialog.contains(active) && active.scrollIntoView) {
+            active.scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function watchViewport(on) {
+        var vv = topViewport();
+        if (!vv) return;
+        var method = on ? "addEventListener" : "removeEventListener";
+        vv[method]("resize", fitDialog);
+        vv[method]("scroll", fitDialog);
+        window[method]("resize", fitDialog);
+    }
+
+    dialog.addEventListener("focusin", function () { setTimeout(fitDialog, 300); });
+
     // Close, the X and Escape all land here. A half-typed new entry is dropped, but the
     // date/route/driver/unit stay filled in for the next one; an unsaved edit is discarded.
     dialog.addEventListener("close", function () {
+        watchViewport(false);
+        dialog.style.marginTop = "";
+        dialog.style.marginBottom = "";
+        dialog.style.maxHeight = "";
         resetForm(!editingId);
         say("");
     });
