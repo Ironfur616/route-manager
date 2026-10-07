@@ -566,6 +566,8 @@
     button.addEventListener("click", function () {
         run(button, "Generating…", function (doc) {
             doc.save(fileName());
+            // Keep the app's own copy for Saved PDFs in the menu
+            if (window.PdfStore) window.PdfStore.add(fileName(), doc.output("blob")).catch(function () {});
             // Tells the shell (tabs.js) the report exists, so it can drop this tab's autosaved draft
             document.dispatchEvent(new CustomEvent("pdf-saved"));
         });

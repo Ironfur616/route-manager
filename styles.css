@@ -2606,3 +2606,78 @@ body.shell {
 .pdf-viewer-status[hidden] {
     display: none;
 }
+
+
+/* ---------- Saved PDFs list (saved-pdfs.js) ---------- */
+.sp-body {
+    padding: 1rem;
+}
+
+.sp-status {
+    margin-top: 0;
+}
+
+.sp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sp-item {
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--white);
+}
+
+/* The whole top of the card opens the PDF */
+.sp-open {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    width: 100%;
+    min-height: 56px;
+    padding: 0.75rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sp-open:hover {
+    background-color: rgba(86, 157, 214, 0.1);
+}
+
+.sp-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+.sp-name {
+    color: var(--deep-navy);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.sp-meta {
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+}
+
+.sp-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 0.75rem 0.75rem;
+}
+
+@media (min-width: 48em) {
+    .sp-dialog {
+        max-width: 40rem;
+    }
+
+    .sp-body {
+        padding: 1.25rem 1.5rem;
+    }
+}

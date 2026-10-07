@@ -913,7 +913,10 @@
         }
 
         var fileSafeTitle = (c.title || "RCA-Case").replace(/[\\/:*?"<>|]/g, "");
-        doc.save(fileSafeTitle + " - " + dateString(new Date()) + ".pdf");
+        var pdfName = fileSafeTitle + " - " + dateString(new Date()) + ".pdf";
+        doc.save(pdfName);
+        // Keep the app's own copy for Saved PDFs in the menu
+        if (window.PdfStore) window.PdfStore.add(pdfName, doc.output("blob")).catch(function () {});
     }
 
     // Another open copy of this page changed the log

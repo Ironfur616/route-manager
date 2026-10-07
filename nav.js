@@ -124,9 +124,8 @@
     }
 })();
 
-// Saved PDFs: an icon button pinned to the bottom right of the menu. A web page can't open a
-// folder in the file manager, so this opens the device's file picker (starting in Downloads
-// where the browser supports it) and shows the chosen PDF in the in-app viewer (pdf-viewer.js).
+// Saved PDFs: an icon button pinned to the bottom right of the menu. What it opens (the
+// in-app list of PDFs the app has created) lives in saved-pdfs.js.
 (function () {
     "use strict";
 
@@ -139,7 +138,7 @@
     footer.className = "site-nav-footer";
     footer.innerHTML =
         '<button type="button" class="nav-icon-btn" id="open-saved-pdfs" ' +
-            'aria-label="Open saved PDFs" title="Open saved PDFs">' +
+            'aria-label="Saved PDFs" title="Saved PDFs">' +
             '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">' +
                 '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" ' +
                     'fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
@@ -147,45 +146,6 @@
             "</svg>" +
         "</button>";
     nav.appendChild(footer);
-
-    var input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/pdf,.pdf";
-    input.hidden = true;
-    document.body.appendChild(input);
-
-    function show(file) {
-        // Close the menu so the viewer isn't sitting on top of an open drawer
-        var closeBtn = document.getElementById("nav-close");
-        if (closeBtn && nav.classList.contains("is-open")) closeBtn.click();
-        window.PdfViewer.open(file);
-    }
-
-    input.addEventListener("change", function () {
-        if (input.files && input.files[0]) {
-            show(input.files[0]);
-        }
-        input.value = "";
-    });
-
-    document.getElementById("open-saved-pdfs").addEventListener("click", function () {
-        if (window.showOpenFilePicker) {
-            window.showOpenFilePicker({
-                startIn: "downloads",
-                types: [{ description: "PDF files", accept: { "application/pdf": [".pdf"] } }]
-            })
-                .then(function (handles) { return handles[0].getFile(); })
-                .then(show)
-                .catch(function (err) {
-                    // Backing out of the picker is not an error
-                    if (err && err.name !== "AbortError") {
-                        input.click();
-                    }
-                });
-        } else {
-            input.click();
-        }
-    });
 })();
 
 // Collapsible Residential/Commercial subsections under Observations.
