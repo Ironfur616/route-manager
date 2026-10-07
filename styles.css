@@ -566,11 +566,24 @@ body.nav-open {
     margin-top: 1rem;
 }
 
-.send-field label {
+.send-field label,
+.send-field .send-label {
     display: block;
     margin-bottom: 0.25rem;
     color: var(--deep-navy);
     font-weight: 600;
+}
+
+/* The PDF Send attaches for you, shown in place of a file picker */
+.send-attachment {
+    margin: 0;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(4, 57, 96, 0.25);
+    border-radius: 4px;
+    background-color: rgba(4, 102, 53, 0.06);
+    color: var(--drk-gray);
+    font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 /* 16px font stops iOS Safari from zooming in when a field is focused */

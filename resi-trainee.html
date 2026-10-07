@@ -793,7 +793,7 @@
         <dialog class="send-dialog" id="send-dialog" aria-labelledby="send-dialog-title">
             <form class="send-form" id="send-form" novalidate>
                 <h2 id="send-dialog-title">Send Report</h2>
-                <p class="send-help">Save the form first, then choose the saved PDF below.</p>
+                <p class="send-help">The PDF of this form is created and attached for you.</p>
 
                 <div class="send-field">
                     <label for="send-email-to">Email address</label>
@@ -801,8 +801,8 @@
                 </div>
 
                 <div class="send-field">
-                    <label for="send-pdf">PDF report</label>
-                    <input type="file" id="send-pdf" name="pdf" accept="application/pdf,.pdf" required>
+                    <span class="send-label">Attached</span>
+                    <p class="send-attachment" id="send-attachment"></p>
                 </div>
 
                 <p class="send-error" id="send-error" role="alert" hidden></p>

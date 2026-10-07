@@ -573,16 +573,19 @@
         });
     });
 
-    /* Send: collects the recipient and the saved PDF, then builds the email.
-       Browsers don't let a web page silently attach a file, so where the device supports
-       sharing files (most phones and tablets) the PDF goes through the share sheet into the
-       mail app as a real attachment. Elsewhere a mailto: draft opens and the user attaches
-       the PDF they picked. */
+    /* Send: builds the PDF from the form, then collects the recipient and builds the email.
+       The PDF is made when Send is tapped, before the dialog opens, so nobody has to dig it
+       out of Android's file browser (which an installed app can't always get back out of).
+       It's ready by the time Create Email is tapped, so sharing happens inside that tap, as the
+       browser requires. Where the device supports sharing files (most phones and tablets) the
+       PDF goes through the share sheet into the mail app as a real attachment. Elsewhere the
+       PDF is downloaded and a mailto: draft opens for the user to attach it. */
     var dialog = document.getElementById("send-dialog");
     var sendForm = document.getElementById("send-form");
     var toInput = document.getElementById("send-email-to");
-    var pdfInput = document.getElementById("send-pdf");
+    var attachmentEl = document.getElementById("send-attachment");
     var errorBox = document.getElementById("send-error");
+    var preparedPdf = null;
 
     function showError(msg) {
         errorBox.textContent = msg;
@@ -593,6 +596,11 @@
         if (dialog.open) dialog.close();
     }
 
+    // The sent report goes into Saved PDFs too
+    function keepCopy(file) {
+        if (window.PdfStore) window.PdfStore.add(file.name, file).catch(function () {});
+    }
+
     if (sendButton && dialog && sendForm) {
         sendButton.addEventListener("click", function () {
             if (!val("emp-name")) {
@@ -600,11 +608,14 @@
                 document.getElementById("emp-name").focus();
                 return;
             }
-            showError("");
-            pdfInput.value = "";
-            toInput.value = lastEmail();
-            dialog.showModal();
-            (toInput.value ? pdfInput : toInput).focus();
+            run(sendButton, "Preparing\u2026", function (doc) {
+                preparedPdf = new File([doc.output("blob")], fileName(), { type: "application/pdf" });
+                attachmentEl.textContent = "\uD83D\uDCCE " + preparedPdf.name;
+                showError("");
+                toInput.value = lastEmail();
+                dialog.showModal();
+                (toInput.value ? sendForm.querySelector(".send-submit") : toInput).focus();
+            });
         });
 
         document.getElementById("send-cancel").addEventListener("click", closeDialog);
@@ -616,7 +627,7 @@
         sendForm.addEventListener("submit", function (e) {
             e.preventDefault();
             var address = toInput.value.trim();
-            var file = pdfInput.files && pdfInput.files[0];
+            var file = preparedPdf;
 
             if (!EMAIL_RE.test(address)) {
                 showError("Enter a valid email address.");
@@ -624,11 +635,7 @@
                 return;
             }
             if (!file) {
-                showError("Choose the PDF to attach.");
-                return;
-            }
-            if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-                showError("The attachment must be a PDF file.");
+                showError("The PDF wasn't created. Close this and tap Send again.");
                 return;
             }
 
@@ -636,17 +643,31 @@
             var subject = TITLE + " - " + val("emp-name");
             var body = "Please find the " + TITLE + " report for " + val("emp-name") + " attached.";
 
+            // No file sharing on this device: download the PDF, then open a draft to attach it to
             function fallback() {
+                var url = URL.createObjectURL(file);
+                var link = document.createElement("a");
+                link.href = url;
+                link.download = file.name;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+                keepCopy(file);
+
                 window.top.location.href = "mailto:" + encodeURIComponent(address) +
                     "?subject=" + encodeURIComponent(subject) +
-                    "&body=" + encodeURIComponent(body + "\n\n(Attach the file: " + file.name + ")");
+                    "&body=" + encodeURIComponent(body + "\n\n(Attach the downloaded file: " + file.name + ")");
                 closeDialog();
             }
 
             var shareData = { files: [file], title: subject, text: "To: " + address + "\n\n" + body };
             if (navigator.canShare && navigator.canShare(shareData)) {
                 navigator.share(shareData)
-                    .then(closeDialog)
+                    .then(function () {
+                        keepCopy(file);
+                        closeDialog();
+                    })
                     .catch(function (err) {
                         // Backing out of the share sheet is not an error worth reporting
                         if (err && err.name === "AbortError") return;
