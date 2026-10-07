@@ -2183,3 +2183,298 @@ body.shell {
     accent-color: #B3261E;
     cursor: pointer;
 }
+
+
+/* ---------- Recycle week calendar (header button + dialog) ---------- */
+/* Mobile first: the dialog uses the shared .mt-dialog frame; the month grid fills its width.
+   Recycle weeks are a green row with a recycle mark on the Sunday cell. */
+.rc-open {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--deep-navy);
+    cursor: pointer;
+}
+
+.rc-open:hover {
+    background-color: rgba(4, 57, 96, 0.08);
+}
+
+.rc-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rc-badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--white);
+    border-radius: 50%;
+    background-color: var(--forest-green);
+    color: var(--white);
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.rc-badge[hidden] {
+    display: none;
+}
+
+.rc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.rc-areas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.rc-area {
+    min-height: 44px;
+    padding: 0.5rem 0.875rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 999px;
+    background-color: var(--white);
+    color: var(--deep-navy);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.rc-area.is-selected {
+    border-color: var(--forest-green);
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+.rc-area-add {
+    border-style: dashed;
+}
+
+.rc-area:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rc-add-area label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+.rc-add-area[hidden] {
+    display: none;
+}
+
+.rc-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* 16px font stops iOS Safari from zooming in on focus */
+.rc-add-row input {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--deep-navy);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 1rem;
+}
+
+.rc-add-row input:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+.rc-add-error {
+    margin-top: 0.5rem;
+}
+
+.rc-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.75rem;
+    border-left: 6px solid rgba(4, 57, 96, 0.35);
+    border-radius: 4px;
+    background-color: rgba(4, 57, 96, 0.05);
+    color: var(--deep-navy);
+}
+
+.rc-status.is-recycle {
+    border-left-color: var(--forest-green);
+    background-color: #E8F5EC;
+}
+
+.rc-status strong {
+    font-size: 1.0625rem;
+}
+
+.rc-status span {
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+}
+
+.rc-month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rc-month-nav .mt-btn {
+    flex: none;
+    width: 48px;
+    padding: 0;
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.rc-month {
+    flex: 1 1 auto;
+    margin: 0;
+    color: var(--deep-navy);
+    font-size: 1.125rem;
+    text-align: center;
+}
+
+.rc-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    table-layout: fixed;
+}
+
+.rc-grid th {
+    padding-bottom: 0.25rem;
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.rc-day {
+    position: relative;
+    height: 44px;
+    text-align: center;
+    color: var(--drk-gray);
+}
+
+.rc-day.is-other-month {
+    color: rgba(26, 26, 26, 0.4);
+}
+
+.rc-day-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.rc-day.is-today .rc-day-num {
+    border: 2px solid var(--deep-navy);
+    font-weight: 700;
+}
+
+.rc-week.is-recycle .rc-day {
+    background-color: #E8F5EC;
+    color: var(--forest-green);
+    font-weight: 700;
+}
+
+.rc-week.is-recycle .rc-day.is-other-month {
+    color: rgba(4, 102, 53, 0.55);
+}
+
+.rc-week.is-recycle .rc-day:first-child {
+    border-radius: 6px 0 0 6px;
+    box-shadow: inset 4px 0 0 var(--forest-green);
+}
+
+.rc-week.is-recycle .rc-day:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+.rc-week-icon {
+    position: absolute;
+    top: 0;
+    left: 6px;
+    font-size: 0.7rem;
+}
+
+/* Edit mode: whole weeks are the tap targets */
+.rc-dialog.is-editing .rc-week {
+    cursor: pointer;
+}
+
+.rc-dialog.is-editing .rc-week:hover .rc-day {
+    outline: 1px dashed var(--forest-green);
+    outline-offset: -2px;
+}
+
+.rc-dialog.is-editing .rc-week:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 1px;
+}
+
+.rc-dialog.is-editing .rc-grid {
+    border: 2px dashed var(--forest-green);
+    border-radius: 6px;
+}
+
+.rc-hint {
+    margin: 0;
+    color: var(--drk-gray);
+}
+
+.rc-remove-area {
+    align-self: flex-start;
+}
+
+@media (min-width: 30em) {
+    .rc-add-row input {
+        flex: 1 1 auto;
+    }
+
+    .rc-add-row .mt-btn {
+        flex: none;
+    }
+}
+
+@media (min-width: 48em) {
+    .rc-dialog {
+        max-width: 34rem;
+    }
+
+    .rc-body {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .rc-day {
+        height: 52px;
+    }
+}

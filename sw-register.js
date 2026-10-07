@@ -9,7 +9,7 @@ if ("serviceWorker" in navigator) {
             // An installed app is usually resumed from the background rather than relaunched,
             // so also look for a new version each time it comes back to the front.
             document.addEventListener("visibilitychange", function () {
-                if (document.visibilityState === "visible") reg.update().catch(function () {});
+                if (document.visibilityState === "visible" && reg) reg.update().catch(function () {});
             });
         }).catch(function (err) {
             console.error("Service worker registration failed:", err);
