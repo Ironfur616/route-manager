@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>Route Streets · Earthwise Route IQ</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section">
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="rs-open">+ Add Route</button>
+        </div>
+        <p class="mt-warning" id="rs-storage-warning" hidden>This browser is blocking storage, so routes cannot be saved. Export to CSV before closing.</p>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>ROUTE STREETS</legend>
+
+                <div class="mt-filters nc-filters">
+                    <div class="field">
+                        <label for="rs-search">Find a street or route</label>
+                        <input type="search" id="rs-search" placeholder="Street name, route, or area" autocomplete="off">
+                    </div>
+                </div>
+
+                <p class="mt-count" id="rs-count" aria-live="polite"></p>
+                <div class="mt-list" id="rs-list"></div>
+
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="rs-export">Export CSV</button>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+
+    <dialog class="send-dialog mt-dialog" id="rs-dialog" aria-labelledby="rs-form-title">
+        <form class="emp-info" id="rs-form" data-title="Route">
+            <div class="mt-dialog-head">
+                <h2 id="rs-form-title">Add Route</h2>
+                <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+
+            <fieldset class="emp-fields">
+                <legend>Route details</legend>
+
+                <div class="field">
+                    <label for="rs-route">Route</label>
+                    <input type="text" id="rs-route" name="route" autocomplete="off" required>
+                </div>
+
+                <div class="field">
+                    <label for="rs-day">Service Day</label>
+                    <select id="rs-day" name="day"></select>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="rs-area">Area (Boro / Twp)</label>
+                    <input type="text" id="rs-area" name="area" list="dl-rs-area" autocomplete="off">
+                </div>
+
+                <div class="field field-wide">
+                    <label for="rs-streets">Streets</label>
+                    <textarea id="rs-streets" name="streets" rows="8" placeholder="One street per line"></textarea>
+                    <p class="mt-hint" id="rs-streets-count" aria-live="polite"></p>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="rs-notes">Notes</label>
+                    <textarea id="rs-notes" name="notes" rows="2"></textarea>
+                </div>
+            </fieldset>
+
+            <datalist id="dl-rs-area"></datalist>
+
+            <p class="send-error mt-dialog-error" id="rs-error" hidden></p>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" data-dialog-close>Close</button>
+                <button type="submit" class="generate-pdf" id="rs-submit">Save Route</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="tracker-dialog.js" defer></script>
+    <script src="route-streets.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>
