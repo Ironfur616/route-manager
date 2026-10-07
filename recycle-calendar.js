@@ -1,11 +1,12 @@
-/* Recycle week calendar, opened from the calendar button at the right of the app header.
-   A quick reference for which weeks are recycle weeks in each service area. Weeks are marked
-   by hand (Edit weeks, then tap a week), and stored per area in localStorage under the date of
-   the week's Sunday, the first day of each calendar row. The calendar opens view-only so a
-   stray tap while checking it can't change anything.
+/* Recycle calendar, opened from the calendar button at the right of the app header.
+   A quick reference for which days are recycle days in each service area. Days are marked by
+   hand: Edit, then pick how a tap works (one Day, a Range from a first to a last day, or a whole
+   Week) and tap the calendar. Marked days are stored per area in localStorage as a sorted list
+   of "YYYY-MM-DD" dates. The calendar opens view-only so a stray tap while checking it can't
+   change anything.
 
-   The header button shows a small recycle badge when the current week is a recycle week for
-   the selected area, so the answer is visible without opening the calendar.
+   The header button shows a small recycle badge when today is a recycle day for the selected
+   area, so the answer is visible without opening the calendar.
 
    Loaded only by the shell (index.html), after nav.js has built the header. */
 (function () {
@@ -17,6 +18,11 @@
         { id: "washington", name: "Washington" }
     ];
     var WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+    var TOOLS = [
+        { value: "day", label: "Day", hint: "Tap a day to mark or unmark it." },
+        { value: "range", label: "Range", hint: "Tap the first day, then the last day. Every day in between is marked (or unmarked, if the first day was already marked)." },
+        { value: "week", label: "Week", hint: "Tap any day to mark or unmark its whole week." }
+    ];
 
     var header = document.querySelector(".app-header");
     if (!header) return;
@@ -24,6 +30,8 @@
     var viewMonth = startOfMonth(new Date());
     var editing = false;
     var addingArea = false;
+    var tool = "day";
+    var rangeStart = null; // "YYYY-MM-DD" of the first tap of a range, waiting for the second
 
     /* ---------- Dates ---------- */
 
@@ -33,6 +41,11 @@
 
     function dateString(d) {
         return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+
+    function parseDate(value) {
+        var p = String(value).split("-");
+        return new Date(+p[0], +p[1] - 1, +p[2]);
     }
 
     function startOfMonth(d) {
@@ -49,17 +62,42 @@
         return addDays(d, -d.getDay());
     }
 
-    // "Oct 4 – 10" or "Sep 27 – Oct 3"
-    function weekRange(sunday) {
-        var saturday = addDays(sunday, 6);
-        var first = sunday.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-        var last = saturday.getMonth() === sunday.getMonth()
-            ? String(saturday.getDate())
-            : saturday.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-        return first + " – " + last;
+    function shortDay(value) {
+        return parseDate(value).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    }
+
+    // Consecutive dates grouped into runs: ["2026-10-05".."2026-10-08"] -> "Mon, Oct 5 – Thu, Oct 8"
+    function describeRuns(dates) {
+        var runs = [];
+        dates.forEach(function (value) {
+            var last = runs[runs.length - 1];
+            if (last && dateString(addDays(parseDate(last.end), 1)) === value) last.end = value;
+            else runs.push({ start: value, end: value });
+        });
+        return runs.map(function (r) {
+            return r.start === r.end ? shortDay(r.start) : shortDay(r.start) + " – " + shortDay(r.end);
+        }).join("; ");
     }
 
     /* ---------- Storage ---------- */
+
+    // Calendars saved before single days could be marked stored whole weeks under each
+    // week's Sunday; those become the seven marked days they stood for.
+    function migrate(data) {
+        if (!data.weeks) return false;
+        Object.keys(data.weeks).forEach(function (areaId) {
+            var days = data.days[areaId] || [];
+            (data.weeks[areaId] || []).forEach(function (sunday) {
+                for (var i = 0; i < 7; i++) {
+                    var day = dateString(addDays(parseDate(sunday), i));
+                    if (days.indexOf(day) === -1) days.push(day);
+                }
+            });
+            data.days[areaId] = days.sort();
+        });
+        delete data.weeks;
+        return true;
+    }
 
     function load() {
         var data;
@@ -70,7 +108,8 @@
         }
         if (!data || typeof data !== "object") data = {};
         if (!Array.isArray(data.customAreas)) data.customAreas = [];
-        if (!data.weeks || typeof data.weeks !== "object") data.weeks = {};
+        if (!data.days || typeof data.days !== "object") data.days = {};
+        if (migrate(data)) save(data);
         return data;
     }
 
@@ -95,20 +134,52 @@
         return all[0];
     }
 
-    function isRecycleWeek(data, areaId, sunday) {
-        return (data.weeks[areaId] || []).indexOf(dateString(sunday)) !== -1;
+    function daysFor(data, areaId) {
+        return data.days[areaId] || [];
     }
 
-    function toggleWeek(sunday) {
+    function isRecycleDay(data, areaId, value) {
+        return daysFor(data, areaId).indexOf(value) !== -1;
+    }
+
+    // Marks (or unmarks) every date from `from` to `to`, in either order
+    function setDays(from, to, marked) {
         var data = load();
         var area = selectedArea(data);
-        var list = data.weeks[area.id] || [];
-        var key = dateString(sunday);
-        var at = list.indexOf(key);
-        if (at === -1) list.push(key);
-        else list.splice(at, 1);
-        data.weeks[area.id] = list.sort();
+        var set = {};
+        daysFor(data, area.id).forEach(function (d) { set[d] = true; });
+        var a = from < to ? from : to;
+        var b = from < to ? to : from;
+        for (var d = parseDate(a); dateString(d) <= b; d = addDays(d, 1)) {
+            if (marked) set[dateString(d)] = true;
+            else delete set[dateString(d)];
+        }
+        data.days[area.id] = Object.keys(set).sort();
         save(data);
+    }
+
+    function tapDay(value) {
+        var data = load();
+        var area = selectedArea(data);
+        var on = isRecycleDay(data, area.id, value);
+
+        if (tool === "day") {
+            setDays(value, value, !on);
+        } else if (tool === "week") {
+            var sunday = weekStart(parseDate(value));
+            // Fill the week unless it's already fully marked, in which case clear it
+            var full = true;
+            for (var i = 0; i < 7; i++) {
+                if (!isRecycleDay(data, area.id, dateString(addDays(sunday, i)))) full = false;
+            }
+            setDays(dateString(sunday), dateString(addDays(sunday, 6)), !full);
+        } else if (!rangeStart) {
+            rangeStart = value;
+        } else {
+            // The first day's state decides: start on an unmarked day to mark, a marked one to clear
+            setDays(rangeStart, value, !isRecycleDay(data, area.id, rangeStart));
+            rangeStart = null;
+        }
         render();
     }
 
@@ -132,7 +203,7 @@
 
     var openBtn = el("button", "rc-open");
     openBtn.type = "button";
-    openBtn.setAttribute("aria-label", "Recycle week calendar");
+    openBtn.setAttribute("aria-label", "Recycle calendar");
     openBtn.innerHTML =
         '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">' +
             '<rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>' +
@@ -145,10 +216,10 @@
     function updateBadge() {
         var data = load();
         var area = selectedArea(data);
-        var on = isRecycleWeek(data, area.id, weekStart(new Date()));
+        var on = isRecycleDay(data, area.id, dateString(new Date()));
         openBtn.querySelector(".rc-badge").hidden = !on;
-        openBtn.setAttribute("aria-label", "Recycle week calendar" +
-            (on ? " (this week is a recycle week in " + area.name + ")" : ""));
+        openBtn.setAttribute("aria-label", "Recycle calendar" +
+            (on ? " (today is a recycle day in " + area.name + ")" : ""));
     }
 
     /* ---------- Dialog ---------- */
@@ -157,7 +228,7 @@
     dialog.setAttribute("aria-labelledby", "rc-title");
     dialog.innerHTML =
         '<div class="mt-dialog-head">' +
-            '<h2 id="rc-title">Recycle Weeks</h2>' +
+            '<h2 id="rc-title">Recycle Days</h2>' +
             '<button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>' +
         "</div>" +
         '<div class="rc-body">' +
@@ -172,17 +243,18 @@
                 '<p class="send-error rc-add-error" hidden></p>' +
             "</div>" +
             '<div class="rc-status" aria-live="polite"></div>' +
+            '<div class="rc-tools" role="group" aria-label="What a tap marks" hidden></div>' +
             '<div class="rc-month-nav">' +
                 '<button type="button" class="mt-btn rc-prev" aria-label="Previous month">‹</button>' +
                 '<h3 class="rc-month" aria-live="polite"></h3>' +
                 '<button type="button" class="mt-btn rc-next" aria-label="Next month">›</button>' +
             "</div>" +
             '<table class="rc-grid"><thead><tr></tr></thead><tbody></tbody></table>' +
-            '<p class="mt-hint rc-hint"></p>' +
+            '<p class="mt-hint rc-hint" aria-live="polite"></p>' +
         "</div>" +
         '<div class="form-actions mt-dialog-actions rc-actions">' +
             '<button type="button" class="send-email rc-today">Today</button>' +
-            '<button type="button" class="generate-pdf rc-edit">Edit weeks</button>' +
+            '<button type="button" class="generate-pdf rc-edit">Edit</button>' +
         "</div>";
     document.body.appendChild(dialog);
 
@@ -191,6 +263,7 @@
     var areaInput = dialog.querySelector("#rc-area-name");
     var addError = dialog.querySelector(".rc-add-error");
     var statusEl = dialog.querySelector(".rc-status");
+    var toolsEl = dialog.querySelector(".rc-tools");
     var monthEl = dialog.querySelector(".rc-month");
     var tbody = dialog.querySelector(".rc-grid tbody");
     var hintEl = dialog.querySelector(".rc-hint");
@@ -204,6 +277,7 @@
         onClose: function () {
             editing = false;
             addingArea = false;
+            rangeStart = null;
             updateBadge();
         }
     });
@@ -212,6 +286,7 @@
         viewMonth = startOfMonth(new Date());
         editing = false;
         addingArea = false;
+        rangeStart = null;
         render();
         calendarDialog.open();
     });
@@ -226,6 +301,7 @@
                 var d = load();
                 d.selected = a.id;
                 save(d);
+                rangeStart = null;
                 render();
             });
             b.setAttribute("aria-pressed", String(a.id === current.id));
@@ -240,25 +316,38 @@
     }
 
     function renderStatus(data, area) {
-        var thisWeek = weekStart(new Date());
-        var on = isRecycleWeek(data, area.id, thisWeek);
+        var today = dateString(new Date());
+        var on = isRecycleDay(data, area.id, today);
+        var sunday = dateString(weekStart(new Date()));
+        var saturday = dateString(addDays(weekStart(new Date()), 6));
+        var thisWeek = daysFor(data, area.id).filter(function (d) { return d >= sunday && d <= saturday; });
+
         statusEl.className = "rc-status" + (on ? " is-recycle" : "");
         statusEl.textContent = "";
-        statusEl.appendChild(el("strong", null, on
-            ? "♻ This week is a recycle week"
-            : "This week is not a recycle week"));
-        statusEl.appendChild(el("span", null, area.name + " · " + weekRange(thisWeek)));
-
-        if (!on) {
-            var upcoming = (data.weeks[area.id] || []).filter(function (k) { return k > dateString(thisWeek); })[0];
-            if (upcoming) {
-                var p = upcoming.split("-");
-                statusEl.appendChild(el("span", null, "Next recycle week: " +
-                    weekRange(new Date(+p[0], +p[1] - 1, +p[2]))));
-            } else if (!(data.weeks[area.id] || []).length) {
-                statusEl.appendChild(el("span", null, "No recycle weeks marked yet for this area."));
-            }
+        statusEl.appendChild(el("strong", null, on ? "♻ Today is a recycle day" : "Today is not a recycle day"));
+        statusEl.appendChild(el("span", null, area.name));
+        if (thisWeek.length) {
+            statusEl.appendChild(el("span", null, "This week: " + describeRuns(thisWeek)));
         }
+        if (!on) {
+            var next = daysFor(data, area.id).filter(function (d) { return d > today; })[0];
+            if (next && next > saturday) statusEl.appendChild(el("span", null, "Next recycle day: " + shortDay(next)));
+            else if (!daysFor(data, area.id).length) statusEl.appendChild(el("span", null, "No recycle days marked yet for this area."));
+        }
+    }
+
+    function renderTools() {
+        toolsEl.hidden = !editing;
+        toolsEl.textContent = "";
+        TOOLS.forEach(function (t) {
+            var b = button("rc-tool" + (t.value === tool ? " is-selected" : ""), t.label, function () {
+                tool = t.value;
+                rangeStart = null;
+                render();
+            });
+            b.setAttribute("aria-pressed", String(t.value === tool));
+            toolsEl.appendChild(b);
+        });
     }
 
     function renderGrid(data, area) {
@@ -269,35 +358,54 @@
 
         // Every week that touches this month, Sunday to Saturday
         for (var sunday = weekStart(viewMonth); sunday.getMonth() === month || sunday < viewMonth; sunday = addDays(sunday, 7)) {
-            (function (rowStart) {
-                var on = isRecycleWeek(data, area.id, rowStart);
-                var row = el("tr", "rc-week" + (on ? " is-recycle" : ""));
+            var row = el("tr", "rc-week");
+            for (var i = 0; i < 7; i++) {
+                var day = addDays(sunday, i);
+                var value = dateString(day);
+                var on = isRecycleDay(data, area.id, value);
+                // Rounded ends where a run of marked days starts and stops
+                var prevOn = on && i > 0 && isRecycleDay(data, area.id, dateString(addDays(day, -1)));
+                var nextOn = on && i < 6 && isRecycleDay(data, area.id, dateString(addDays(day, 1)));
+                var cell = el("td", "rc-day" +
+                    (day.getMonth() !== month ? " is-other-month" : "") +
+                    (value === today ? " is-today" : "") +
+                    (on ? " is-recycle" : "") +
+                    (on && !prevOn ? " run-start" : "") +
+                    (on && !nextOn ? " run-end" : "") +
+                    (value === rangeStart ? " is-range-start" : ""));
+                cell.appendChild(el("span", "rc-day-num", String(day.getDate())));
+                if (on && !prevOn) cell.appendChild(el("span", "rc-week-icon", "♻"));
+
                 if (editing) {
-                    row.tabIndex = 0;
-                    row.setAttribute("role", "button");
-                    row.setAttribute("aria-pressed", String(on));
-                    row.setAttribute("aria-label", "Week of " + weekRange(rowStart) +
-                        (on ? ", recycle week. Tap to unmark." : ". Tap to mark as a recycle week."));
-                    row.addEventListener("click", function () { toggleWeek(rowStart); });
-                    row.addEventListener("keydown", function (ev) {
-                        if (ev.key === "Enter" || ev.key === " ") {
-                            ev.preventDefault();
-                            toggleWeek(rowStart);
-                        }
-                    });
+                    cell.tabIndex = 0;
+                    cell.setAttribute("role", "button");
+                    cell.setAttribute("aria-pressed", String(on));
+                    cell.setAttribute("aria-label", shortDay(value) + (on ? ", recycle day" : ""));
+                    (function (v) {
+                        cell.addEventListener("click", function () { tapDay(v); });
+                        cell.addEventListener("keydown", function (ev) {
+                            if (ev.key === "Enter" || ev.key === " ") {
+                                ev.preventDefault();
+                                tapDay(v);
+                            }
+                        });
+                    })(value);
                 }
-                for (var i = 0; i < 7; i++) {
-                    var day = addDays(rowStart, i);
-                    var cell = el("td", "rc-day" +
-                        (day.getMonth() !== month ? " is-other-month" : "") +
-                        (dateString(day) === today ? " is-today" : ""));
-                    cell.appendChild(el("span", "rc-day-num", String(day.getDate())));
-                    if (on && i === 0) cell.appendChild(el("span", "rc-week-icon", "♻"));
-                    row.appendChild(cell);
-                }
-                tbody.appendChild(row);
-            })(sunday);
+                row.appendChild(cell);
+            }
+            tbody.appendChild(row);
         }
+    }
+
+    function hintText(area) {
+        if (!editing) return "Recycle days are highlighted in green. Tap Edit to change them.";
+        if (tool === "range" && rangeStart) {
+            return "First day: " + shortDay(rangeStart) + ". Now tap the last day of the range (you can change months first).";
+        }
+        for (var i = 0; i < TOOLS.length; i++) {
+            if (TOOLS[i].value === tool) return TOOLS[i].hint + " Changes apply to " + area.name + ".";
+        }
+        return "";
     }
 
     function render() {
@@ -307,13 +415,12 @@
         renderAreas(data);
         addAreaEl.hidden = !addingArea;
         renderStatus(data, area);
+        renderTools();
         renderGrid(data, area);
 
         dialog.classList.toggle("is-editing", editing);
-        editBtn.textContent = editing ? "Done" : "Edit weeks";
-        hintEl.textContent = editing
-            ? "Tap a week to mark or unmark it as a recycle week for " + area.name + "."
-            : "Recycle weeks are highlighted in green. Tap Edit weeks to change them.";
+        editBtn.textContent = editing ? "Done" : "Edit";
+        hintEl.textContent = hintText(area);
 
         // Only areas you added can be removed; the two built-in ones always stay
         var removeBtn = dialog.querySelector(".rc-remove-area");
@@ -322,12 +429,12 @@
             var remove = button("mt-btn mt-btn-danger rc-remove-area", "Remove " + area.name, function () {
                 TrackerDialog.confirmDelete({
                     title: "Remove area?",
-                    message: area.name + " and all of its marked recycle weeks will be removed. This cannot be undone.",
+                    message: area.name + " and all of its marked recycle days will be removed. This cannot be undone.",
                     confirmLabel: "Remove area"
                 }, function () {
                     var d = load();
                     d.customAreas = d.customAreas.filter(function (a) { return a.id !== area.id; });
-                    delete d.weeks[area.id];
+                    delete d.days[area.id];
                     d.selected = BUILT_IN[0].id;
                     save(d);
                     render();
@@ -356,6 +463,7 @@
 
     editBtn.addEventListener("click", function () {
         editing = !editing;
+        rangeStart = null;
         render();
     });
 
@@ -379,7 +487,7 @@
         }
         addError.hidden = true;
         addingArea = false;
-        editing = true; // a new area has no weeks yet, so go straight to marking them
+        editing = true; // a new area has no days yet, so go straight to marking them
         render();
     }
 

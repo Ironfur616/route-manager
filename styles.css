@@ -2201,9 +2201,10 @@ body.shell {
 }
 
 
-/* ---------- Recycle week calendar (header button + dialog) ---------- */
+/* ---------- Recycle calendar (header button + dialog) ---------- */
 /* Mobile first: the dialog uses the shared .mt-dialog frame; the month grid fills its width.
-   Recycle weeks are a green row with a recycle mark on the Sunday cell. */
+   Recycle days are green; a run of consecutive days gets rounded ends and a recycle mark on
+   its first day. */
 .rc-open {
     position: relative;
     display: flex;
@@ -2416,23 +2417,30 @@ body.shell {
     font-weight: 700;
 }
 
-.rc-week.is-recycle .rc-day {
+.rc-day.is-recycle {
     background-color: #E8F5EC;
     color: var(--forest-green);
     font-weight: 700;
 }
 
-.rc-week.is-recycle .rc-day.is-other-month {
+.rc-day.is-recycle.is-other-month {
     color: rgba(4, 102, 53, 0.55);
 }
 
-.rc-week.is-recycle .rc-day:first-child {
+.rc-day.run-start {
     border-radius: 6px 0 0 6px;
     box-shadow: inset 4px 0 0 var(--forest-green);
 }
 
-.rc-week.is-recycle .rc-day:last-child {
-    border-radius: 0 6px 6px 0;
+.rc-day.run-end {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* First tap of a range, waiting for the last day */
+.rc-day.is-range-start .rc-day-num {
+    background-color: var(--forest-green);
+    color: var(--white);
 }
 
 .rc-week-icon {
@@ -2442,19 +2450,56 @@ body.shell {
     font-size: 0.7rem;
 }
 
-/* Edit mode: whole weeks are the tap targets */
-.rc-dialog.is-editing .rc-week {
+/* Edit mode: each day is a tap target */
+.rc-dialog.is-editing .rc-day {
     cursor: pointer;
 }
 
-.rc-dialog.is-editing .rc-week:hover .rc-day {
+.rc-dialog.is-editing .rc-day:hover {
     outline: 1px dashed var(--forest-green);
     outline-offset: -2px;
 }
 
-.rc-dialog.is-editing .rc-week:focus-visible {
+.rc-dialog.is-editing .rc-day:focus-visible {
     outline: 3px solid var(--sky-blue);
-    outline-offset: 1px;
+    outline-offset: -2px;
+}
+
+/* Day / Range / Week: what a tap marks while editing */
+.rc-tools {
+    display: flex;
+    border: 1px solid var(--deep-navy);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.rc-tools[hidden] {
+    display: none;
+}
+
+.rc-tool {
+    flex: 1 1 0;
+    min-height: 44px;
+    border: 0;
+    background-color: var(--white);
+    color: var(--deep-navy);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.rc-tool + .rc-tool {
+    border-left: 1px solid var(--deep-navy);
+}
+
+.rc-tool.is-selected {
+    background-color: var(--deep-navy);
+    color: var(--white);
+}
+
+.rc-tool:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
 }
 
 .rc-dialog.is-editing .rc-grid {
