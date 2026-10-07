@@ -493,10 +493,18 @@
     }
 
     function remove(id) {
-        if (!confirm("Delete this entry? This cannot be undone.")) return;
-        save(load().filter(function (e) { return e.id !== id; }));
-        if (editingId === id) resetForm(false);
-        render();
+        var entry = load().filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete entry?",
+            message: "The missed collection at " + entry.address + " on " + prettyDate(entry.date) +
+                " will be deleted. This cannot be undone.",
+            confirmLabel: "Delete entry"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm(false);
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);

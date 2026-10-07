@@ -2145,3 +2145,41 @@ body.shell {
 .mt-confirm .mt-confirm-delete:hover {
     background-color: #8C1D17;
 }
+
+.mt-confirm .mt-confirm-delete:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.mt-confirm .mt-confirm-delete:disabled:hover {
+    background-color: #B3261E;
+}
+
+/* Extra tick-to-confirm step (requireCheck), for lists where a mistaken delete is costly */
+.mt-confirm-check {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 44px;
+    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #B3261E;
+    border-radius: 4px;
+    background-color: #FDF1F0;
+    color: var(--deep-navy);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mt-confirm-check[hidden] {
+    display: none;
+}
+
+.mt-confirm-check input {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    accent-color: #B3261E;
+    cursor: pointer;
+}

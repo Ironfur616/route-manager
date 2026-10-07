@@ -339,10 +339,18 @@
     });
 
     function remove(id) {
-        if (!confirm("Delete this customer? This cannot be undone.")) return;
-        save(load().filter(function (e) { return e.id !== id; }));
-        if (editingId === id) resetForm();
-        render();
+        var entry = load().filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete customer?",
+            message: entry.address + " will be deleted from New Customers, along with its checklist " +
+                "and notes. This cannot be undone.",
+            confirmLabel: "Delete customer"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm();
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);

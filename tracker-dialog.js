@@ -102,7 +102,10 @@
        that box is easy to tap through by mistake and isn't always shown inside an installed
        app. Cancel has focus, so a stray tap or Enter never deletes anything.
 
-         TrackerDialog.confirmDelete({ title, message, confirmLabel }, function () { ...delete... });
+         TrackerDialog.confirmDelete({ title, message, confirmLabel, requireCheck }, function () { ...delete... });
+
+       requireCheck (optional) is a checkbox label; the delete button stays disabled until it's
+       ticked. Used where a mistaken delete would be costly (the handicap & elderly service list).
     */
     var confirmEl = null;
     var onConfirm = null;
@@ -115,6 +118,7 @@
         confirmEl.innerHTML =
             '<h2 id="mt-confirm-title"></h2>' +
             '<p class="send-help" id="mt-confirm-message"></p>' +
+            '<label class="mt-confirm-check" hidden><input type="checkbox"><span></span></label>' +
             '<div class="send-actions">' +
                 '<button type="button" class="send-cancel" data-confirm="cancel">Cancel</button>' +
                 '<button type="button" class="send-submit mt-confirm-delete" data-confirm="ok"></button>' +
@@ -126,20 +130,34 @@
             // A tap on the dimmed backdrop lands on the dialog itself: treat it as Cancel
             if (ev.target === confirmEl || choice === "cancel") {
                 confirmEl.close();
-            } else if (choice === "ok") {
+            } else if (choice === "ok" && !ev.target.disabled) {
                 var run = onConfirm;
                 confirmEl.close();
                 if (run) run();
             }
         });
         confirmEl.addEventListener("close", function () { onConfirm = null; });
+
+        var box = confirmEl.querySelector(".mt-confirm-check input");
+        box.addEventListener("change", function () {
+            confirmEl.querySelector(".mt-confirm-delete").disabled = !box.checked;
+        });
     }
 
     window.TrackerDialog.confirmDelete = function (options, callback) {
         if (!confirmEl) buildConfirm();
         confirmEl.querySelector("#mt-confirm-title").textContent = options.title || "Delete?";
         confirmEl.querySelector("#mt-confirm-message").textContent = options.message || "";
-        confirmEl.querySelector(".mt-confirm-delete").textContent = options.confirmLabel || "Delete";
+        var deleteBtn = confirmEl.querySelector(".mt-confirm-delete");
+        deleteBtn.textContent = options.confirmLabel || "Delete";
+
+        // Unticked every time it opens, so an earlier confirmation never carries over
+        var check = confirmEl.querySelector(".mt-confirm-check");
+        check.hidden = !options.requireCheck;
+        check.querySelector("input").checked = false;
+        check.querySelector("span").textContent = options.requireCheck || "";
+        deleteBtn.disabled = !!options.requireCheck;
+
         onConfirm = callback;
         confirmEl.showModal();
         confirmEl.querySelector('[data-confirm="cancel"]').focus();

@@ -365,8 +365,13 @@
         del.type = "button";
         del.setAttribute("aria-label", "Remove this evidence entry");
         del.addEventListener("click", function () {
-            if (!confirm("Remove this evidence entry? This cannot be undone.")) return;
-            updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
+            TrackerDialog.confirmDelete({
+                title: "Remove evidence?",
+                message: "This evidence entry will be removed from “" + c.title + "”. This cannot be undone.",
+                confirmLabel: "Remove evidence"
+            }, function () {
+                updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
+            });
         });
         actions.appendChild(editBtn);
         actions.appendChild(del);
@@ -687,10 +692,17 @@
     });
 
     function removeCase(id) {
-        if (!confirm("Delete this case and all of its evidence? This cannot be undone.")) return;
-        save(load().filter(function (c) { return c.id !== id; }));
-        if (editingId === id) resetForm();
-        render();
+        var c = load().filter(function (e) { return e.id === id; })[0];
+        if (!c) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete case?",
+            message: "“" + c.title + "” and all of its evidence will be deleted. This cannot be undone.",
+            confirmLabel: "Delete case"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm();
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);

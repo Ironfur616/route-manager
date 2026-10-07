@@ -275,10 +275,18 @@
     });
 
     function remove(id) {
-        if (!confirm("Delete this pickup request? This cannot be undone.")) return;
-        save(load().filter(function (e) { return e.id !== id; }));
-        if (editingId === id) resetForm();
-        render();
+        var entry = load().filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete pickup request?",
+            message: "The bulk pickup at " + entry.address + " (" + prettyDate(entry.pickupDate) +
+                ") will be deleted. This cannot be undone.",
+            confirmLabel: "Delete request"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm();
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);

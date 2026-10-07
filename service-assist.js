@@ -587,7 +587,8 @@
             title: "Remove customer?",
             message: c.address + " will be taken off the " + dayLabel(c.day) +
                 " route. Their past Service Log entries are kept.",
-            confirmLabel: "Remove customer"
+            confirmLabel: "Remove customer",
+            requireCheck: "I confirm this customer should be removed from the service list"
         }, function () {
             save(load().filter(function (e) { return e.id !== id; }));
             render();
