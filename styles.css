@@ -126,7 +126,10 @@ body {
 }
 
 /* ---------- Off-canvas nav drawer ---------- */
+/* Column flex so the Saved PDFs footer sits at the bottom even when the menu is short */
 .site-nav {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 200;
@@ -156,12 +159,11 @@ body {
 }
 
 .nav-section {
-    padding: 0.125rem 1rem;
+    padding: 0.75rem 1rem 0;
 }
 
-/* Section/subsection headings are buttons that expand/collapse the content
-   below them (see nav.js). A shared caret rotates via [aria-expanded]. */
-.nav-section-title,
+/* Subsection headings (Residential, Commercial) are buttons that expand/collapse the
+   links below them (see nav.js). The caret rotates via [aria-expanded]. */
 .nav-subsection-title {
     display: flex;
     align-items: center;
@@ -176,32 +178,13 @@ body {
     transition: background-color 0.15s ease;
 }
 
-.nav-section-title:hover,
 .nav-subsection-title:hover {
     background-color: rgba(86, 157, 214, 0.12);
 }
 
-.nav-section-title:focus-visible,
 .nav-subsection-title:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
-}
-
-/* Margin under the heading only while its panel is open, so collapsed headings sit close together */
-.nav-section-title[aria-expanded="true"] {
-    margin-bottom: 0.25rem;
-}
-
-.nav-section-title {
-    margin: 0;
-    min-height: 40px;
-    padding: 0 0 0.125rem;
-    color: var(--deep-navy);
-    font-size: 1.125rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    border-bottom: 2px solid var(--forest-green);
 }
 
 .nav-caret {
@@ -222,22 +205,24 @@ body {
 
 /* Smooth height animation without measuring in JS: the grid row goes from
    0fr (collapsed) to 1fr (open), and the inner wrapper clips overflow. */
-.nav-section-body,
 .nav-subsection-body {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.25s ease;
 }
 
-.nav-section-body.is-open,
 .nav-subsection-body.is-open {
     grid-template-rows: 1fr;
 }
 
-.nav-section-body-inner,
 .nav-subsection-body-inner {
     overflow: hidden;
     min-height: 0;
+}
+
+/* The subsection headings sit in <h3>s; drop the browser's default heading margins */
+.nav-subsection h3 {
+    margin: 0;
 }
 
 .nav-subsection + .nav-subsection {
@@ -294,10 +279,10 @@ body {
     color: var(--white);
 }
 
-/* Saved PDFs: a plain (non-collapsible) section holding one action button */
+/* Top-level section heading: always open, not a button */
 .nav-section-plain {
-    margin: 0 0 0.75rem;
-    padding: 0 0 0.5rem;
+    margin: 0 0 0.25rem;
+    padding: 0 0 0.25rem;
     color: var(--deep-navy);
     font-size: 1.125rem;
     font-weight: 700;
@@ -306,35 +291,40 @@ body {
     border-bottom: 2px solid var(--forest-green);
 }
 
-.nav-action {
-    display: block;
-    width: 100%;
-    min-height: 44px;
-    padding: 0.75rem 0.5rem;
+/* Saved PDFs icon, pinned to the bottom right of the drawer */
+.site-nav-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    background-color: var(--white);
+}
+
+.nav-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     border: none;
     border-radius: 4px;
     background-color: transparent;
-    color: var(--drk-gray);
-    font: inherit;
-    font-weight: 600;
-    text-align: left;
+    color: var(--deep-navy);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
-.nav-action:hover {
+.nav-icon-btn:hover {
     background-color: rgba(86, 157, 214, 0.15);
 }
 
-.nav-action:focus-visible {
+.nav-icon-btn:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
-}
-
-.nav-action-hint {
-    margin: 0.25rem 0.5rem 0;
-    color: var(--drk-gray);
-    font-size: 0.8rem;
 }
 
 /* Dims and blocks interaction with the page behind the open drawer */

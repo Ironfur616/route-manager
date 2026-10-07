@@ -16,12 +16,11 @@
             '<ul class="nav-link-list">' + links.join("") + "</ul></div></div></div>";
     }
 
-    function section(id, title, content) {
+    // Top-level sections are always open; only subsections (Residential, Commercial) collapse
+    function section(title, content) {
         return '<div class="nav-section">' +
-            '<h2><button type="button" class="nav-section-title" aria-expanded="false" aria-controls="' + id + '">' +
-            title + '<span class="nav-caret" aria-hidden="true"></span></button></h2>' +
-            '<div class="nav-section-body" id="' + id + '"><div class="nav-section-body-inner">' +
-            content + "</div></div></div>";
+            '<h2 class="nav-section-plain">' + title + "</h2>" +
+            content + "</div>";
     }
 
     var html =
@@ -36,7 +35,7 @@
                 '<span class="site-nav-heading">Menu</span>' +
                 '<button type="button" class="nav-close" id="nav-close" aria-label="Close menu">&times;</button>' +
             "</div>" +
-            section("panel-observations", "Observations",
+            section("Observations",
                 subsection("panel-residential", "Residential", [
                     link("resi-driver.html", "Residential Driver"),
                     link("resi-helper.html", "Residential Helper"),
@@ -46,16 +45,16 @@
                     link("com-driver.html", "Commercial Driver"),
                     link("com-trainee.html", "Commercial Trainee")
                 ])) +
-            section("panel-safety", "Safety",
+            section("Safety",
                 '<ul class="nav-link-list">' + link("safety-lane-ck.html", "Safety Lane") + "</ul>") +
-            section("panel-route-management", "Route Management",
+            section("Route Management",
                 '<ul class="nav-link-list">' +
                     link("missed-tracker.html", "Missed Collections") +
                     link("new-customers.html", "New Customers") +
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
-            section("panel-service", "Service",
+            section("Service",
                 '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
@@ -125,9 +124,9 @@
     }
 })();
 
-// "Saved PDFs" menu item. A web page can't open a folder in the file manager, so this
-// opens the device's file picker (starting in Downloads where the browser supports it)
-// and shows the chosen PDF in a new browser tab. Injected here so every page's menu gets it.
+// Saved PDFs: an icon button pinned to the bottom right of the menu. A web page can't open a
+// folder in the file manager, so this opens the device's file picker (starting in Downloads
+// where the browser supports it) and shows the chosen PDF in a new browser tab.
 (function () {
     "use strict";
 
@@ -136,13 +135,18 @@
         return;
     }
 
-    var section = document.createElement("div");
-    section.className = "nav-section";
-    section.innerHTML =
-        '<h2 class="nav-section-plain">Saved Files</h2>' +
-        '<button type="button" class="nav-action" id="open-saved-pdfs">Open Saved PDFs</button>' +
-        '<p class="nav-action-hint">Browse to the folder your PDFs were saved to (usually Downloads) and pick one to view it.</p>';
-    nav.appendChild(section);
+    var footer = document.createElement("div");
+    footer.className = "site-nav-footer";
+    footer.innerHTML =
+        '<button type="button" class="nav-icon-btn" id="open-saved-pdfs" ' +
+            'aria-label="Open saved PDFs" title="Open saved PDFs">' +
+            '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">' +
+                '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" ' +
+                    'fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+                '<path d="M8 13h8M8 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+            "</svg>" +
+        "</button>";
+    nav.appendChild(footer);
 
     var input = document.createElement("input");
     input.type = "file";
@@ -187,13 +191,13 @@
     });
 })();
 
-// Collapsible Observations section + Residential/Commercial subsections.
+// Collapsible Residential/Commercial subsections under Observations.
 // Each heading is a button (aria-expanded/aria-controls) toggling the
 // .is-open class on its panel; styles.css animates the height.
 (function () {
     "use strict";
 
-    var toggles = document.querySelectorAll(".nav-section-title, .nav-subsection-title");
+    var toggles = document.querySelectorAll(".nav-subsection-title");
 
     toggles.forEach(function (btn) {
         btn.addEventListener("click", function () {
