@@ -581,9 +581,17 @@
     });
 
     function remove(id) {
-        if (!confirm("Remove this customer from the weekly list? Their past service log entries are kept.")) return;
-        save(load().filter(function (c) { return c.id !== id; }));
-        render();
+        var c = load().filter(function (e) { return e.id === id; })[0];
+        if (!c) return;
+        TrackerDialog.confirmDelete({
+            title: "Remove customer?",
+            message: c.address + " will be taken off the " + dayLabel(c.day) +
+                " route. Their past Service Log entries are kept.",
+            confirmLabel: "Remove customer"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            render();
+        });
     }
 
     /* ---------- CSV export ---------- */

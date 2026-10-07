@@ -97,4 +97,51 @@
             }
         };
     };
+
+    /* In-app confirmation before something is deleted, in place of the browser's confirm():
+       that box is easy to tap through by mistake and isn't always shown inside an installed
+       app. Cancel has focus, so a stray tap or Enter never deletes anything.
+
+         TrackerDialog.confirmDelete({ title, message, confirmLabel }, function () { ...delete... });
+    */
+    var confirmEl = null;
+    var onConfirm = null;
+
+    function buildConfirm() {
+        confirmEl = document.createElement("dialog");
+        confirmEl.className = "send-dialog mt-confirm";
+        confirmEl.setAttribute("aria-labelledby", "mt-confirm-title");
+        confirmEl.setAttribute("aria-describedby", "mt-confirm-message");
+        confirmEl.innerHTML =
+            '<h2 id="mt-confirm-title"></h2>' +
+            '<p class="send-help" id="mt-confirm-message"></p>' +
+            '<div class="send-actions">' +
+                '<button type="button" class="send-cancel" data-confirm="cancel">Cancel</button>' +
+                '<button type="button" class="send-submit mt-confirm-delete" data-confirm="ok"></button>' +
+            "</div>";
+        document.body.appendChild(confirmEl);
+
+        confirmEl.addEventListener("click", function (ev) {
+            var choice = ev.target.getAttribute && ev.target.getAttribute("data-confirm");
+            // A tap on the dimmed backdrop lands on the dialog itself: treat it as Cancel
+            if (ev.target === confirmEl || choice === "cancel") {
+                confirmEl.close();
+            } else if (choice === "ok") {
+                var run = onConfirm;
+                confirmEl.close();
+                if (run) run();
+            }
+        });
+        confirmEl.addEventListener("close", function () { onConfirm = null; });
+    }
+
+    window.TrackerDialog.confirmDelete = function (options, callback) {
+        if (!confirmEl) buildConfirm();
+        confirmEl.querySelector("#mt-confirm-title").textContent = options.title || "Delete?";
+        confirmEl.querySelector("#mt-confirm-message").textContent = options.message || "";
+        confirmEl.querySelector(".mt-confirm-delete").textContent = options.confirmLabel || "Delete";
+        onConfirm = callback;
+        confirmEl.showModal();
+        confirmEl.querySelector('[data-confirm="cancel"]').focus();
+    };
 })();

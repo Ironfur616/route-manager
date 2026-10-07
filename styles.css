@@ -2130,3 +2130,18 @@ body.shell {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* Delete confirmation (TrackerDialog.confirmDelete): the confirm button is red, not green */
+.mt-confirm h2 {
+    margin: 0 0 0.5rem;
+    color: var(--deep-navy);
+    font-size: 1.25rem;
+}
+
+.mt-confirm .mt-confirm-delete {
+    background-color: #B3261E;
+}
+
+.mt-confirm .mt-confirm-delete:hover {
+    background-color: #8C1D17;
+}
