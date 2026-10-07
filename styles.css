@@ -985,6 +985,7 @@ body.shell {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
+    isolation: isolate; /* keeps the empty-state watermark (z-index -1) above the page background */
 }
 
 .tab-frame {
@@ -1009,6 +1010,18 @@ body.shell {
 
 .tab-empty[hidden] {
     display: none;
+}
+
+/* Faint Earthwise logo filling the empty area before any form is open. It hangs off
+   .tab-empty, so it goes away with it as soon as the first tab opens. */
+.tab-empty::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url("assets/ew-logo.svg") center / min(75%, 560px) auto no-repeat;
+    opacity: 0.08;
+    pointer-events: none;
 }
 
 
