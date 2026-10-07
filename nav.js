@@ -126,7 +126,7 @@
 
 // Saved PDFs: an icon button pinned to the bottom right of the menu. A web page can't open a
 // folder in the file manager, so this opens the device's file picker (starting in Downloads
-// where the browser supports it) and shows the chosen PDF in a new browser tab.
+// where the browser supports it) and shows the chosen PDF in the in-app viewer (pdf-viewer.js).
 (function () {
     "use strict";
 
@@ -155,13 +155,10 @@
     document.body.appendChild(input);
 
     function show(file) {
-        var url = URL.createObjectURL(file);
-        var win = window.open(url, "_blank");
-        if (!win) {
-            alert("Your browser blocked the PDF from opening. Allow pop-ups for this site and try again.");
-        }
-        // Give the new tab time to load the file before releasing it
-        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+        // Close the menu so the viewer isn't sitting on top of an open drawer
+        var closeBtn = document.getElementById("nav-close");
+        if (closeBtn && nav.classList.contains("is-open")) closeBtn.click();
+        window.PdfViewer.open(file);
     }
 
     input.addEventListener("change", function () {
