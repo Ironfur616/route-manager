@@ -1,7 +1,8 @@
 /* Recycle calendar, opened from the calendar button at the right of the app header.
    A quick reference for which days are recycle days in each service area. Days are marked by
-   hand: Edit, then pick how a tap works (one Day, a Range from a first to a last day, or a whole
-   Week) and tap the calendar. Marked days are stored per area in localStorage as a sorted list
+   hand: Edit, tap the first day and then the last day, and everything from one to the other is
+   marked (tap the same day twice for a single day). Starting on a day that's already marked
+   clears the range instead. Marked days are stored per area in localStorage as a sorted list
    of "YYYY-MM-DD" dates. The calendar opens view-only so a stray tap while checking it can't
    change anything.
 
@@ -18,11 +19,6 @@
         { id: "washington", name: "Washington" }
     ];
     var WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
-    var TOOLS = [
-        { value: "day", label: "Day", hint: "Tap a day to mark or unmark it." },
-        { value: "range", label: "Range", hint: "Tap the first day, then the last day. Every day in between is marked (or unmarked, if the first day was already marked)." },
-        { value: "week", label: "Week", hint: "Tap any day to mark or unmark its whole week." }
-    ];
 
     var header = document.querySelector(".app-header");
     if (!header) return;
@@ -30,8 +26,7 @@
     var viewMonth = startOfMonth(new Date());
     var editing = false;
     var addingArea = false;
-    var tool = "day";
-    var rangeStart = null; // "YYYY-MM-DD" of the first tap of a range, waiting for the second
+    var rangeStart = null; // "YYYY-MM-DD" of the first tap, waiting for the last day
 
     /* ---------- Dates ---------- */
 
@@ -158,26 +153,14 @@
         save(data);
     }
 
+    // First tap picks the first day; second tap the last day (the same day again for just one).
+    // The first day's state decides: start on an unmarked day to mark, a marked one to clear.
     function tapDay(value) {
-        var data = load();
-        var area = selectedArea(data);
-        var on = isRecycleDay(data, area.id, value);
-
-        if (tool === "day") {
-            setDays(value, value, !on);
-        } else if (tool === "week") {
-            var sunday = weekStart(parseDate(value));
-            // Fill the week unless it's already fully marked, in which case clear it
-            var full = true;
-            for (var i = 0; i < 7; i++) {
-                if (!isRecycleDay(data, area.id, dateString(addDays(sunday, i)))) full = false;
-            }
-            setDays(dateString(sunday), dateString(addDays(sunday, 6)), !full);
-        } else if (!rangeStart) {
+        if (!rangeStart) {
             rangeStart = value;
         } else {
-            // The first day's state decides: start on an unmarked day to mark, a marked one to clear
-            setDays(rangeStart, value, !isRecycleDay(data, area.id, rangeStart));
+            var data = load();
+            setDays(rangeStart, value, !isRecycleDay(data, selectedArea(data).id, rangeStart));
             rangeStart = null;
         }
         render();
@@ -243,7 +226,6 @@
                 '<p class="send-error rc-add-error" hidden></p>' +
             "</div>" +
             '<div class="rc-status" aria-live="polite"></div>' +
-            '<div class="rc-tools" role="group" aria-label="What a tap marks" hidden></div>' +
             '<div class="rc-month-nav">' +
                 '<button type="button" class="mt-btn rc-prev" aria-label="Previous month">‹</button>' +
                 '<h3 class="rc-month" aria-live="polite"></h3>' +
@@ -263,7 +245,6 @@
     var areaInput = dialog.querySelector("#rc-area-name");
     var addError = dialog.querySelector(".rc-add-error");
     var statusEl = dialog.querySelector(".rc-status");
-    var toolsEl = dialog.querySelector(".rc-tools");
     var monthEl = dialog.querySelector(".rc-month");
     var tbody = dialog.querySelector(".rc-grid tbody");
     var hintEl = dialog.querySelector(".rc-hint");
@@ -336,20 +317,6 @@
         }
     }
 
-    function renderTools() {
-        toolsEl.hidden = !editing;
-        toolsEl.textContent = "";
-        TOOLS.forEach(function (t) {
-            var b = button("rc-tool" + (t.value === tool ? " is-selected" : ""), t.label, function () {
-                tool = t.value;
-                rangeStart = null;
-                render();
-            });
-            b.setAttribute("aria-pressed", String(t.value === tool));
-            toolsEl.appendChild(b);
-        });
-    }
-
     function renderGrid(data, area) {
         var today = dateString(new Date());
         var month = viewMonth.getMonth();
@@ -399,13 +366,13 @@
 
     function hintText(area) {
         if (!editing) return "Recycle days are highlighted in green. Tap Edit to change them.";
-        if (tool === "range" && rangeStart) {
-            return "First day: " + shortDay(rangeStart) + ". Now tap the last day of the range (you can change months first).";
+        if (rangeStart) {
+            var clearing = isRecycleDay(load(), area.id, rangeStart);
+            return "First day: " + shortDay(rangeStart) + ". Now tap the last day" +
+                (clearing ? " to clear" : "") + " (tap it again for just this day).";
         }
-        for (var i = 0; i < TOOLS.length; i++) {
-            if (TOOLS[i].value === tool) return TOOLS[i].hint + " Changes apply to " + area.name + ".";
-        }
-        return "";
+        return "Tap the first day, then the last day. Tap a day twice for just that day. " +
+            "Starting on a green day clears instead. Changes apply to " + area.name + ".";
     }
 
     function render() {
@@ -415,7 +382,6 @@
         renderAreas(data);
         addAreaEl.hidden = !addingArea;
         renderStatus(data, area);
-        renderTools();
         renderGrid(data, area);
 
         dialog.classList.toggle("is-editing", editing);

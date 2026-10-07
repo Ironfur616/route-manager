@@ -2465,43 +2465,6 @@ body.shell {
     outline-offset: -2px;
 }
 
-/* Day / Range / Week: what a tap marks while editing */
-.rc-tools {
-    display: flex;
-    border: 1px solid var(--deep-navy);
-    border-radius: 6px;
-    overflow: hidden;
-}
-
-.rc-tools[hidden] {
-    display: none;
-}
-
-.rc-tool {
-    flex: 1 1 0;
-    min-height: 44px;
-    border: 0;
-    background-color: var(--white);
-    color: var(--deep-navy);
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.rc-tool + .rc-tool {
-    border-left: 1px solid var(--deep-navy);
-}
-
-.rc-tool.is-selected {
-    background-color: var(--deep-navy);
-    color: var(--white);
-}
-
-.rc-tool:focus-visible {
-    outline: 3px solid var(--sky-blue);
-    outline-offset: -3px;
-}
-
 .rc-dialog.is-editing .rc-grid {
     border: 2px dashed var(--forest-green);
     border-radius: 6px;
