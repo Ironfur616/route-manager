@@ -55,6 +55,8 @@
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
+            section("panel-service", "Service",
+                '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 

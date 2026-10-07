@@ -27,7 +27,7 @@ body {
 
 /* ---------- App header ---------- */
 /* Hamburger button + title, sticky at every breakpoint. Using the same
-   off-canvas drawer at every width avoids the old top-nav's link-wrapping
+    off-canvas drawer at every width avoids the old top-nav's link-wrapping
    congestion when the window is resized between phone and desktop widths. */
 .app-header {
     display: flex;
@@ -1918,4 +1918,127 @@ body.shell {
    the main list (upcoming) and the Completed Pickups disclosure once the date has passed. */
 .bp-entry {
     border-left: 1px solid rgba(4, 57, 96, 0.2);
+}
+
+
+/* ---------- Service: handicap & elderly customers ---------- */
+/* Reuses the tracker card, chip and dialog classes. Each weekday is a collapsible section;
+   a checked-off customer gets a green flag chip and a light green card until the end-of-day
+   rollover moves the check into the Service Log below. */
+.sv-days {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sv-day {
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-radius: 4px;
+    background-color: var(--white);
+}
+
+.sv-day.sv-today {
+    border-color: var(--forest-green);
+}
+
+.sv-day summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    color: var(--deep-navy);
+    cursor: pointer;
+}
+
+.sv-day-name {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-chip-today {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+.sv-day-count {
+    margin-left: auto;
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-day-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0 0.75rem 0.75rem;
+}
+
+.sv-entry {
+    border-left: 1px solid rgba(4, 57, 96, 0.2);
+}
+
+.sv-entry.sv-done {
+    border-left: 6px solid var(--forest-green);
+    background-color: #E8F5EC;
+}
+
+.mt-chip-done {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+.sv-check input {
+    accent-color: var(--forest-green);
+}
+
+.sv-check {
+    margin-top: 0.5rem;
+}
+
+.sv-add-day {
+    flex: none;
+    width: 100%;
+}
+
+.sv-log {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.sv-log-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sv-log-date {
+    margin: 0;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
+    color: var(--deep-navy);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-log-row {
+    padding: 0.5rem 0.75rem;
+    border-left: 4px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: rgba(4, 102, 53, 0.05);
+}
+
+.sv-log-address {
+    color: var(--deep-navy);
+    font-weight: 700;
+    overflow-wrap: anywhere;
 }

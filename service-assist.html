@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>Handicap &amp; Elderly Service · Earthwise Route IQ</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section">
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="sv-open">+ Add Customer</button>
+        </div>
+        <p class="mt-warning" id="sv-storage-warning" hidden>This browser is blocking storage, so customers and the service log cannot be saved.</p>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>HANDICAP &amp; ELDERLY SERVICE</legend>
+                <p class="mt-count" id="sv-summary" aria-live="polite"></p>
+                <div class="sv-days" id="sv-days"></div>
+            </fieldset>
+        </div>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>SERVICE LOG</legend>
+                <p class="mt-count" id="sv-log-count" aria-live="polite"></p>
+                <div class="sv-log" id="sv-log"></div>
+                <div class="form-actions">
+                    <button type="button" class="send-email" id="sv-export">Export Log CSV</button>
+                </div>
+            </fieldset>
+        </div>
+    </section>
+
+    <dialog class="send-dialog mt-dialog" id="sv-dialog" aria-labelledby="sv-form-title">
+        <form class="emp-info" id="sv-form" data-title="Service Customer">
+            <div class="mt-dialog-head">
+                <h2 id="sv-form-title">Add Customer</h2>
+                <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+
+            <fieldset class="emp-fields">
+                <legend>Customer details</legend>
+
+                <div class="field">
+                    <label for="sv-day">Day of the Week</label>
+                    <select id="sv-day" name="day" required></select>
+                </div>
+
+                <div class="field">
+                    <label for="sv-boro">Boro / Twp</label>
+                    <input type="text" id="sv-boro" name="boro" list="dl-sv-boro" autocomplete="off">
+                </div>
+
+                <div class="field field-wide">
+                    <label for="sv-address">Address</label>
+                    <input type="text" id="sv-address" name="address" autocomplete="off" required>
+                </div>
+
+                <div class="field field-wide">
+                    <label for="sv-notes">Notes</label>
+                    <textarea id="sv-notes" name="notes" rows="3"></textarea>
+                </div>
+            </fieldset>
+
+            <datalist id="dl-sv-boro"></datalist>
+
+            <p class="mt-message" id="sv-message" role="status" aria-live="polite"></p>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" data-dialog-close>Close</button>
+                <button type="submit" class="generate-pdf" id="sv-submit">Save Customer</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="tracker-dialog.js" defer></script>
+    <script src="service-assist.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>
