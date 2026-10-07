@@ -26,7 +26,6 @@
         firstDay: document.getElementById("nc-first-day")
     };
     var submitBtn = document.getElementById("nc-submit");
-    var cancelBtn = document.getElementById("nc-cancel");
     var formTitle = document.getElementById("nc-form-title");
     var message = document.getElementById("nc-message");
     var listEl = document.getElementById("nc-list");
@@ -250,7 +249,7 @@
         establishedCountEl.textContent = established.length;
 
         if (!entries.length) {
-            countEl.textContent = "No new customers logged yet. Use the form above to add the first one.";
+            countEl.textContent = "No new customers logged yet. Tap Add New Customer to add the first one.";
         } else if (!active.length) {
             countEl.textContent = term ? "Nothing matches the current search." : "No active new customers. Check Established Customers below.";
         } else {
@@ -273,9 +272,8 @@
 
     function resetForm() {
         editingId = null;
-        formTitle.textContent = "ADD NEW CUSTOMER";
+        formTitle.textContent = "Add New Customer";
         submitBtn.textContent = "Save Entry";
-        cancelBtn.hidden = true;
         form.reset();
         fields.type.value = TYPES[0];
     }
@@ -289,13 +287,28 @@
         fields.route.value = entry.route || "";
         fields.driver.value = entry.driver || "";
         fields.firstDay.value = entry.firstDay || "";
-        formTitle.textContent = "EDIT CUSTOMER";
+        formTitle.textContent = "Edit Customer";
         submitBtn.textContent = "Save Changes";
-        cancelBtn.hidden = false;
         say("");
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        fields.address.focus({ preventScroll: true });
+        entryDialog.open();
     }
+
+    /* ---------- Dialog ---------- */
+
+    // Close, the X and Escape all close it; anything typed but not saved is discarded
+    var entryDialog = TrackerDialog(document.getElementById("nc-dialog"), {
+        focus: fields.address,
+        onClose: function () {
+            resetForm();
+            say("");
+        }
+    });
+
+    document.getElementById("nc-open").addEventListener("click", function () {
+        resetForm();
+        say("");
+        entryDialog.open();
+    });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -321,15 +334,8 @@
         }
         if (!save(list)) return;
 
-        var wasEdit = !!existing;
-        resetForm();
         render();
-        say(wasEdit ? "Changes saved." : "Customer added.");
-    });
-
-    cancelBtn.addEventListener("click", function () {
-        resetForm();
-        say("");
+        entryDialog.close();
     });
 
     function remove(id) {

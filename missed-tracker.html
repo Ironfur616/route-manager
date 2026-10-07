@@ -43,7 +43,7 @@
         <form class="emp-info" id="mt-form" data-title="Missed Collection">
             <div class="mt-dialog-head">
                 <h2 id="mt-form-title">Log a Missed Collection</h2>
-                <button type="button" class="mt-dialog-close" id="mt-close" aria-label="Close">&times;</button>
+                <button type="button" class="mt-dialog-close" id="mt-close" aria-label="Close" data-dialog-close>&times;</button>
             </div>
 
             <fieldset class="emp-fields">
@@ -110,7 +110,7 @@
 
             <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
             <div class="form-actions mt-dialog-actions">
-                <button type="button" class="send-email" id="mt-cancel">Close</button>
+                <button type="button" class="send-email" id="mt-cancel" data-dialog-close>Close</button>
                 <button type="submit" class="generate-pdf" id="mt-submit">Save Entry</button>
             </div>
         </form>
@@ -146,6 +146,7 @@
         </div>
     </section>
 
+    <script src="tracker-dialog.js" defer></script>
     <script src="missed-tracker.js" defer></script>
     <script src="sw-register.js" defer></script>
 </body>

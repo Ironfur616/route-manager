@@ -2,7 +2,7 @@
 <html lang="en" data-no-draft>
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <script>
         (function () {
             try {
@@ -27,9 +27,20 @@
 
 <body>
     <section class="emp-info-section mt-section">
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="nc-open">+ Add New Customer</button>
+        </div>
+    </section>
+
+    <dialog class="send-dialog mt-dialog" id="nc-dialog" aria-labelledby="nc-form-title">
         <form class="emp-info" id="nc-form" data-title="New Customer">
+            <div class="mt-dialog-head">
+                <h2 id="nc-form-title">Add New Customer</h2>
+                <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+
             <fieldset class="emp-fields">
-                <legend id="nc-form-title">ADD NEW CUSTOMER</legend>
+                <legend>New Customer details</legend>
 
                 <div class="field field-wide">
                     <label for="nc-address">Customer Address</label>
@@ -61,13 +72,13 @@
             <datalist id="dl-nc-route"></datalist>
             <datalist id="dl-nc-driver"></datalist>
 
-            <div class="form-actions">
-                <button type="button" class="send-email" id="nc-cancel" hidden>Cancel</button>
+            <p class="mt-message" id="nc-message" role="status" aria-live="polite"></p>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" data-dialog-close>Close</button>
                 <button type="submit" class="generate-pdf" id="nc-submit">Save Entry</button>
             </div>
-            <p class="mt-message" id="nc-message" role="status" aria-live="polite"></p>
         </form>
-    </section>
+    </dialog>
 
     <section class="emp-info-section mt-section">
         <div class="emp-info">
@@ -96,6 +107,7 @@
         </div>
     </section>
 
+    <script src="tracker-dialog.js" defer></script>
     <script src="new-customers.js" defer></script>
     <script src="sw-register.js" defer></script>
 </body>

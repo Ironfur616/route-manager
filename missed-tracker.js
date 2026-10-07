@@ -38,7 +38,6 @@
     ];
     var YELLOW_TAG_REASON = "Customer issued a yellow tag";
 
-    var dialog = document.getElementById("mt-dialog");
     var form = document.getElementById("mt-form");
     var fields = {
         date: document.getElementById("mt-date"),
@@ -55,7 +54,6 @@
     var reasonsError = document.getElementById("mt-reasons-error");
     var yellowTagCheckbox = document.getElementById("mt-yellow-tag");
     var submitBtn = document.getElementById("mt-submit");
-    var cancelBtn = document.getElementById("mt-cancel");
     var formTitle = document.getElementById("mt-form-title");
     var message = document.getElementById("mt-message");
     var addressHint = document.getElementById("mt-address-hint");
@@ -405,83 +403,24 @@
 
     /* ---------- Dialog ---------- */
 
-    function openDialog() {
-        if (!dialog.open) {
-            dialog.showModal();
-            watchViewport(true);
-        }
-        dialog.scrollTop = 0;
-        fields.address.focus();
-    }
-
-    /* The on-screen keyboard covers the page without shrinking it (always on iPad; on Android
-       unless the browser honors interactive-widget=resizes-content), so the dialog would keep its
-       full height and its lower fields would sit under the keyboard. While it's open, fit it to
-       the part of this frame that's still visible above the keyboard. */
-    function topViewport() {
-        try {
-            return window.top.visualViewport || window.visualViewport;
-        } catch (e) {
-            return window.visualViewport;
-        }
-    }
-
-    function fitDialog() {
-        var vv = topViewport();
-        if (!dialog.open || !vv) return;
-        var frameTop = 0;
-        try {
-            if (window.frameElement) frameTop = window.frameElement.getBoundingClientRect().top;
-        } catch (e) { /* not framed by this app */ }
-        var visibleTop = Math.max(0, vv.offsetTop - frameTop);
-        var visibleBottom = Math.min(window.innerHeight, vv.offsetTop + vv.height - frameTop);
-        var room = visibleBottom - visibleTop;
-
-        if (room >= window.innerHeight - 1) {
-            // Nothing covered: let the stylesheet center it as usual
-            dialog.style.marginTop = "";
-            dialog.style.marginBottom = "";
-            dialog.style.maxHeight = "";
-        } else {
-            dialog.style.marginTop = (visibleTop + 8) + "px";
-            dialog.style.marginBottom = "auto";
-            dialog.style.maxHeight = Math.max(160, room - 16) + "px";
-        }
-
-        // Keep the field being typed in above the keyboard and clear of the pinned Save bar
-        var active = document.activeElement;
-        if (active && active !== dialog && dialog.contains(active) && active.scrollIntoView) {
-            active.scrollIntoView({ block: "nearest" });
-        }
-    }
-
-    function watchViewport(on) {
-        var vv = topViewport();
-        if (!vv) return;
-        var method = on ? "addEventListener" : "removeEventListener";
-        vv[method]("resize", fitDialog);
-        vv[method]("scroll", fitDialog);
-        window[method]("resize", fitDialog);
-    }
-
-    dialog.addEventListener("focusin", function () { setTimeout(fitDialog, 300); });
-
-    // Close, the X and Escape all land here. A half-typed new entry is dropped, but the
+    // Close, the X and Escape all close it. A half-typed new entry is dropped, but the
     // date/route/driver/unit stay filled in for the next one; an unsaved edit is discarded.
-    dialog.addEventListener("close", function () {
-        watchViewport(false);
-        dialog.style.marginTop = "";
-        dialog.style.marginBottom = "";
-        dialog.style.maxHeight = "";
-        resetForm(!editingId);
-        say("");
+    var entryDialog = TrackerDialog(document.getElementById("mt-dialog"), {
+        focus: fields.address,
+        onClose: function () {
+            resetForm(!editingId);
+            say("");
+        }
     });
+
+    function openDialog() {
+        entryDialog.open();
+    }
 
     document.getElementById("mt-open").addEventListener("click", function () {
         say("");
         openDialog();
     });
-    document.getElementById("mt-close").addEventListener("click", function () { dialog.close(); });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -515,16 +454,14 @@
         // An edit is done once saved. A new entry leaves the dialog open: a manager usually
         // logs several misses from the same route in a row.
         if (existing) {
-            dialog.close();
+            entryDialog.close();
             return;
         }
         resetForm(true);
         say("Entry saved. Route and driver kept for the next stop.");
-        dialog.scrollTop = 0;
+        entryDialog.scrollToTop();
         fields.address.focus();
     });
-
-    cancelBtn.addEventListener("click", function () { dialog.close(); });
 
     fields.address.addEventListener("input", updateAddressHint);
 

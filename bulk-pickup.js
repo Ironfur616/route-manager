@@ -21,7 +21,6 @@
         items: document.getElementById("bp-items")
     };
     var submitBtn = document.getElementById("bp-submit");
-    var cancelBtn = document.getElementById("bp-cancel");
     var formTitle = document.getElementById("bp-form-title");
     var message = document.getElementById("bp-message");
     var listEl = document.getElementById("bp-list");
@@ -190,7 +189,7 @@
         completedCountEl.textContent = completed.length;
 
         if (!entries.length) {
-            countEl.textContent = "No bulk pickup requests logged yet. Use the form above to add the first one.";
+            countEl.textContent = "No bulk pickup requests logged yet. Tap Add Bulk Pickup Request to add the first one.";
         } else if (!upcoming.length) {
             countEl.textContent = term ? "Nothing matches the current search." : "No upcoming pickups. Check Completed Pickups below.";
         } else {
@@ -213,9 +212,8 @@
 
     function resetForm() {
         editingId = null;
-        formTitle.textContent = "ADD BULK PICKUP REQUEST";
+        formTitle.textContent = "Add Bulk Pickup Request";
         submitBtn.textContent = "Save Entry";
-        cancelBtn.hidden = true;
         form.reset();
     }
 
@@ -228,13 +226,28 @@
         fields.driver.value = entry.driver || "";
         fields.pickupDate.value = entry.pickupDate || "";
         fields.items.value = entry.items || "";
-        formTitle.textContent = "EDIT REQUEST";
+        formTitle.textContent = "Edit Request";
         submitBtn.textContent = "Save Changes";
-        cancelBtn.hidden = false;
         say("");
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        fields.address.focus({ preventScroll: true });
+        entryDialog.open();
     }
+
+    /* ---------- Dialog ---------- */
+
+    // Close, the X and Escape all close it; anything typed but not saved is discarded
+    var entryDialog = TrackerDialog(document.getElementById("bp-dialog"), {
+        focus: fields.address,
+        onClose: function () {
+            resetForm();
+            say("");
+        }
+    });
+
+    document.getElementById("bp-open").addEventListener("click", function () {
+        resetForm();
+        say("");
+        entryDialog.open();
+    });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -257,15 +270,8 @@
         }
         if (!save(list)) return;
 
-        var wasEdit = !!existing;
-        resetForm();
         render();
-        say(wasEdit ? "Changes saved." : "Pickup request added.");
-    });
-
-    cancelBtn.addEventListener("click", function () {
-        resetForm();
-        say("");
+        entryDialog.close();
     });
 
     function remove(id) {
