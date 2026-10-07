@@ -6,20 +6,28 @@
    off stamps completedOn (the date) and completedAt (the time). Once that date has passed, the
    check is moved into the Service Log and the checkbox is cleared for the next week. The rollover
    runs on load, when the app comes back to the front, and once a minute while it stays open, so
-   it also happens if the page is left open overnight. */
+   it also happens if the page is left open overnight.
+
+   Holiday and split weeks: each route day can be worked on a different date that week (Mon-Sat),
+   set in This Week's Schedule. Only changed days are stored, keyed by the week's Monday, so a
+   new week starts back on the normal schedule by itself. The schedule decides which route is
+   "Today"; the log always records the real date a customer was checked off, and shows when that
+   differs from the route's normal weekday. */
 (function () {
     "use strict";
 
     var KEY = "fleetMgrServiceCustomers";
     var LOG_KEY = "fleetMgrServiceLog";
+    var SCHEDULE_KEY = "fleetMgrServiceSchedule";
 
     var DAYS = [
-        { value: "mon", label: "Monday" },
-        { value: "tue", label: "Tuesday" },
-        { value: "wed", label: "Wednesday" },
-        { value: "thu", label: "Thursday" },
-        { value: "fri", label: "Friday" }
+        { value: "mon", label: "Monday", short: "Mon" },
+        { value: "tue", label: "Tuesday", short: "Tue" },
+        { value: "wed", label: "Wednesday", short: "Wed" },
+        { value: "thu", label: "Thursday", short: "Thu" },
+        { value: "fri", label: "Friday", short: "Fri" }
     ];
+    var WORK_DAYS_IN_WEEK = 6; // a route can be moved to any day Monday-Saturday
 
     var form = document.getElementById("sv-form");
     var fields = {
@@ -65,6 +73,46 @@
         });
     }
 
+    function parseDate(value) {
+        var p = String(value).split("-");
+        return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : null;
+    }
+
+    // "Tue, Oct 13"
+    function shortDate(value) {
+        var d = parseDate(value);
+        return d ? d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) : value;
+    }
+
+    function weekdayName(value) {
+        var d = parseDate(value);
+        return d ? d.toLocaleDateString(undefined, { weekday: "short" }) : value;
+    }
+
+    function addDays(value, n) {
+        var d = parseDate(value);
+        d.setDate(d.getDate() + n);
+        return dateString(d);
+    }
+
+    // The Monday of the week a date falls in (Sunday counts with the week before it)
+    function weekStartOf(value) {
+        var d = parseDate(value);
+        return addDays(value, -((d.getDay() + 6) % 7));
+    }
+
+    function dayIndex(day) {
+        for (var i = 0; i < DAYS.length; i++) {
+            if (DAYS[i].value === day) return i;
+        }
+        return 0;
+    }
+
+    // The date a route is normally worked in the week containing `value`
+    function normalDate(day, value) {
+        return addDays(weekStartOf(value), dayIndex(day));
+    }
+
     function prettyTime(ms) {
         return new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
     }
@@ -82,11 +130,121 @@
         return value;
     }
 
-    // Today's weekday section, or Monday on a weekend (the next service day)
-    function todayDay() {
-        var d = new Date().getDay();
-        return d >= 1 && d <= 5 ? DAYS[d - 1].value : "mon";
+    /* ---------- Weekly schedule ---------- */
+
+    function loadSchedule() {
+        try {
+            var data = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || "{}");
+            return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+        } catch (e) {
+            return {};
+        }
     }
+
+    function thisWeek() {
+        return weekStartOf(dateString(new Date()));
+    }
+
+    function saveSchedule(changes) {
+        var all = loadSchedule();
+        var week = thisWeek();
+        // Earlier weeks are never shown again, so they're dropped instead of piling up
+        Object.keys(all).forEach(function (k) { if (k < week) delete all[k]; });
+        if (Object.keys(changes).length) all[week] = changes;
+        else delete all[week];
+        try {
+            localStorage.setItem(SCHEDULE_KEY, JSON.stringify(all));
+        } catch (e) {
+            document.getElementById("sv-storage-warning").hidden = false;
+        }
+    }
+
+    // Only routes moved off their normal date are stored for the week
+    function weekChanges() {
+        return loadSchedule()[thisWeek()] || {};
+    }
+
+    function scheduledDate(day) {
+        return weekChanges()[day] || normalDate(day, dateString(new Date()));
+    }
+
+    function isMoved(day) {
+        return scheduledDate(day) !== normalDate(day, dateString(new Date()));
+    }
+
+    function isWorkedToday(day) {
+        return scheduledDate(day) === dateString(new Date());
+    }
+
+    // Routes worked today. With none (a day off, or the weekend), the next one coming up this
+    // week, or Monday's once the week is done.
+    function todayDays() {
+        var today = dateString(new Date());
+        var onToday = DAYS.filter(function (d) { return isWorkedToday(d.value); })
+            .map(function (d) { return d.value; });
+        if (onToday.length) return onToday;
+        var upcoming = DAYS.filter(function (d) { return scheduledDate(d.value) > today; })
+            .sort(function (a, b) { return scheduledDate(a.value) < scheduledDate(b.value) ? -1 : 1; });
+        return [upcoming.length ? upcoming[0].value : "mon"];
+    }
+
+    function todayDay() {
+        return todayDays()[0];
+    }
+
+    function applySchedule(changes) {
+        saveSchedule(changes);
+        openDays = {}; // reopen whichever route is now today's
+        render();
+    }
+
+    function setRouteDate(day, value) {
+        var changes = weekChanges();
+        if (value === normalDate(day, dateString(new Date()))) delete changes[day];
+        else changes[day] = value;
+        applySchedule(changes);
+    }
+
+    function renderSchedule() {
+        var grid = document.getElementById("sv-schedule-grid");
+        var week = thisWeek();
+        grid.textContent = "";
+
+        DAYS.forEach(function (d) {
+            var id = "sv-sched-" + d.value;
+            var field = el("div", "field sv-schedule-field" + (isMoved(d.value) ? " sv-moved" : ""));
+            var label = el("label", null, d.label + " route");
+            label.htmlFor = id;
+            var select = el("select");
+            select.id = id;
+            for (var i = 0; i < WORK_DAYS_IN_WEEK; i++) {
+                var value = addDays(week, i);
+                select.appendChild(el("option", null, shortDate(value))).value = value;
+            }
+            select.value = scheduledDate(d.value);
+            select.addEventListener("change", function () { setRouteDate(d.value, select.value); });
+            field.appendChild(label);
+            field.appendChild(select);
+            grid.appendChild(field);
+        });
+
+        var moved = DAYS.filter(function (d) { return isMoved(d.value); });
+        var status = document.getElementById("sv-schedule-status");
+        status.textContent = moved.length
+            ? "Changed: " + moved.map(function (d) { return d.short + " \u2192 " + weekdayName(scheduledDate(d.value)); }).join(", ")
+            : "Normal week (Mon\u2013Fri)";
+        status.classList.toggle("sv-schedule-changed", !!moved.length);
+    }
+
+    document.getElementById("sv-holiday").addEventListener("click", function () {
+        var changes = {};
+        DAYS.forEach(function (d, i) { changes[d.value] = addDays(thisWeek(), i + 1); });
+        applySchedule(changes);
+    });
+
+    document.getElementById("sv-reset-week").addEventListener("click", function () {
+        applySchedule({});
+    });
 
     function isDone(c) {
         return !!c.completedOn;
@@ -249,21 +407,24 @@
     }
 
     function renderDays(list) {
-        var today = todayDay();
+        var focus = todayDays();
         daysEl.textContent = "";
 
         DAYS.forEach(function (d) {
             var customers = list.filter(function (c) { return c.day === d.value; });
             var doneCount = customers.filter(isDone).length;
 
-            var section = el("details", "sv-day" + (d.value === today ? " sv-today" : ""));
-            if (openDays[d.value] === undefined) openDays[d.value] = d.value === today;
+            var worked = isWorkedToday(d.value);
+            var section = el("details", "sv-day" + (worked ? " sv-today" : ""));
+            if (openDays[d.value] === undefined) openDays[d.value] = focus.indexOf(d.value) !== -1;
             section.open = openDays[d.value];
             section.addEventListener("toggle", function () { openDays[d.value] = section.open; });
 
             var summary = el("summary");
-            summary.appendChild(el("span", "sv-day-name", d.label));
-            if (d.value === today) summary.appendChild(el("span", "mt-chip sv-chip-today", "Today"));
+            summary.appendChild(el("span", "sv-day-name", d.label + " route"));
+            if (worked) summary.appendChild(el("span", "mt-chip sv-chip-today", "Today"));
+            if (isMoved(d.value)) summary.appendChild(el("span", "mt-chip sv-chip-moved", "Moved"));
+            summary.appendChild(el("span", "sv-day-date", shortDate(scheduledDate(d.value))));
             summary.appendChild(el("span", "sv-day-count", customers.length
                 ? doneCount + " of " + customers.length + " done"
                 : "No customers"));
@@ -313,7 +474,9 @@
                 top.appendChild(el("span", "sv-log-address", entry.address));
                 top.appendChild(el("span", "mt-entry-date", entry.completedAt ? prettyTime(entry.completedAt) : ""));
                 row.appendChild(top);
-                var meta = [dayLabel(entry.day)];
+                var meta = [dayLabel(entry.day) + " route"];
+                var normal = normalDate(entry.day, entry.serviceDate);
+                if (entry.serviceDate !== normal) meta.push("moved from " + weekdayName(normal));
                 if (entry.boro) meta.push(entry.boro);
                 meta.push("Logged " + prettyStamp(entry.loggedAt));
                 row.appendChild(el("p", "mt-entry-meta", meta.join(" · ")));
@@ -332,6 +495,7 @@
     function render() {
         var list = load().sort(function (a, b) { return (a.created || 0) - (b.created || 0); });
         renderDatalist(list);
+        renderSchedule();
         renderDays(list);
         renderLog();
     }
@@ -434,9 +598,11 @@
         var log = readList(LOG_KEY).sort(function (a, b) {
             return a.serviceDate < b.serviceDate ? -1 : a.serviceDate > b.serviceDate ? 1 : (a.completedAt || 0) - (b.completedAt || 0);
         });
-        var rows = [["Service Date", "Day", "Address", "Boro / Twp", "Completed At", "Logged At", "Notes"]];
+        var rows = [["Service Date", "Route Day", "Moved From Normal Day", "Address", "Boro / Twp",
+            "Completed At", "Logged At", "Notes"]];
         log.forEach(function (e) {
-            rows.push([e.serviceDate, dayLabel(e.day), e.address, e.boro,
+            var normal = normalDate(e.day, e.serviceDate);
+            rows.push([e.serviceDate, dayLabel(e.day), normal === e.serviceDate ? "No" : "Yes (" + normal + ")", e.address, e.boro,
                 e.completedAt ? prettyStamp(e.completedAt) : "", prettyStamp(e.loggedAt), e.notes]);
         });
         var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");

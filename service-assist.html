@@ -37,6 +37,21 @@
         <div class="emp-info">
             <fieldset>
                 <legend>HANDICAP &amp; ELDERLY SERVICE</legend>
+                <details class="sv-schedule" id="sv-schedule">
+                    <summary>
+                        <span class="sv-schedule-title">This Week's Schedule</span>
+                        <span class="sv-schedule-status" id="sv-schedule-status"></span>
+                    </summary>
+                    <div class="sv-schedule-body">
+                        <p class="mt-hint sv-schedule-help">Pick the date each route is worked this week. Resets to the normal Monday&ndash;Friday schedule every new week.</p>
+                        <div class="sv-schedule-grid" id="sv-schedule-grid"></div>
+                        <div class="form-actions sv-schedule-actions">
+                            <button type="button" class="mt-btn" id="sv-holiday">Holiday Monday &ndash; shift to Tue&ndash;Sat</button>
+                            <button type="button" class="mt-btn" id="sv-reset-week">Reset to normal week</button>
+                        </div>
+                    </div>
+                </details>
+
                 <p class="mt-count" id="sv-summary" aria-live="polite"></p>
                 <div class="sv-days" id="sv-days"></div>
             </fieldset>

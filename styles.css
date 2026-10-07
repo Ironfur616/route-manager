@@ -1965,6 +1965,18 @@ body.shell {
     color: var(--white);
 }
 
+.sv-day-date {
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-chip-moved {
+    border: none;
+    background-color: #5B2C83;
+    color: var(--white);
+}
+
 .sv-day-count {
     margin-left: auto;
     color: var(--drk-gray);
@@ -2041,4 +2053,80 @@ body.shell {
     color: var(--deep-navy);
     font-weight: 700;
     overflow-wrap: anywhere;
+}
+
+/* This Week's Schedule: closed by default; the summary says whether any route was moved */
+.sv-schedule {
+    margin-bottom: 1rem;
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-radius: 4px;
+    background-color: rgba(4, 57, 96, 0.03);
+}
+
+.sv-schedule summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    color: var(--deep-navy);
+    cursor: pointer;
+}
+
+.sv-schedule-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-schedule-status {
+    color: var(--drk-gray);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-schedule-status.sv-schedule-changed {
+    color: #5B2C83;
+}
+
+.sv-schedule-body {
+    padding: 0 0.75rem 0.75rem;
+}
+
+.sv-schedule-help {
+    margin: 0 0 0.75rem;
+    color: var(--drk-gray);
+}
+
+.sv-schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+/* Grid gap does the spacing, so drop the stacked-form margin */
+.emp-info .sv-schedule-grid .field + .field {
+    margin-top: 0;
+}
+
+.emp-info .sv-schedule-field.sv-moved select {
+    border: 2px solid #5B2C83;
+}
+
+.sv-schedule-actions {
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+@media (min-width: 30em) {
+    .sv-schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 48em) {
+    .sv-schedule-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
