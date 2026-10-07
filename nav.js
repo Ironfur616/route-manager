@@ -57,7 +57,7 @@
             section("Service",
                 '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +
             section("Routing",
-                '<ul class="nav-link-list">' + link("route-streets.html", "Route Streets") + "</ul>") +
+                '<ul class="nav-link-list">' + link("route-streets.html", "Route Sheets") + "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 

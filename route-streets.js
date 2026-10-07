@@ -1,4 +1,4 @@
-/* Route streets directory (route-streets.html), under Routing in the menu.
+/* Route Sheets (route-streets.html), under Routing in the menu: routes and their streets.
    A reference list of routes and the streets on each, kept in localStorage like the trackers
    (data-no-draft on <html> opts out of the shell's draft handling). Streets are entered one per
    line so a whole list can be pasted in. The search answers "which route is this street on?":
@@ -346,7 +346,7 @@
         var url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
         var link = document.createElement("a");
         link.href = url;
-        link.download = "route-streets-" + dateString(new Date()) + ".csv";
+        link.download = "route-sheets-" + dateString(new Date()) + ".csv";
         document.body.appendChild(link);
         link.click();
         link.remove();
