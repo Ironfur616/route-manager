@@ -50,6 +50,7 @@
 
                 <div class="form-actions">
                     <button type="button" class="send-email" id="rs-export">Export CSV</button>
+                    <button type="button" class="generate-pdf" id="rs-print-all">Print All</button>
                 </div>
             </fieldset>
         </div>
@@ -101,6 +102,9 @@
             </div>
         </form>
     </dialog>
+
+    <!-- Route sheets for printing; only shown on paper (see "Route Sheets: print" in styles.css) -->
+    <div class="rs-print" id="rs-print" aria-hidden="true"></div>
 
     <script src="tracker-dialog.js" defer></script>
     <script src="route-streets.js" defer></script>
