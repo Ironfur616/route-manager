@@ -149,6 +149,24 @@
         }
     }
 
+    // The Earthwise logo for the PDF header (the same one the observation PDFs use). Fetched once
+    // up front so Generate PDF doesn't wait on it later. Resolves to null (the report still works
+    // without the logo) if it can't be loaded, e.g. offline on first visit.
+    function loadLogo() {
+        return fetch("assets/icons/ew-logo-192.png")
+            .then(function (r) { return r.blob(); })
+            .then(function (blob) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () { resolve(reader.result); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            })
+            .catch(function () { return null; });
+    }
+    var logoPromise = loadLogo();
+
     function save(list) {
         try {
             localStorage.setItem(KEY, JSON.stringify(list));
@@ -555,8 +573,8 @@
             var label = pdfBtn.textContent;
             pdfBtn.disabled = true;
             pdfBtn.textContent = "Generating...";
-            Promise.resolve()
-                .then(function () { buildCasePdf(c); })
+            logoPromise
+                .then(function (logo) { buildCasePdf(c, logo); })
                 .catch(function (err) {
                     console.error(err);
                     alert("Sorry, the PDF could not be created.");
@@ -729,7 +747,7 @@
 
     /* ---------- PDF report ---------- */
 
-    function buildCasePdf(c) {
+    function buildCasePdf(c, logo) {
         if (!window.jspdf) {
             alert("The PDF library did not load. Reload the page and try again.");
             return;
@@ -740,11 +758,14 @@
         var PAGE_W = 612, PAGE_H = 792, M = 40;
         var CONTENT_W = PAGE_W - M * 2;
         var BOTTOM = PAGE_H - 54;
+        var LOGO_SIZE = 60;
 
         var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
         var y = M;
         function color(fn, col) { doc[fn](col[0], col[1], col[2]); }
         function ensure(h) { if (y + h > BOTTOM) { doc.addPage(); y = M; return true; } return false; }
+
+        if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO_SIZE + 6, M - 12, LOGO_SIZE, LOGO_SIZE);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
