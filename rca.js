@@ -111,23 +111,6 @@
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
-    // Fetched once up front so clicking Generate PDF doesn't wait on it later. Resolves to null
-    // (report still works without the logo) if it can't be loaded, e.g. offline on first visit.
-    function loadLogo() {
-        return fetch("assets/icons/icon-192.png")
-            .then(function (r) { return r.blob(); })
-            .then(function (blob) {
-                return new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function () { resolve(reader.result); };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            })
-            .catch(function () { return null; });
-    }
-    var logoPromise = loadLogo();
-
     // Downscales + re-compresses a photo before it ever touches storage. A phone photo straight
     // off the camera can be several MB; localStorage only has a few MB total for the whole app,
     // shared with every other saved case, entry and draft. This keeps one photo to roughly
@@ -572,8 +555,8 @@
             var label = pdfBtn.textContent;
             pdfBtn.disabled = true;
             pdfBtn.textContent = "Generating...";
-            logoPromise
-                .then(function (logo) { buildCasePdf(c, logo); })
+            Promise.resolve()
+                .then(function () { buildCasePdf(c); })
                 .catch(function (err) {
                     console.error(err);
                     alert("Sorry, the PDF could not be created.");
@@ -746,7 +729,7 @@
 
     /* ---------- PDF report ---------- */
 
-    function buildCasePdf(c, logo) {
+    function buildCasePdf(c) {
         if (!window.jspdf) {
             alert("The PDF library did not load. Reload the page and try again.");
             return;
@@ -757,14 +740,11 @@
         var PAGE_W = 612, PAGE_H = 792, M = 40;
         var CONTENT_W = PAGE_W - M * 2;
         var BOTTOM = PAGE_H - 54;
-        var LOGO_SIZE = 50;
 
         var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
         var y = M;
         function color(fn, col) { doc[fn](col[0], col[1], col[2]); }
         function ensure(h) { if (y + h > BOTTOM) { doc.addPage(); y = M; return true; } return false; }
-
-        if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO_SIZE, M - 4, LOGO_SIZE, LOGO_SIZE);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
