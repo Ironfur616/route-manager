@@ -2548,8 +2548,9 @@ body.shell {
     white-space: nowrap;
 }
 
+/* Zoom buttons only from tablet width up, leaving room for Print / Share and Close on phones */
 .pdf-viewer-zoom {
-    display: flex;
+    display: none;
     flex: none;
     gap: 0.25rem;
 }
@@ -2589,7 +2590,23 @@ body.shell {
     cursor: pointer;
 }
 
+/* Print / Share: hands the PDF to the share sheet (a printing app, email...) */
+.pdf-viewer-share {
+    flex: none;
+    min-height: 44px;
+    padding: 0.5rem 0.875rem;
+    border: 0;
+    border-radius: 4px;
+    background-color: var(--forest-green);
+    color: var(--white);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .pdf-viewer-btn:focus-visible,
+.pdf-viewer-share:focus-visible,
 .pdf-viewer-close:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: 2px;
@@ -2626,6 +2643,12 @@ body.shell {
 
 .pdf-viewer-status[hidden] {
     display: none;
+}
+
+@media (min-width: 30em) {
+    .pdf-viewer-zoom {
+        display: flex;
+    }
 }
 
 
@@ -2779,168 +2802,5 @@ body.shell {
 
     .mt-dialog .mt-dialog-error {
         padding: 0 1.5rem 0.75rem;
-    }
-}
-
-
-/* ---------- Route Sheets: print ---------- */
-/* The sheets are built into .rs-print only when Print is tapped, and only show on paper. Same
-   house format as the PDF reports: navy title, company line, green rule, Earthwise logo. */
-.rs-print {
-    display: none;
-}
-
-@media print {
-    @page {
-        size: letter;
-        margin: 0.5in;
-    }
-
-    /* Only the route sheets print; the page itself, the menu and any dialog stay off paper */
-    body > :not(.rs-print) {
-        display: none !important;
-    }
-
-    body {
-        background: #FFFFFF;
-    }
-
-    .rs-print {
-        display: block;
-        color: #1A1A1A;
-        font-family: Helvetica, Arial, sans-serif;
-        font-size: 11pt;
-    }
-
-    .rs-sheet {
-        break-after: page;
-    }
-
-    .rs-sheet:last-child {
-        break-after: auto;
-    }
-
-    .rs-sheet-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        padding-bottom: 8pt;
-        border-bottom: 3pt solid #046635;
-    }
-
-    .rs-sheet-title {
-        margin: 0;
-        color: #043960;
-        font-size: 18pt;
-    }
-
-    .rs-sheet-company {
-        margin: 2pt 0 0;
-        color: #6E767E;
-        font-size: 9pt;
-    }
-
-    .rs-sheet-logo {
-        width: 60pt;
-        height: 60pt;
-        margin: -10pt -6pt 0 0;
-    }
-
-    .rs-sheet-route {
-        margin: 14pt 0 8pt;
-        color: #043960;
-        font-size: 15pt;
-    }
-
-    .rs-sheet-info {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6pt 12pt;
-        margin: 0 0 12pt;
-        padding: 8pt 10pt;
-        border-radius: 4pt;
-        background-color: #F4F7FA;
-    }
-
-    .rs-sheet-info dt {
-        color: #043960;
-        font-size: 7.5pt;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-    }
-
-    .rs-sheet-info dd {
-        margin: 1pt 0 0;
-    }
-
-    .rs-sheet-section {
-        margin: 12pt 0 6pt;
-        padding: 4pt 8pt;
-        background-color: #043960;
-        color: #FFFFFF;
-        font-size: 10pt;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-
-    .rs-sheet-info,
-    .rs-sheet-head {
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-
-    .rs-sheet-notes {
-        margin: 0;
-        white-space: pre-wrap;
-    }
-
-    .rs-sheet-streets {
-        width: 100%;
-        margin-top: 12pt;
-        border-collapse: collapse;
-    }
-
-    /* Repeats at the top of each printed page */
-    .rs-sheet-streets thead {
-        display: table-header-group;
-    }
-
-    .rs-sheet-streets th.rs-sheet-section {
-        display: table-cell;
-        margin: 0;
-        border-bottom: 6pt solid #FFFFFF;
-        text-align: left;
-    }
-
-    .rs-sheet-streets tr {
-        break-inside: avoid;
-    }
-
-    .rs-sheet-streets td {
-        padding: 3pt 0;
-        border-bottom: 0.5pt solid #D6DEE6;
-        vertical-align: top;
-    }
-
-    .rs-sheet-num {
-        width: 26pt;
-        padding-right: 4pt !important;
-        color: #6E767E;
-        text-align: right;
-    }
-
-    .rs-sheet-street {
-        width: calc(50% - 26pt);
-        padding-left: 4pt !important;
-        padding-right: 12pt !important;
-    }
-
-    .rs-sheet-foot {
-        margin-top: 14pt;
-        padding-top: 6pt;
-        border-top: 0.5pt solid #D6DEE6;
-        color: #6E767E;
-        font-size: 8pt;
     }
 }

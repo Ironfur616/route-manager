@@ -4,9 +4,9 @@
    line so a whole list can be pasted in. The search answers "which route is this street on?":
    it matches street names (as well as route and area) and highlights the matching streets.
 
-   Print (one route) and Print All build route sheets in the house report format (Earthwise
-   logo, navy title, green rule) into a print-only area and open the device's print screen,
-   which also offers Save as PDF. Each route prints on its own page.
+   Print (one route) and Print All build a route sheet PDF in the house report format and open
+   it in the app's own viewer, with Print / Share there (see Printing below). Each route
+   starts on its own page.
 
    Each route record has room for a mapUrl, for the custom route maps planned later. */
 (function () {
@@ -175,7 +175,7 @@
         var print = el("button", "mt-btn", "Print");
         print.type = "button";
         print.setAttribute("aria-label", "Print route " + r.route);
-        print.addEventListener("click", function () { printRoutes([r]); });
+        print.addEventListener("click", function () { printRoutes([r], print); });
         actions.appendChild(print);
         var edit = el("button", "mt-btn", "Edit");
         edit.type = "button";
@@ -223,90 +223,202 @@
     }
 
     /* ---------- Printing ---------- */
+    /* Print builds the route sheet PDF in the house report format (the RCA case PDF's layout:
+       Earthwise logo, navy title, company line, green rule, page footer) and shows it in the
+       app's own PDF viewer. From there Print / Share hands it to Android's share sheet, where a
+       printing app (Samsung Print Service, Mopria, HP Smart...) or email takes it. That opens as
+       a separate app, so the back button always returns to Route IQ. Opening the system print
+       screen inside the app could leave no way back. Every sheet is kept in Saved PDFs too. */
 
-    var printEl = document.getElementById("rs-print");
+    // Fetched once up front; resolves to null (sheets still work without it) if it can't load
+    var logoPromise = fetch("assets/icons/ew-logo-192.png")
+        .then(function (r) { return r.blob(); })
+        .then(function (blob) {
+            return new Promise(function (resolve, reject) {
+                var reader = new FileReader();
+                reader.onload = function () { resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        })
+        .catch(function () { return null; });
 
     function prettyToday() {
         return new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     }
 
-    function buildSheet(r) {
-        var streets = r.streets || [];
-        var sheet = el("section", "rs-sheet");
+    function buildSheetsPdf(routes, logo) {
+        var NAVY = [4, 57, 96], GREEN = [4, 102, 53], INK = [26, 26, 26];
+        var GRAY = [110, 118, 126], RULE = [214, 222, 230], TINT = [244, 247, 250];
 
-        var head = el("header", "rs-sheet-head");
-        var titles = el("div");
-        titles.appendChild(el("h1", "rs-sheet-title", "Route Sheet"));
-        titles.appendChild(el("p", "rs-sheet-company", "Earthwise Environmental Solutions"));
-        head.appendChild(titles);
-        var logo = el("img", "rs-sheet-logo");
-        logo.src = "assets/icons/ew-logo-192.png";
-        logo.alt = "";
-        head.appendChild(logo);
-        sheet.appendChild(head);
+        var PAGE_W = 612, PAGE_H = 792, M = 40;
+        var CONTENT_W = PAGE_W - M * 2;
+        var BOTTOM = PAGE_H - 54;
+        var LOGO_SIZE = 60;
+        var ROW_H = 18;
 
-        sheet.appendChild(el("h2", "rs-sheet-route", "Route " + r.route));
+        var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
+        var y = M;
+        var pageRoute = []; // pageRoute[n] = the route printed on page n, for the footers
+        function color(fn, col) { doc[fn](col[0], col[1], col[2]); }
 
-        var info = el("dl", "rs-sheet-info");
-        [["Service Day", r.day || "N/A"], ["Area", r.area || "N/A"],
-            ["Streets", String(streets.length)], ["Printed", prettyToday()]].forEach(function (pair) {
-            var row = el("div");
-            row.appendChild(el("dt", null, pair[0]));
-            row.appendChild(el("dd", null, pair[1]));
-            info.appendChild(row);
-        });
-        sheet.appendChild(info);
-
-        if (r.notes) {
-            sheet.appendChild(el("h3", "rs-sheet-section", "Notes"));
-            sheet.appendChild(el("p", "rs-sheet-notes", r.notes));
+        function sectionBar(title) {
+            color("setFillColor", NAVY);
+            doc.rect(M, y, CONTENT_W, 18, "F");
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            color("setTextColor", [255, 255, 255]);
+            doc.text(title, M + 8, y + 13);
+            y += 18 + 6;
         }
 
-        // A table so the browser repeats its header row on every printed page, so a long route's
-        // later pages still say which route they belong to. Two streets per row, read left to
-        // right, so the numbering stays in order across a page break.
-        if (streets.length) {
-            var table = el("table", "rs-sheet-streets");
-            var headRow = el("tr");
-            var th = el("th", "rs-sheet-section", "Route " + r.route + " \u00B7 Streets");
-            th.colSpan = 4;
-            headRow.appendChild(th);
-            table.appendChild(el("thead")).appendChild(headRow);
-            var body = table.appendChild(el("tbody"));
-            for (var i = 0; i < streets.length; i += 2) {
-                var tr = el("tr");
-                [i, i + 1].forEach(function (n) {
-                    tr.appendChild(el("td", "rs-sheet-num", n < streets.length ? (n + 1) + "." : ""));
-                    tr.appendChild(el("td", "rs-sheet-street", n < streets.length ? streets[n] : ""));
-                });
-                body.appendChild(tr);
-            }
-            sheet.appendChild(table);
-        } else {
-            sheet.appendChild(el("h3", "rs-sheet-section", "Streets"));
-            sheet.appendChild(el("p", "rs-sheet-notes", "No streets entered for this route."));
-        }
+        routes.forEach(function (r, index) {
+            if (index > 0) doc.addPage();
+            y = M;
+            pageRoute[doc.getNumberOfPages()] = r.route;
+            var streets = r.streets || [];
 
-        sheet.appendChild(el("footer", "rs-sheet-foot", "Route " + r.route + " \u00B7 Earthwise Environmental Solutions"));
-        return sheet;
-    }
+            if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO_SIZE + 6, M - 12, LOGO_SIZE, LOGO_SIZE);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            color("setTextColor", NAVY);
+            doc.text("Route Sheet", M, y + 20);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            color("setTextColor", GRAY);
+            doc.text("Earthwise Environmental Solutions", M, y + 34);
+            y += 50;
+            color("setFillColor", GREEN);
+            doc.rect(M, y, CONTENT_W, 3, "F");
+            y += 16;
 
-    // Waits for the logo so it isn't missing from the printout, then opens the print screen
-    function printRoutes(routes) {
-        printEl.textContent = "";
-        routes.forEach(function (r) { printEl.appendChild(buildSheet(r)); });
-        var images = Array.prototype.slice.call(printEl.querySelectorAll("img"));
-        Promise.all(images.map(function (img) {
-            return img.complete ? Promise.resolve() : new Promise(function (resolve) {
-                img.onload = img.onerror = resolve;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(15);
+            color("setTextColor", NAVY);
+            doc.text("Route " + r.route, M, y + 13);
+            y += 26;
+
+            // Day, area, street count and print date across one shaded box
+            var info = [["Service Day", r.day || "N/A"], ["Area", r.area || "N/A"],
+                ["Streets", String(streets.length)], ["Printed", prettyToday()]];
+            var colW = CONTENT_W / info.length;
+            color("setFillColor", TINT);
+            doc.roundedRect(M, y, CONTENT_W, 40, 4, 4, "F");
+            info.forEach(function (pair, i) {
+                var x = M + 12 + i * colW;
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(7.5);
+                color("setTextColor", NAVY);
+                doc.text(pair[0].toUpperCase(), x, y + 15);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                color("setTextColor", INK);
+                doc.text(doc.splitTextToSize(String(pair[1]), colW - 16)[0], x, y + 30);
             });
-        })).then(function () { window.print(); });
+            y += 40 + 16;
+
+            if (r.notes) {
+                sectionBar("Notes");
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9.5);
+                color("setTextColor", INK);
+                var lines = doc.splitTextToSize(r.notes, CONTENT_W);
+                doc.text(lines, M, y + 9, { lineHeightFactor: 1.3 });
+                y += lines.length * 12.5 + 12;
+            }
+
+            // Two streets per row, read left to right, so numbering stays in order across pages.
+            // A page break repeats the bar with the route number, so loose pages can't be mixed up.
+            sectionBar("Route " + r.route + "  \u00B7  Streets");
+            if (!streets.length) {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9.5);
+                color("setTextColor", INK);
+                doc.text("No streets entered for this route.", M, y + 10);
+                return;
+            }
+            var half = CONTENT_W / 2;
+            for (var i = 0; i < streets.length; i += 2) {
+                if (y + ROW_H > BOTTOM) {
+                    doc.addPage();
+                    y = M;
+                    pageRoute[doc.getNumberOfPages()] = r.route;
+                    sectionBar("Route " + r.route + "  \u00B7  Streets (continued)");
+                }
+                [i, i + 1].forEach(function (n, col) {
+                    if (n >= streets.length) return;
+                    var x = M + col * half;
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(9);
+                    color("setTextColor", GRAY);
+                    doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
+                    doc.setFontSize(10);
+                    color("setTextColor", INK);
+                    doc.text(doc.splitTextToSize(streets[n], half - 40)[0], x + 26, y + 12);
+                    color("setDrawColor", RULE);
+                    doc.setLineWidth(0.5);
+                    doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
+                });
+                y += ROW_H;
+            }
+        });
+
+        // Footer: which route, and its page count, so each sheet stands on its own
+        var pages = doc.getNumberOfPages();
+        var counts = {};
+        var seen = {};
+        for (var pg = 1; pg <= pages; pg++) counts[pageRoute[pg]] = (counts[pageRoute[pg]] || 0) + 1;
+        for (pg = 1; pg <= pages; pg++) {
+            var route = pageRoute[pg];
+            seen[route] = (seen[route] || 0) + 1;
+            doc.setPage(pg);
+            color("setDrawColor", RULE);
+            doc.setLineWidth(0.6);
+            doc.line(M, PAGE_H - 40, PAGE_W - M, PAGE_H - 40);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            color("setTextColor", GRAY);
+            doc.text("Route " + route + "  \u00B7  Earthwise Environmental Solutions", M, PAGE_H - 27);
+            doc.text("Page " + seen[route] + " of " + counts[route], PAGE_W - M, PAGE_H - 27, { align: "right" });
+        }
+        return doc;
     }
 
-    window.addEventListener("afterprint", function () { printEl.textContent = ""; });
+    function printRoutes(routes, button) {
+        if (!window.jspdf) {
+            alert("The PDF library did not load. Reload the page and try again.");
+            return;
+        }
+        var label = button.textContent;
+        button.disabled = true;
+        button.textContent = "Preparing\u2026";
+        logoPromise.then(function (logo) {
+            var doc = buildSheetsPdf(routes, logo);
+            var name = (routes.length === 1 ? "Route " + routes[0].route + " Sheet" : "Route Sheets - All Routes") +
+                " - " + dateString(new Date()) + ".pdf";
+            name = name.replace(/[\\/:*?"<>|]/g, "");
+            var file = new File([doc.output("blob")], name, { type: "application/pdf" });
+            if (window.PdfStore) window.PdfStore.add(file.name, file).catch(function () {});
+
+            // The viewer lives in the app shell; opened on its own, this page just downloads it
+            var viewer = null;
+            try { viewer = window.top.PdfViewer; } catch (e) { /* not inside the app */ }
+            if (viewer) {
+                viewer.open(file);
+            } else {
+                doc.save(file.name);
+            }
+        }).catch(function (err) {
+            console.error(err);
+            alert("Sorry, the route sheet could not be created.");
+        }).then(function () {
+            button.disabled = false;
+            button.textContent = label;
+        });
+    }
 
     document.getElementById("rs-print-all").addEventListener("click", function () {
-        printRoutes(load().sort(byRoute));
+        printRoutes(load().sort(byRoute), this);
     });
 
     /* ---------- Form ---------- */

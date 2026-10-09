@@ -5,6 +5,11 @@
    the first time a PDF is opened), in a full-screen dialog with a Close button. On Android the
    system Back button also closes it, through a history entry added while it's open.
 
+   Print / Share hands the PDF to Android's share sheet, where a printing app (Samsung Print
+   Service, Mopria, HP Smart...) or email takes it. Those open as separate apps, so the back
+   button always returns to Route IQ; the system print screen opened inside the app could leave
+   no way back. Where files can't be shared, the button downloads the PDF instead.
+
      PdfViewer.open(file);   // a File or Blob from the file picker */
 (function () {
     "use strict";
@@ -14,8 +19,9 @@
     var MAX_CANVAS_PIXELS = 16000000;
 
     var dialog = null;
-    var pagesEl, titleEl, statusEl, zoomOutBtn, zoomInBtn;
+    var pagesEl, titleEl, statusEl, zoomOutBtn, zoomInBtn, shareBtn;
     var pdfDoc = null;
+    var currentFile = null;
     var zoomIndex = 0;
     var renderToken = 0;
     var libPromise = null;
@@ -52,6 +58,7 @@
                     '<button type="button" class="pdf-viewer-btn" data-zoom="-1" aria-label="Zoom out">−</button>' +
                     '<button type="button" class="pdf-viewer-btn" data-zoom="1" aria-label="Zoom in">+</button>' +
                 "</div>" +
+                '<button type="button" class="pdf-viewer-share"></button>' +
                 '<button type="button" class="pdf-viewer-close">Close</button>' +
             "</div>" +
             '<div class="pdf-viewer-pages">' +
@@ -64,6 +71,9 @@
         statusEl = dialog.querySelector(".pdf-viewer-status");
         zoomOutBtn = dialog.querySelector('[data-zoom="-1"]');
         zoomInBtn = dialog.querySelector('[data-zoom="1"]');
+        shareBtn = dialog.querySelector(".pdf-viewer-share");
+        shareBtn.textContent = canShareFiles() ? "Print / Share" : "Download";
+        shareBtn.addEventListener("click", shareCurrent);
 
         dialog.querySelector(".pdf-viewer-close").addEventListener("click", close);
         zoomOutBtn.addEventListener("click", function () { setZoom(zoomIndex - 1); });
@@ -97,6 +107,33 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(renderAll, 200);
         });
+    }
+
+    function canShareFiles() {
+        try {
+            return !!(navigator.canShare && navigator.canShare({
+                files: [new File(["x"], "x.pdf", { type: "application/pdf" })]
+            }));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function shareCurrent() {
+        if (!currentFile) return;
+        if (canShareFiles()) {
+            navigator.share({ files: [currentFile], title: currentFile.name })
+                .catch(function () { /* backing out of the share sheet is fine */ });
+            return;
+        }
+        var url = URL.createObjectURL(currentFile);
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = currentFile.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
     }
 
     function close() {
@@ -164,6 +201,7 @@
     window.PdfViewer = {
         open: function (file) {
             if (!dialog) build();
+            currentFile = file instanceof File ? file : new File([file], file.name || "document.pdf", { type: "application/pdf" });
             titleEl.textContent = file.name || "PDF";
             clearPages();
             say("Opening…");
