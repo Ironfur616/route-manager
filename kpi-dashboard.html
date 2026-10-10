@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>KPI Dashboard · Earthwise Route IQ</title>
+</head>
+
+<body class="kpi-page">
+    <div class="kpi-wrap">
+        <!-- One filter row above everything it scopes -->
+        <div class="kpi-filters">
+            <div class="kpi-range" role="group" aria-label="Date range" id="kpi-range"></div>
+            <button type="button" class="mt-btn kpi-customize-btn" id="kpi-customize-btn" aria-expanded="false" aria-controls="kpi-customize">Customize</button>
+        </div>
+        <p class="kpi-range-note" id="kpi-range-note" aria-live="polite"></p>
+
+        <div class="kpi-customize" id="kpi-customize" hidden>
+            <p class="kpi-customize-title">Show on the dashboard</p>
+            <div class="kpi-customize-list" id="kpi-customize-list"></div>
+        </div>
+
+        <div class="kpi-cards" id="kpi-cards"></div>
+    </div>
+
+    <div class="kpi-tooltip" id="kpi-tooltip" role="status" hidden></div>
+
+    <script src="kpi-dashboard.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>

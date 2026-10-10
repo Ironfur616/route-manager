@@ -35,6 +35,8 @@
                 '<span class="site-nav-heading">Menu</span>' +
                 '<button type="button" class="nav-close" id="nav-close" aria-label="Close menu">&times;</button>' +
             "</div>" +
+            section("KPI",
+                '<ul class="nav-link-list">' + link("kpi-dashboard.html", "Dashboard") + "</ul>") +
             section("Observations",
                 subsection("panel-residential", "Residential", [
                     link("resi-driver.html", "Residential Driver"),
