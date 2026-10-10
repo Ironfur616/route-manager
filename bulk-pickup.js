@@ -215,6 +215,7 @@
         formTitle.textContent = "Add Bulk Pickup Request";
         submitBtn.textContent = "Save Entry";
         form.reset();
+        routeFill.reset();
     }
 
     function startEdit(id) {
@@ -222,6 +223,7 @@
         if (!entry) return;
         editingId = id;
         fields.address.value = entry.address || "";
+        routeFill.editing(entry);
         fields.route.value = entry.route || "";
         fields.driver.value = entry.driver || "";
         fields.pickupDate.value = entry.pickupDate || "";
@@ -231,6 +233,14 @@
         say("");
         entryDialog.open();
     }
+
+    /* ---------- Route Sheets lookup ---------- */
+
+    // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
+    var routeFill = window.RouteLookup
+        ? RouteLookup.attach({ address: fields.address, route: fields.route, driver: fields.driver,
+            note: document.getElementById("bp-route-match") })
+        : { reset: function () {}, editing: function () {} };
 
     /* ---------- Dialog ---------- */
 

@@ -403,155 +403,10 @@
 
     /* ---------- Route Sheets lookup ---------- */
 
-    // Where the route and driver currently in the form came from. Only "manual" (typed by hand
-    // in this form) is protected; values kept from the last stop or filled by a lookup are
-    // replaced when a new address matches.
-    var source = { route: "kept", driver: "kept" };
-
-    function fillFrom(match) {
-        if (source.route !== "manual") {
-            fields.route.value = match.route;
-            source.route = "auto";
-        }
-        if (match.driver && source.driver !== "manual") {
-            fields.driver.value = match.driver;
-            source.driver = "auto";
-        }
-    }
-
-    // A route/driver the lookup filled in for an earlier address is wrong for this one: clear it.
-    // Values typed by hand or kept from the last stop are left alone.
-    function clearAutoFilled() {
-        if (source.route === "auto") {
-            fields.route.value = "";
-            source.route = "kept";
-        }
-        if (source.driver === "auto") {
-            fields.driver.value = "";
-            source.driver = "kept";
-        }
-    }
-
-    function matchLabel(m) {
-        return "Route " + m.route + (m.driver ? " \u00B7 " + m.driver : "");
-    }
-
-    // Says why the driver didn't fill in, instead of leaving it to guesswork: a route with no
-    // driver in Route Sheets, or a driver already entered by hand that the lookup won't overwrite
-    // (with a button to use the Route Sheets driver instead)
-    function driverNotes(matches) {
-        var routeNow = String(fields.route.value).trim().toLowerCase();
-        var combined = RouteLookup.combine(matches);
-        var forRoute = String(combined.route).toLowerCase() === routeNow ? matches
-            : matches.filter(function (m) { return String(m.route).toLowerCase() === routeNow; });
-        if (!forRoute.length) return;
-
-        var missing = forRoute.filter(function (m) { return !m.driver; });
-        if (missing.length) {
-            routeMatchEl.appendChild(el("p", "mt-route-none", "No driver listed for " +
-                missing.map(function (m) { return "Route " + m.route; }).join(" or ") +
-                " in Route Sheets. Add it there to have it filled in here."));
-        }
-
-        var expected = RouteLookup.combine(forRoute).driver;
-        if (expected && source.driver === "manual" && fields.driver.value.trim().toLowerCase() !== expected.toLowerCase()) {
-            routeMatchEl.appendChild(el("p", "mt-route-none", "Driver was entered by hand, so it was left as is."));
-            var use = el("button", "mt-btn mt-route-pick", "Use " + expected);
-            use.type = "button";
-            use.addEventListener("click", function () {
-                fields.driver.value = expected;
-                source.driver = "auto";
-                updateRouteMatch(false);
-            });
-            routeMatchEl.appendChild(use);
-        }
-    }
-
-    function updateRouteMatch(apply) {
-        routeMatchEl.textContent = "";
-        if (!window.RouteLookup || !RouteLookup.hasRoutes()) return;
-        if (!fields.address.value.trim()) {
-            if (apply) clearAutoFilled();
-            return;
-        }
-        var matches = RouteLookup.find(fields.address.value);
-
-        if (matches.length === 1) {
-            var m = matches[0];
-            if (apply) fillFrom(m);
-            var p = el("p", "mt-route-found");
-            var routeDiffers = fields.route.value.trim() && fields.route.value.trim().toLowerCase() !== String(m.route).toLowerCase();
-            p.textContent = (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m);
-            routeMatchEl.appendChild(p);
-            // A route typed by hand that disagrees with Route Sheets: offer, don't overwrite
-            if (routeDiffers) {
-                var use = el("button", "mt-btn mt-route-pick", "Use " + matchLabel(m));
-                use.type = "button";
-                use.addEventListener("click", function () {
-                    source.route = "auto";
-                    source.driver = "auto";
-                    fillFrom(m);
-                    updateRouteMatch(false);
-                });
-                routeMatchEl.appendChild(use);
-            } else {
-                driverNotes(matches);
-            }
-        } else if (matches.length > 1) {
-            // Split street: fill in every route and driver ("12 / 9", "Sam / Kim") until its break
-            // points are known. A single route picked from the buttons below is kept while the
-            // rest of the address is typed.
-            var both = RouteLookup.combine(matches);
-            var current = String(fields.route.value).toLowerCase();
-            var pickedOne = matches.some(function (x) { return String(x.route).toLowerCase() === current; });
-            if (apply && !pickedOne) fillFrom(both);
-            current = String(fields.route.value).toLowerCase(); // what the buttons below should show as chosen
-            routeMatchEl.appendChild(el("p", "mt-route-found", matches[0].street + " is split between " +
-                matches.map(matchLabel).join(" and ") + ". Both are filled in; tap one if you know which:"));
-            var picks = el("div", "mt-route-picks");
-            var bothBtn = el("button", "mt-btn mt-route-pick", "Both");
-            bothBtn.type = "button";
-            var bothChosen = current === String(both.route).toLowerCase();
-            if (bothChosen) bothBtn.classList.add("is-selected");
-            bothBtn.setAttribute("aria-pressed", String(bothChosen));
-            bothBtn.addEventListener("click", function () {
-                source.route = "auto";
-                source.driver = "auto";
-                fillFrom(both);
-                updateRouteMatch(false);
-            });
-            picks.appendChild(bothBtn);
-            matches.forEach(function (match) {
-                var b = el("button", "mt-btn mt-route-pick", matchLabel(match));
-                b.type = "button";
-                var chosen = String(fields.route.value).toLowerCase() === String(match.route).toLowerCase();
-                if (chosen) b.classList.add("is-selected");
-                b.setAttribute("aria-pressed", String(chosen));
-                b.addEventListener("click", function () {
-                    source.route = "auto";
-                    source.driver = "auto";
-                    fillFrom(match);
-                    updateRouteMatch(false);
-                });
-                picks.appendChild(b);
-            });
-            routeMatchEl.appendChild(picks);
-            driverNotes(matches);
-        } else {
-            if (apply) clearAutoFilled();
-            if (/[a-z]/i.test(fields.address.value)) {
-                routeMatchEl.appendChild(el("p", "mt-route-none", "Street not found in Route Sheets."));
-            }
-        }
-    }
-
-    fields.route.addEventListener("input", function () {
-        source.route = fields.route.value.trim() ? "manual" : "kept";
-        updateRouteMatch(false);
-    });
-    fields.driver.addEventListener("input", function () {
-        source.driver = fields.driver.value.trim() ? "manual" : "kept";
-    });
+    // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
+    var routeFill = window.RouteLookup
+        ? RouteLookup.attach({ address: fields.address, route: fields.route, driver: fields.driver, note: routeMatchEl })
+        : { reset: function () {}, editing: function () {} };
 
     /* ---------- Fill older entries from Route Sheets ---------- */
 
@@ -648,8 +503,7 @@
         updateReasonsCount();
         reasonsError.hidden = true;
         updateAddressHint();
-        source = { route: "kept", driver: "kept" };
-        routeMatchEl.textContent = "";
+        routeFill.reset();
     }
 
     function startEdit(id) {
@@ -657,8 +511,7 @@
         if (!entry) return;
         editingId = id;
         Object.keys(fields).forEach(function (k) { fields[k].value = entry[k] || ""; });
-        source = { route: entry.route ? "manual" : "kept", driver: entry.driver ? "manual" : "kept" };
-        routeMatchEl.textContent = "";
+        routeFill.editing(entry);
         setCheckedReasons(entry.reasons);
         updateReasonsCount();
         reasonsError.hidden = true;
@@ -733,10 +586,7 @@
         fields.address.focus();
     });
 
-    fields.address.addEventListener("input", function () {
-        updateAddressHint();
-        updateRouteMatch(true);
-    });
+    fields.address.addEventListener("input", updateAddressHint);
 
     /* ---------- List actions ---------- */
 

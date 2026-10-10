@@ -275,6 +275,7 @@
         formTitle.textContent = "Add New Customer";
         submitBtn.textContent = "Save Entry";
         form.reset();
+        routeFill.reset();
         fields.type.value = TYPES[0];
     }
 
@@ -283,6 +284,7 @@
         if (!entry) return;
         editingId = id;
         fields.address.value = entry.address || "";
+        routeFill.editing(entry);
         fields.type.value = entry.type || TYPES[0];
         fields.route.value = entry.route || "";
         fields.driver.value = entry.driver || "";
@@ -292,6 +294,14 @@
         say("");
         entryDialog.open();
     }
+
+    /* ---------- Route Sheets lookup ---------- */
+
+    // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
+    var routeFill = window.RouteLookup
+        ? RouteLookup.attach({ address: fields.address, route: fields.route, driver: fields.driver,
+            note: document.getElementById("nc-route-match") })
+        : { reset: function () {}, editing: function () {} };
 
     /* ---------- Dialog ---------- */
 

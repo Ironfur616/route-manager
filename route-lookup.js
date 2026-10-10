@@ -91,9 +91,181 @@
             street: matches.length ? matches[0].street : "" };
     }
 
+    /* ---------- Form auto-fill ----------
+       Connects a form's address, route and driver inputs to the lookup:
+
+         var routeFill = RouteLookup.attach({ address: input, route: input, driver: input, note: element });
+         routeFill.reset();          // a fresh form (kept values from the last stop stay replaceable)
+         routeFill.editing(entry);   // an existing entry: its saved route/driver count as typed by hand
+
+       Typing the address fills Route and Driver unless they were typed by hand in this form. A
+       street on several routes fills all of them ("12 / 9", "Sam / Kim") with buttons to narrow it
+       to one. Values the lookup filled for an earlier address are cleared when the address stops
+       matching. The note element explains what happened, including why a driver didn't fill. */
+    function attach(f) {
+        // Where the route and driver in the form came from. Only "manual" (typed by hand here) is
+        // protected; "kept" (from the last stop or empty) and "auto" (filled by a lookup) are not.
+        // "picked" is one route chosen from a split street's buttons: kept while that street's
+        // address is still being typed, replaced like "auto" otherwise.
+        var source = { route: "kept", driver: "kept" };
+
+        function isLookupValue(s) {
+            return s === "auto" || s === "picked";
+        }
+
+        function el(tag, className, text) {
+            var node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text != null) node.textContent = text;
+            return node;
+        }
+
+        function same(a, b) {
+            return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+        }
+
+        function fillFrom(match, how) {
+            if (source.route !== "manual") {
+                f.route.value = match.route;
+                source.route = how || "auto";
+            }
+            if (source.driver === "manual") return;
+            if (match.driver) {
+                f.driver.value = match.driver;
+                source.driver = how || "auto";
+            } else if (isLookupValue(source.driver)) {
+                // A driver filled in for an earlier route isn't this route's driver
+                f.driver.value = "";
+                source.driver = "kept";
+            }
+        }
+
+        function clearAutoFilled() {
+            if (isLookupValue(source.route)) {
+                f.route.value = "";
+                source.route = "kept";
+            }
+            if (isLookupValue(source.driver)) {
+                f.driver.value = "";
+                source.driver = "kept";
+            }
+        }
+
+        function matchLabel(m) {
+            return "Route " + m.route + (m.driver ? " · " + m.driver : "");
+        }
+
+        function pickButton(text, chosen, onPick) {
+            var b = el("button", "mt-btn mt-route-pick" + (chosen ? " is-selected" : ""), text);
+            b.type = "button";
+            if (chosen !== null) b.setAttribute("aria-pressed", String(!!chosen));
+            b.addEventListener("click", function () {
+                onPick();
+                update(false);
+            });
+            return b;
+        }
+
+        // A button tap: overrides even values typed by hand, since the person chose it
+        function useMatch(m, how) {
+            source.route = "auto";
+            source.driver = "auto";
+            fillFrom(m, how);
+        }
+
+        // Why the driver didn't fill in: a route with no driver in Route Sheets, or a driver
+        // entered by hand that the lookup won't overwrite (with a button to use Route Sheets')
+        function driverNotes(matches) {
+            var both = combine(matches);
+            var forRoute = same(both.route, f.route.value) ? matches
+                : matches.filter(function (m) { return same(m.route, f.route.value); });
+            if (!forRoute.length) return;
+
+            var missing = forRoute.filter(function (m) { return !m.driver; });
+            if (missing.length) {
+                f.note.appendChild(el("p", "mt-route-none", "No driver listed for " +
+                    missing.map(function (m) { return "Route " + m.route; }).join(" or ") +
+                    " in Route Sheets. Add it there to have it filled in here."));
+            }
+
+            var expected = combine(forRoute).driver;
+            if (expected && source.driver === "manual" && !same(f.driver.value, expected)) {
+                f.note.appendChild(el("p", "mt-route-none", "Driver was entered by hand, so it was left as is."));
+                f.note.appendChild(pickButton("Use " + expected, null, function () {
+                    f.driver.value = expected;
+                    source.driver = "auto";
+                }));
+            }
+        }
+
+        function update(apply) {
+            f.note.textContent = "";
+            if (!loadRoutes().length) return;
+            if (!f.address.value.trim()) {
+                if (apply) clearAutoFilled();
+                return;
+            }
+            var matches = find(f.address.value);
+
+            if (matches.length === 1) {
+                var m = matches[0];
+                if (apply) fillFrom(m);
+                var routeDiffers = f.route.value.trim() && !same(f.route.value, m.route);
+                f.note.appendChild(el("p", "mt-route-found",
+                    (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m)));
+                // A route typed by hand that disagrees with Route Sheets: offer, don't overwrite
+                if (routeDiffers) f.note.appendChild(pickButton("Use " + matchLabel(m), null, function () { useMatch(m); }));
+                else driverNotes(matches);
+            } else if (matches.length > 1) {
+                // Split street: every route and driver until its break points are known. A single
+                // route picked below is kept while the rest of the address is typed.
+                var both = combine(matches);
+                var pickedOne = source.route === "picked" && matches.some(function (x) { return same(x.route, f.route.value); });
+                if (apply && !pickedOne) fillFrom(both);
+                f.note.appendChild(el("p", "mt-route-found", matches[0].street + " is split between " +
+                    matches.map(matchLabel).join(" and ") + ". " + (same(f.route.value, both.route)
+                        ? "Both are filled in; tap one if you know which:"
+                        : "Tap the route this stop is on, or Both:")));
+                var picks = el("div", "mt-route-picks");
+                picks.appendChild(pickButton("Both", same(f.route.value, both.route), function () { useMatch(both); }));
+                matches.forEach(function (match) {
+                    picks.appendChild(pickButton(matchLabel(match), same(f.route.value, match.route), function () { useMatch(match, "picked"); }));
+                });
+                f.note.appendChild(picks);
+                driverNotes(matches);
+            } else {
+                if (apply) clearAutoFilled();
+                if (/[a-z]/i.test(f.address.value)) {
+                    f.note.appendChild(el("p", "mt-route-none", "Street not found in Route Sheets."));
+                }
+            }
+        }
+
+        f.address.addEventListener("input", function () { update(true); });
+        f.route.addEventListener("input", function () {
+            source.route = f.route.value.trim() ? "manual" : "kept";
+            update(false);
+        });
+        f.driver.addEventListener("input", function () {
+            source.driver = f.driver.value.trim() ? "manual" : "kept";
+        });
+
+        return {
+            reset: function () {
+                source = { route: "kept", driver: "kept" };
+                f.note.textContent = "";
+            },
+            editing: function (entry) {
+                source = { route: entry.route ? "manual" : "kept", driver: entry.driver ? "manual" : "kept" };
+                f.note.textContent = "";
+            }
+        };
+    }
+
     window.RouteLookup = {
         find: find,
         combine: combine,
+        attach: attach,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
 })();
