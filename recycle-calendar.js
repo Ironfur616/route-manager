@@ -215,7 +215,13 @@
             '<button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>' +
         "</div>" +
         '<div class="rc-body">' +
-            '<div class="rc-areas" role="group" aria-label="Service area"></div>' +
+            '<div class="rc-areas">' +
+                '<label class="rc-area-label" for="rc-area-select">Area</label>' +
+                '<div class="rc-area-row">' +
+                    '<select class="rc-area-select" id="rc-area-select"></select>' +
+                    '<button type="button" class="rc-area-add" aria-label="Add area" title="Add area">+</button>' +
+                "</div>" +
+            "</div>" +
             '<div class="rc-add-area" hidden>' +
                 '<label for="rc-area-name">New area name</label>' +
                 '<div class="rc-add-row">' +
@@ -240,7 +246,23 @@
         "</div>";
     document.body.appendChild(dialog);
 
-    var areasEl = dialog.querySelector(".rc-areas");
+    var areaSelect = dialog.querySelector("#rc-area-select");
+
+    // Picking a name in the dropdown switches the calendar to it straight away
+    areaSelect.addEventListener("change", function () {
+        var d = load();
+        d.selected = areaSelect.value;
+        save(d);
+        rangeStart = null;
+        render();
+    });
+
+    dialog.querySelector(".rc-area-add").addEventListener("click", function () {
+        addingArea = true;
+        render();
+        areaInput.value = "";
+        areaInput.focus();
+    });
     var addAreaEl = dialog.querySelector(".rc-add-area");
     var areaInput = dialog.querySelector("#rc-area-name");
     var addError = dialog.querySelector(".rc-add-error");
@@ -276,24 +298,13 @@
 
     function renderAreas(data) {
         var current = selectedArea(data);
-        areasEl.textContent = "";
+        areaSelect.textContent = "";
         areas(data).forEach(function (a) {
-            var b = button("rc-area" + (a.id === current.id ? " is-selected" : ""), a.name, function () {
-                var d = load();
-                d.selected = a.id;
-                save(d);
-                rangeStart = null;
-                render();
-            });
-            b.setAttribute("aria-pressed", String(a.id === current.id));
-            areasEl.appendChild(b);
+            var opt = el("option", null, a.name);
+            opt.value = a.id;
+            areaSelect.appendChild(opt);
         });
-        areasEl.appendChild(button("rc-area rc-area-add", "+ Add area", function () {
-            addingArea = true;
-            render();
-            areaInput.value = "";
-            areaInput.focus();
-        }));
+        areaSelect.value = current.id;
     }
 
     function renderStatus(data, area) {
