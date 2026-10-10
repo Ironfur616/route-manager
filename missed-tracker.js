@@ -1,7 +1,11 @@
 /* Missed collection tracker (missed-tracker.html).
     Unlike the observation forms, this is a running log, not a draft: entries are kept in
     localStorage until they are deleted. The page opts out of the shell's draft handling with
-   data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step. */
+   data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step.
+
+   Route and driver come from Route Sheets where they can (route-lookup.js): typing the address
+   fills them in unless they were typed by hand, a street on several routes offers each route
+   to pick from, and Fill from Route Sheets completes older entries that are missing them. */
 (function () {
     "use strict";
 
@@ -57,6 +61,7 @@
     var formTitle = document.getElementById("mt-form-title");
     var message = document.getElementById("mt-message");
     var addressHint = document.getElementById("mt-address-hint");
+    var routeMatchEl = document.getElementById("mt-route-match");
     var listEl = document.getElementById("mt-list");
     var archiveEl = document.getElementById("mt-archive");
     var archiveListEl = document.getElementById("mt-archive-list");
@@ -357,6 +362,7 @@
 
         renderStats(entries, counts);
         renderDatalists(entries);
+        renderBackfill(entries);
         updateAddressHint();
 
         var filtering = !!(term || status || yellowOnly);
@@ -393,6 +399,156 @@
     }
 
     /* ---------- Form ---------- */
+
+    /* ---------- Route Sheets lookup ---------- */
+
+    // Where the route and driver currently in the form came from. Only "manual" (typed by hand
+    // in this form) is protected; values kept from the last stop or filled by a lookup are
+    // replaced when a new address matches.
+    var source = { route: "kept", driver: "kept" };
+
+    function fillFrom(match) {
+        if (source.route !== "manual") {
+            fields.route.value = match.route;
+            source.route = "auto";
+        }
+        if (match.driver && source.driver !== "manual") {
+            fields.driver.value = match.driver;
+            source.driver = "auto";
+        }
+    }
+
+    // A route/driver the lookup filled in for an earlier address is wrong for this one: clear it.
+    // Values typed by hand or kept from the last stop are left alone.
+    function clearAutoFilled() {
+        if (source.route === "auto") {
+            fields.route.value = "";
+            source.route = "kept";
+        }
+        if (source.driver === "auto") {
+            fields.driver.value = "";
+            source.driver = "kept";
+        }
+    }
+
+    function matchLabel(m) {
+        return "Route " + m.route + (m.driver ? " \u00B7 " + m.driver : "");
+    }
+
+    function updateRouteMatch(apply) {
+        routeMatchEl.textContent = "";
+        if (!window.RouteLookup || !RouteLookup.hasRoutes()) return;
+        if (!fields.address.value.trim()) {
+            if (apply) clearAutoFilled();
+            return;
+        }
+        var matches = RouteLookup.find(fields.address.value);
+
+        if (matches.length === 1) {
+            var m = matches[0];
+            if (apply) fillFrom(m);
+            var p = el("p", "mt-route-found");
+            var routeDiffers = fields.route.value.trim() && fields.route.value.trim().toLowerCase() !== String(m.route).toLowerCase();
+            p.textContent = (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m);
+            routeMatchEl.appendChild(p);
+            // A route typed by hand that disagrees with Route Sheets: offer, don't overwrite
+            if (routeDiffers) {
+                var use = el("button", "mt-btn mt-route-pick", "Use " + matchLabel(m));
+                use.type = "button";
+                use.addEventListener("click", function () {
+                    source.route = "auto";
+                    source.driver = "auto";
+                    fillFrom(m);
+                    updateRouteMatch(false);
+                });
+                routeMatchEl.appendChild(use);
+            }
+        } else if (matches.length > 1) {
+            // Keep a route already picked from these buttons while the rest of the address is typed
+            var current = String(fields.route.value).toLowerCase();
+            if (apply && !matches.some(function (x) { return String(x.route).toLowerCase() === current; })) clearAutoFilled();
+            routeMatchEl.appendChild(el("p", "mt-route-found", matches[0].street + " is on more than one route. Pick the right one:"));
+            var picks = el("div", "mt-route-picks");
+            matches.forEach(function (match) {
+                var b = el("button", "mt-btn mt-route-pick", matchLabel(match));
+                b.type = "button";
+                var chosen = String(fields.route.value).toLowerCase() === String(match.route).toLowerCase();
+                if (chosen) b.classList.add("is-selected");
+                b.setAttribute("aria-pressed", String(chosen));
+                b.addEventListener("click", function () {
+                    source.route = "auto";
+                    source.driver = "auto";
+                    fillFrom(match);
+                    updateRouteMatch(false);
+                });
+                picks.appendChild(b);
+            });
+            routeMatchEl.appendChild(picks);
+        } else {
+            if (apply) clearAutoFilled();
+            if (/[a-z]/i.test(fields.address.value)) {
+                routeMatchEl.appendChild(el("p", "mt-route-none", "Street not found in Route Sheets."));
+            }
+        }
+    }
+
+    fields.route.addEventListener("input", function () {
+        source.route = fields.route.value.trim() ? "manual" : "kept";
+        updateRouteMatch(false);
+    });
+    fields.driver.addEventListener("input", function () {
+        source.driver = fields.driver.value.trim() ? "manual" : "kept";
+    });
+
+    /* ---------- Fill older entries from Route Sheets ---------- */
+
+    // Entries missing a route (or a driver) whose street is on exactly one route in Route
+    // Sheets. Only empty fields are ever filled; nothing already entered is changed.
+    function backfillCandidates(entries) {
+        if (!window.RouteLookup || !RouteLookup.hasRoutes()) return [];
+        return entries.map(function (e) {
+            if (e.route && e.driver) return null;
+            var matches = RouteLookup.find(e.address);
+            if (matches.length !== 1) return null;
+            var m = matches[0];
+            var patch = {};
+            if (!e.route) patch.route = m.route;
+            // A driver only comes along when the route agrees with Route Sheets
+            if (!e.driver && m.driver && (!e.route || String(e.route).toLowerCase() === String(m.route).toLowerCase())) patch.driver = m.driver;
+            return Object.keys(patch).length ? { id: e.id, patch: patch } : null;
+        }).filter(Boolean);
+    }
+
+    function renderBackfill(entries) {
+        var box = document.getElementById("mt-backfill");
+        var todo = backfillCandidates(entries);
+        box.hidden = !todo.length;
+        if (!todo.length) return;
+        var routes = todo.filter(function (t) { return t.patch.route; }).length;
+        var drivers = todo.length - routes;
+        document.getElementById("mt-backfill-text").textContent =
+            (routes ? routes + " miss" + (routes === 1 ? " is" : "es are") + " missing a route" : "") +
+            (routes && drivers ? " and " : "") +
+            (drivers ? drivers + " " + (routes ? "more " : "") + "missing a driver" : "") +
+            " that Route Sheets can fill in.";
+    }
+
+    document.getElementById("mt-backfill-btn").addEventListener("click", function () {
+        var list = load();
+        var todo = backfillCandidates(list);
+        var byId = {};
+        todo.forEach(function (t) { byId[t.id] = t.patch; });
+        list.forEach(function (e) {
+            if (!byId[e.id]) return;
+            Object.keys(byId[e.id]).forEach(function (k) { e[k] = byId[e.id][k]; });
+            e.updated = Date.now();
+        });
+        if (save(list)) {
+            document.getElementById("mt-backfill-done").textContent =
+                "Filled in " + todo.length + " miss" + (todo.length === 1 ? "" : "es") + " from Route Sheets.";
+        }
+        render();
+    });
 
     function updateAddressHint() {
         var key = addressKey(fields.address.value);
@@ -438,6 +594,8 @@
         updateReasonsCount();
         reasonsError.hidden = true;
         updateAddressHint();
+        source = { route: "kept", driver: "kept" };
+        routeMatchEl.textContent = "";
     }
 
     function startEdit(id) {
@@ -445,6 +603,8 @@
         if (!entry) return;
         editingId = id;
         Object.keys(fields).forEach(function (k) { fields[k].value = entry[k] || ""; });
+        source = { route: entry.route ? "manual" : "kept", driver: entry.driver ? "manual" : "kept" };
+        routeMatchEl.textContent = "";
         setCheckedReasons(entry.reasons);
         updateReasonsCount();
         reasonsError.hidden = true;
@@ -519,7 +679,10 @@
         fields.address.focus();
     });
 
-    fields.address.addEventListener("input", updateAddressHint);
+    fields.address.addEventListener("input", function () {
+        updateAddressHint();
+        updateRouteMatch(true);
+    });
 
     /* ---------- List actions ---------- */
 

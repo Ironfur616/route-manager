@@ -76,7 +76,12 @@
                     <select id="rs-day" name="day"></select>
                 </div>
 
-                <div class="field field-wide">
+                <div class="field">
+                    <label for="rs-driver">Driver</label>
+                    <input type="text" id="rs-driver" name="driver" list="dl-rs-driver" autocomplete="off">
+                </div>
+
+                <div class="field">
                     <label for="rs-area">Area (Boro / Twp)</label>
                     <input type="text" id="rs-area" name="area" list="dl-rs-area" autocomplete="off">
                 </div>
@@ -94,6 +99,7 @@
             </fieldset>
 
             <datalist id="dl-rs-area"></datalist>
+            <datalist id="dl-rs-driver"></datalist>
 
             <p class="send-error mt-dialog-error" id="rs-error" hidden></p>
             <div class="form-actions mt-dialog-actions">

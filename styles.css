@@ -1386,6 +1386,86 @@ body.shell {
     white-space: pre-wrap;
 }
 
+/* Route Sheets match under the address field */
+.mt-route-match:empty {
+    display: none;
+}
+
+.mt-route-match {
+    margin-top: 0.375rem;
+}
+
+.mt-route-found,
+.mt-route-none {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mt-route-found {
+    color: var(--forest-green);
+}
+
+.mt-route-none {
+    color: var(--drk-gray);
+    font-weight: 400;
+}
+
+.mt-route-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+}
+
+.mt-route-pick {
+    flex: 0 1 auto;
+    margin-top: 0.375rem;
+}
+
+.mt-route-picks .mt-route-pick {
+    margin-top: 0;
+}
+
+.mt-route-pick.is-selected {
+    border-color: var(--forest-green);
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+/* "N misses are missing a route" + Fill from Route Sheets */
+.mt-backfill {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 6px solid var(--sky-blue);
+    border-radius: 4px;
+    background-color: rgba(86, 157, 214, 0.08);
+}
+
+.mt-backfill[hidden] {
+    display: none;
+}
+
+.mt-backfill-text {
+    flex: 1 1 14rem;
+    margin: 0;
+    color: var(--deep-navy);
+    font-weight: 600;
+}
+
+.mt-backfill .mt-btn {
+    flex: 0 0 auto;
+}
+
+.mt-backfill-done:empty {
+    display: none;
+}
+
 /* Added / Resolved times on a missed collection card */
 .mt-entry-stamps {
     margin: 0.5rem 0 0;

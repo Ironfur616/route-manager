@@ -19,6 +19,7 @@
     var fields = {
         route: document.getElementById("rs-route"),
         day: document.getElementById("rs-day"),
+        driver: document.getElementById("rs-driver"),
         area: document.getElementById("rs-area"),
         streets: document.getElementById("rs-streets"),
         notes: document.getElementById("rs-notes")
@@ -95,16 +96,18 @@
 
     /* ---------- Rendering ---------- */
 
-    function renderDatalist(list) {
-        var seen = {};
-        var dl = document.getElementById("dl-rs-area");
-        dl.textContent = "";
-        list.forEach(function (r) {
-            var v = (r.area || "").trim();
-            if (v && !seen[v.toLowerCase()]) {
-                seen[v.toLowerCase()] = true;
-                dl.appendChild(el("option")).value = v;
-            }
+    function renderDatalists(list) {
+        [["dl-rs-area", "area"], ["dl-rs-driver", "driver"]].forEach(function (pair) {
+            var seen = {};
+            var dl = document.getElementById(pair[0]);
+            dl.textContent = "";
+            list.forEach(function (r) {
+                var v = (r[pair[1]] || "").trim();
+                if (v && !seen[v.toLowerCase()]) {
+                    seen[v.toLowerCase()] = true;
+                    dl.appendChild(el("option")).value = v;
+                }
+            });
         });
     }
 
@@ -141,6 +144,11 @@
 
         var chips = el("div", "mt-chips");
         if (r.day) chips.appendChild(el("span", "mt-chip", r.day));
+        if (r.driver) {
+            var driver = el("span", "mt-chip");
+            driver.appendChild(highlighted(r.driver, term));
+            chips.appendChild(driver);
+        }
         if (r.area) {
             var area = el("span", "mt-chip");
             area.appendChild(highlighted(r.area, term));
@@ -194,14 +202,14 @@
 
     function matches(r, term) {
         if (!term) return true;
-        return [r.route, "route " + r.route, r.area, r.day, r.notes].concat(r.streets || [])
+        return [r.route, "route " + r.route, r.area, r.day, r.driver, r.notes].concat(r.streets || [])
             .join("\n").toLowerCase().indexOf(term) !== -1;
     }
 
     function render() {
         var list = load().sort(byRoute);
         var term = searchEl.value.trim().toLowerCase();
-        renderDatalist(list);
+        renderDatalists(list);
 
         var shown = list.filter(function (r) { return matches(r, term); });
         listEl.textContent = "";
@@ -299,7 +307,7 @@
             y += 26;
 
             // Day, area, street count and print date across one shaded box
-            var info = [["Service Day", r.day || "N/A"], ["Area", r.area || "N/A"],
+            var info = [["Service Day", r.day || "N/A"], ["Driver", r.driver || "N/A"], ["Area", r.area || "N/A"],
                 ["Streets", String(streets.length)], ["Printed", prettyToday()]];
             var colW = CONTENT_W / info.length;
             color("setFillColor", TINT);
@@ -433,6 +441,7 @@
             route: fields.route.value.trim().replace(/^route\s+/i, ""),
             day: fields.day.value,
             area: fields.area.value.trim(),
+            driver: fields.driver.value.trim(),
             streets: parseStreets(fields.streets.value),
             notes: fields.notes.value.trim()
         };
@@ -453,6 +462,7 @@
         editingId = id;
         fields.route.value = r.route || "";
         fields.day.value = r.day || "";
+        fields.driver.value = r.driver || "";
         fields.area.value = r.area || "";
         fields.streets.value = (r.streets || []).join("\n");
         fields.notes.value = r.notes || "";
@@ -545,10 +555,10 @@
 
     // One row per street, so the file sorts and filters well in a spreadsheet
     document.getElementById("rs-export").addEventListener("click", function () {
-        var rows = [["Route", "Service Day", "Area", "Street", "Notes"]];
+        var rows = [["Route", "Service Day", "Driver", "Area", "Street", "Notes"]];
         load().sort(byRoute).forEach(function (r) {
             var streets = (r.streets || []).length ? r.streets : [""];
-            streets.forEach(function (s) { rows.push([r.route, r.day, r.area, s, r.notes]); });
+            streets.forEach(function (s) { rows.push([r.route, r.day, r.driver, r.area, s, r.notes]); });
         });
         var csv = "﻿" + rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
 
