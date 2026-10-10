@@ -67,6 +67,11 @@
                 </div>
 
                 <div class="field">
+                    <label for="mt-city">City</label>
+                    <input type="text" id="mt-city" name="city" list="dl-city" autocomplete="off">
+                </div>
+
+                <div class="field">
                     <label for="mt-service">Service</label>
                     <select id="mt-service" name="service" required></select>
                 </div>
@@ -108,6 +113,7 @@
             <datalist id="dl-address"></datalist>
             <datalist id="dl-driver"></datalist>
             <datalist id="dl-unit"></datalist>
+            <datalist id="dl-city"></datalist>
 
             <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
             <div class="form-actions mt-dialog-actions">

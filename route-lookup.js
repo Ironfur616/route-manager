@@ -71,9 +71,18 @@
         });
     }
 
-    function find(address) {
+    // The town a route's street or address is in: saved per line by the Excel import (column G).
+    // Lines typed in by hand have none and match in any town.
+    function lineCity(r, line) {
+        return (r.cities && r.cities[normalize(line)]) || "";
+    }
+
+    // find(address) or find(address, city). With a city, streets listed in a different town are
+    // left out, so "Main St" in Washington and "Main St" in East Washington don't collide.
+    function find(address, city) {
         var full = normalize(address);
         var target = streetPart(address);
+        var town = normalize(city);
         if (!full) return [];
         var best = 0;
         var hits = [];
@@ -81,8 +90,11 @@
             (r.streets || []).forEach(function (s) {
                 var key = normalize(s);
                 if (!key) return;
+                var where = lineCity(r, s);
+                if (town && where && normalize(where) !== town) return;
                 // A listed home beats any street; among streets, a longer one ("main st ext")
-                // beats a shorter one ("main st")
+                // beats a shorter one ("main st"). A line whose town matches the given city
+                // edges out one with no town on record.
                 var score = 0;
                 if (isAddress(s)) {
                     if (matchesAddress(full, key)) score = 100000 + key.length;
@@ -90,17 +102,36 @@
                     score = key.length;
                 }
                 if (!score) return;
+                if (town && where) score += 0.5;
                 if (score > best) {
                     best = score;
                     hits = [];
                 }
-                if (score === best && !hits.some(function (h) { return h.route === r.route; })) {
+                // One hit per route and town: the same street can be on a route in two towns
+                var dup = hits.some(function (h) { return h.route === r.route && normalize(h.city) === normalize(where); });
+                if (score === best && !dup) {
                     hits.push({ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: s,
-                        kind: isAddress(s) ? "address" : "street" });
+                        city: where, kind: isAddress(s) ? "address" : "street" });
                 }
             });
         });
         return hits;
+    }
+
+    // Every town listed in Route Sheets, for a City field's suggestions
+    function cities() {
+        var seen = {};
+        var out = [];
+        loadRoutes().forEach(function (r) {
+            Object.keys(r.cities || {}).forEach(function (k) {
+                var c = r.cities[k];
+                if (c && !seen[normalize(c)]) {
+                    seen[normalize(c)] = true;
+                    out.push(c);
+                }
+            });
+        });
+        return out.sort();
     }
 
     // A street split between routes, until its break points are known, gets every route and
@@ -116,26 +147,30 @@
             }).join(" / ");
         }
         return { route: joined("route"), driver: joined("driver"), area: joined("area"), day: joined("day"),
-            street: matches.length ? matches[0].street : "" };
+            city: joined("city"), street: matches.length ? matches[0].street : "" };
     }
 
     /* ---------- Form auto-fill ----------
-       Connects a form's address, route and driver inputs to the lookup:
+       Connects a form's address, route and driver inputs (and an optional city input) to the lookup:
 
-         var routeFill = RouteLookup.attach({ address: input, route: input, driver: input, note: element });
+         var routeFill = RouteLookup.attach({ address: input, city: input, route: input, driver: input, note: element });
          routeFill.reset();          // a fresh form (kept values from the last stop stay replaceable)
-         routeFill.editing(entry);   // an existing entry: its saved route/driver count as typed by hand
+         routeFill.editing(entry);   // an existing entry: its saved values count as typed by hand
 
        Typing the address fills Route and Driver unless they were typed by hand in this form. A
        street on several routes fills all of them ("12 / 9", "Sam / Kim") with buttons to narrow it
        to one. Values the lookup filled for an earlier address are cleared when the address stops
-       matching. The note element explains what happened, including why a driver didn't fill. */
+       matching. The note element explains what happened, including why a driver didn't fill.
+
+       With a city input: a city typed by hand narrows the match to that town; when every match is
+       in one town, the city is filled in; when a street is in several towns, the buttons name the
+       town and picking one fills the city too. */
     function attach(f) {
-        // Where the route and driver in the form came from. Only "manual" (typed by hand here) is
-        // protected; "kept" (from the last stop or empty) and "auto" (filled by a lookup) are not.
-        // "picked" is one route chosen from a split street's buttons: kept while that street's
-        // address is still being typed, replaced like "auto" otherwise.
-        var source = { route: "kept", driver: "kept" };
+        // Where each value in the form came from. Only "manual" (typed by hand here) is protected;
+        // "kept" (from the last stop or empty) and "auto" (filled by a lookup) are not. "picked" is
+        // one route chosen from a split street's buttons: kept while that street's address is
+        // still being typed, replaced like "auto" otherwise.
+        var source = { route: "kept", driver: "kept", city: "kept" };
 
         function isLookupValue(s) {
             return s === "auto" || s === "picked";
@@ -152,10 +187,21 @@
             return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
         }
 
+        // Only a city typed by hand narrows the search; one the lookup filled in for an earlier
+        // address must not hide the right route for a new one
+        function cityFilter() {
+            return f.city && source.city === "manual" ? f.city.value : "";
+        }
+
         function fillFrom(match, how) {
             if (source.route !== "manual") {
                 f.route.value = match.route;
                 source.route = how || "auto";
+            }
+            // A combined "Washington / East Washington" isn't one town, so it's never put in the box
+            if (f.city && source.city !== "manual" && match.city && match.city.indexOf(" / ") === -1) {
+                f.city.value = match.city;
+                source.city = how || "auto";
             }
             if (source.driver === "manual") return;
             if (match.driver) {
@@ -169,18 +215,22 @@
         }
 
         function clearAutoFilled() {
-            if (isLookupValue(source.route)) {
-                f.route.value = "";
-                source.route = "kept";
-            }
-            if (isLookupValue(source.driver)) {
-                f.driver.value = "";
-                source.driver = "kept";
-            }
+            ["route", "driver", "city"].forEach(function (k) {
+                if (f[k] && isLookupValue(source[k])) {
+                    f[k].value = "";
+                    source[k] = "kept";
+                }
+            });
         }
 
-        function matchLabel(m) {
-            return "Route " + m.route + (m.driver ? " · " + m.driver : "");
+        function multipleTowns(matches) {
+            var seen = {};
+            matches.forEach(function (m) { if (m.city) seen[normalize(m.city)] = true; });
+            return Object.keys(seen).length > 1;
+        }
+
+        function matchLabel(m, withTown) {
+            return "Route " + m.route + (m.driver ? " · " + m.driver : "") + (withTown && m.city ? " (" + m.city + ")" : "");
         }
 
         function pickButton(text, chosen, onPick) {
@@ -198,6 +248,7 @@
         function useMatch(m, how) {
             source.route = "auto";
             source.driver = "auto";
+            if (m.city && m.city.indexOf(" / ") === -1) source.city = "auto";
             fillFrom(m, how);
         }
 
@@ -233,38 +284,53 @@
                 if (apply) clearAutoFilled();
                 return;
             }
-            var matches = find(f.address.value);
+            var town = cityFilter();
+            var matches = find(f.address.value, town);
+            var towns = multipleTowns(matches);
 
             if (matches.length === 1) {
                 var m = matches[0];
                 if (apply) fillFrom(m);
                 var routeDiffers = f.route.value.trim() && !same(f.route.value, m.route);
                 f.note.appendChild(el("p", "mt-route-found",
-                    (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m)));
+                    (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m, !!m.city)));
                 // A route typed by hand that disagrees with Route Sheets: offer, don't overwrite
-                if (routeDiffers) f.note.appendChild(pickButton("Use " + matchLabel(m), null, function () { useMatch(m); }));
+                if (routeDiffers) f.note.appendChild(pickButton("Use " + matchLabel(m, !!m.city), null, function () { useMatch(m); }));
                 else driverNotes(matches);
             } else if (matches.length > 1) {
-                // Split street: every route and driver until its break points are known. A single
-                // route picked below is kept while the rest of the address is typed.
+                // Split street (or the same street in several towns): every route and driver until
+                // it's narrowed down. A single route picked below is kept while the rest of the
+                // address is typed.
                 var both = combine(matches);
                 var pickedOne = source.route === "picked" && matches.some(function (x) { return same(x.route, f.route.value); });
-                if (apply && !pickedOne) fillFrom(both);
-                f.note.appendChild(el("p", "mt-route-found", matches[0].street + " is split between " +
-                    matches.map(matchLabel).join(" and ") + ". " + (same(f.route.value, both.route)
-                        ? "Both are filled in; tap one if you know which:"
-                        : "Tap the route this stop is on, or Both:")));
+                if (apply && !pickedOne) {
+                    fillFrom(both);
+                    // Different towns: a city the lookup filled for an earlier address no longer applies
+                    if (towns && f.city && isLookupValue(source.city)) {
+                        f.city.value = "";
+                        source.city = "kept";
+                    }
+                }
+                var intro = towns
+                    ? matches[0].street + " is on " + matches.length + " routes in different towns" +
+                        (f.city ? ". Enter the city, or tap the right one:" : ". Tap the right one:")
+                    : matches[0].street + " is split between " + matches.map(function (x) { return matchLabel(x, false); }).join(" and ") + ". " +
+                        (same(f.route.value, both.route) ? "Both are filled in; tap one if you know which:" : "Tap the route this stop is on, or Both:");
+                f.note.appendChild(el("p", "mt-route-found", intro));
                 var picks = el("div", "mt-route-picks");
-                picks.appendChild(pickButton("Both", same(f.route.value, both.route), function () { useMatch(both); }));
+                if (!towns) picks.appendChild(pickButton("Both", same(f.route.value, both.route), function () { useMatch(both); }));
                 matches.forEach(function (match) {
-                    picks.appendChild(pickButton(matchLabel(match), same(f.route.value, match.route), function () { useMatch(match, "picked"); }));
+                    var chosen = same(f.route.value, match.route) && (!towns || !f.city || same(f.city.value, match.city));
+                    picks.appendChild(pickButton(matchLabel(match, towns), chosen, function () { useMatch(match, "picked"); }));
                 });
                 f.note.appendChild(picks);
                 driverNotes(matches);
             } else {
                 if (apply) clearAutoFilled();
                 if (/[a-z]/i.test(f.address.value)) {
-                    f.note.appendChild(el("p", "mt-route-none", "Street not found in Route Sheets."));
+                    f.note.appendChild(el("p", "mt-route-none", town
+                        ? "Street not found in Route Sheets for " + town.trim() + "."
+                        : "Street not found in Route Sheets."));
                 }
             }
         }
@@ -277,14 +343,22 @@
         f.driver.addEventListener("input", function () {
             source.driver = f.driver.value.trim() ? "manual" : "kept";
         });
+        if (f.city) {
+            // A city typed (or picked from the suggestions) narrows the match right away
+            f.city.addEventListener("input", function () {
+                source.city = f.city.value.trim() ? "manual" : "kept";
+                update(true);
+            });
+        }
 
         return {
             reset: function () {
-                source = { route: "kept", driver: "kept" };
+                source = { route: "kept", driver: "kept", city: "kept" };
                 f.note.textContent = "";
             },
             editing: function (entry) {
-                source = { route: entry.route ? "manual" : "kept", driver: entry.driver ? "manual" : "kept" };
+                source = { route: entry.route ? "manual" : "kept", driver: entry.driver ? "manual" : "kept",
+                    city: entry.city ? "manual" : "kept" };
                 f.note.textContent = "";
             }
         };
@@ -296,6 +370,7 @@
         attach: attach,
         normalize: normalize,
         isAddress: isAddress,
+        cities: cities,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
 })();

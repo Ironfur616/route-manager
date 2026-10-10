@@ -52,7 +52,8 @@
         driver: document.getElementById("mt-driver"),
         unit: document.getElementById("mt-unit"),
         status: document.getElementById("mt-status"),
-        notes: document.getElementById("mt-notes")
+        notes: document.getElementById("mt-notes"),
+        city: document.getElementById("mt-city")
     };
     var reasonsSelect = document.getElementById("mt-reasons");
     var reasonsCount = document.getElementById("mt-reasons-count");
@@ -274,11 +275,21 @@
                     }
                 });
             });
+        var townSeen = {};
+        var towns = document.getElementById("dl-city");
+        towns.textContent = "";
+        (window.RouteLookup ? RouteLookup.cities() : []).concat(entries.map(function (e) { return (e.city || "").trim(); }))
+            .forEach(function (c) {
+                if (c && !townSeen[c.toLowerCase()]) {
+                    townSeen[c.toLowerCase()] = true;
+                    towns.appendChild(el("option")).value = c;
+                }
+            });
     }
 
     function matchesSearch(e, term) {
         if (!term) return true;
-        return [e.address, e.route, e.driver, e.unit, e.notes, e.service].concat(e.reasons || []).join(" ")
+        return [e.address, e.city, e.route, e.driver, e.unit, e.notes, e.service].concat(e.reasons || []).join(" ")
             .toLowerCase().indexOf(term) !== -1;
     }
 
@@ -305,6 +316,7 @@
         card.appendChild(chips);
 
         var meta = [];
+        if (e.city) meta.push(e.city);
         if (e.route) meta.push("Route " + e.route);
         if (e.driver) meta.push(e.driver);
         if (e.unit) meta.push("Unit " + e.unit);
@@ -405,7 +417,7 @@
 
     // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
     var routeFill = window.RouteLookup
-        ? RouteLookup.attach({ address: fields.address, route: fields.route, driver: fields.driver, note: routeMatchEl })
+        ? RouteLookup.attach({ address: fields.address, city: fields.city, route: fields.route, driver: fields.driver, note: routeMatchEl })
         : { reset: function () {}, editing: function () {} };
 
     /* ---------- Fill older entries from Route Sheets ---------- */
@@ -417,7 +429,7 @@
         if (!window.RouteLookup || !RouteLookup.hasRoutes()) return [];
         return entries.map(function (e) {
             if (e.route && e.driver) return null;
-            var matches = RouteLookup.find(e.address);
+            var matches = RouteLookup.find(e.address, e.city);
             if (!matches.length) return null;
             var m = matches.length === 1 ? matches[0] : RouteLookup.combine(matches);
             var patch = {};
@@ -481,7 +493,8 @@
             driver: fields.driver.value.trim(),
             unit: fields.unit.value.trim(),
             status: fields.status.value,
-            notes: fields.notes.value.trim()
+            notes: fields.notes.value.trim(),
+            city: fields.city.value.trim()
         };
     }
 
@@ -498,6 +511,7 @@
         if (keep.route) fields.route.value = keep.route;
         if (keep.driver) fields.driver.value = keep.driver;
         if (keep.unit) fields.unit.value = keep.unit;
+        if (keep.city) fields.city.value = keep.city;
         fields.service.value = keep.service || SERVICES[0];
         fields.status.value = "open";
         updateReasonsCount();
@@ -646,10 +660,10 @@
     document.getElementById("mt-export").addEventListener("click", function () {
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
-        var rows = [["Date", "Route", "Address", "Service", "Reasons", "Driver", "Unit", "Status",
+        var rows = [["Date", "Route", "Address", "City", "Service", "Reasons", "Driver", "Unit", "Status",
             "Contacted Boro / Twp", "Misses at address", "Added At", "Resolved At", "Notes"]];
         entries.forEach(function (e) {
-            rows.push([e.date, e.route, e.address, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
+            rows.push([e.date, e.route, e.address, e.city, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
                 labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)],
                 e.created ? prettyStamp(e.created) : "", e.status === "resolved" && e.resolvedAt ? prettyStamp(e.resolvedAt) : "",
                 e.notes]);

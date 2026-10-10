@@ -72,6 +72,23 @@
         };
     }
 
+    // Each line's town, saved by the import (column G), keyed like the route lookup matches
+    function cityOf(r, line) {
+        return (r.cities && r.cities[keyOf(line)]) || "";
+    }
+
+    function hasSeveralTowns(r) {
+        var seen = {};
+        Object.keys(r.cities || {}).forEach(function (k) { if (r.cities[k]) seen[r.cities[k].toLowerCase()] = true; });
+        return Object.keys(seen).length > 1;
+    }
+
+    // "Main Street (Washington)" on routes that span towns; just "Main Street" otherwise
+    function withTown(r, line) {
+        var c = hasSeveralTowns(r) ? cityOf(r, line) : "";
+        return c ? line + " (" + c + ")" : line;
+    }
+
     function stopCount(lines) {
         var p = splitStops(lines);
         var parts = [p.streets.length + " street" + (p.streets.length === 1 ? "" : "s")];
@@ -207,7 +224,7 @@
                 if (!g[1].length) return;
                 if (groups.addresses.length) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
                 var ul = el("ul", "rs-streets");
-                g[1].forEach(function (s) { ul.appendChild(el("li", null, s)); });
+                g[1].forEach(function (s) { ul.appendChild(el("li", null, withTown(r, s))); });
                 all.appendChild(ul);
             });
             card.appendChild(all);
@@ -418,7 +435,7 @@
                         doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
                         doc.setFontSize(10);
                         color("setTextColor", INK);
-                        doc.text(doc.splitTextToSize(items[n], half - 40)[0], x + 26, y + 12);
+                        doc.text(doc.splitTextToSize(withTown(r, items[n]), half - 40)[0], x + 26, y + 12);
                         color("setDrawColor", RULE);
                         doc.setLineWidth(0.5);
                         doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
@@ -576,6 +593,13 @@
         var existing = editingId ? list.filter(function (r) { return r.id === editingId; })[0] : null;
         if (existing) {
             Object.keys(data).forEach(function (k) { existing[k] = data[k]; });
+            // Lines still on the list keep their town; added lines have none (they match any town)
+            var kept = {};
+            data.streets.forEach(function (line) {
+                var c = existing.cities && existing.cities[keyOf(line)];
+                if (c) kept[keyOf(line)] = c;
+            });
+            existing.cities = kept;
             existing.updated = Date.now();
         } else {
             data.id = newId();
@@ -662,7 +686,7 @@
 
     function readFile(XLSX, file) {
         var parts = nameParts(file.name);
-        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], area: "", error: "" };
+        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], cities: {}, area: "", error: "" };
         return file.arrayBuffer().then(function (buf) {
             var wb = XLSX.read(new Uint8Array(buf), { type: "array" });
             var sheet = wb.Sheets[wb.SheetNames[0]];
@@ -677,7 +701,10 @@
                 seen[k] = true;
                 result.lines.push(line);
                 var city = String(row[COL_CITY] || "").trim();
-                if (city) cities[city] = (cities[city] || 0) + 1;
+                if (city) {
+                    cities[city] = (cities[city] || 0) + 1;
+                    result.cities[k] = city;
+                }
             });
             // Most common city first; a route covering several towns lists up to three
             result.area = Object.keys(cities).sort(function (a, b) { return cities[b] - cities[a]; }).slice(0, 3).join(" / ");
@@ -754,13 +781,14 @@
             if (r) {
                 // The file is the source of truth for the list, driver and area; day and notes stay
                 r.streets = item.lines.slice();
+                r.cities = item.cities;
                 if (item.driver) r.driver = item.driver;
                 if (item.area) r.area = item.area;
                 r.updated = Date.now();
                 updated++;
             } else {
                 r = { id: newId(), route: item.route, day: "", driver: item.driver, area: item.area,
-                    streets: item.lines.slice(), notes: "", mapUrl: "", created: Date.now() };
+                    streets: item.lines.slice(), cities: item.cities, notes: "", mapUrl: "", created: Date.now() };
                 list.push(r);
                 byRoute[key] = r;
                 added++;
@@ -819,11 +847,11 @@
 
     // One row per street, so the file sorts and filters well in a spreadsheet
     document.getElementById("rs-export").addEventListener("click", function () {
-        var rows = [["Route", "Service Day", "Driver", "Area", "Type", "Street / Address", "Notes"]];
+        var rows = [["Route", "Service Day", "Driver", "Area", "Type", "Street / Address", "City", "Notes"]];
         load().sort(byRoute).forEach(function (r) {
             var streets = (r.streets || []).length ? r.streets : [""];
             streets.forEach(function (s) {
-                rows.push([r.route, r.day, r.driver, r.area, s ? (isAddress(s) ? "Address" : "Street") : "", s, r.notes]);
+                rows.push([r.route, r.day, r.driver, r.area, s ? (isAddress(s) ? "Address" : "Street") : "", s, s ? cityOf(r, s) : "", r.notes]);
             });
         });
         var csv = "﻿" + rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
