@@ -31,13 +31,75 @@
         return normalize(address).replace(/^(\d+[a-z]?\s*)+/, "").trim();
     }
 
-    function loadRoutes() {
+    function readRoutes() {
         try {
             var data = JSON.parse(localStorage.getItem(KEY) || "[]");
             return Array.isArray(data) ? data.filter(function (r) { return r && r.id; }) : [];
         } catch (e) {
             return [];
         }
+    }
+
+    /* ---------- Index ----------
+       Route Sheets can hold thousands of lines. Reading and re-normalizing all of them for every
+       lookup made pages that look up many addresses at once (Missed Collections' Fill from Route
+       Sheets check runs on every redraw) take many seconds. So the lines are read and normalized
+       once into an index, grouped by first word (streets) and house number (homes), and a lookup
+       only checks the lines that could match. The index is dropped whenever Route Sheets change:
+       another page saving fires a storage event here, and Route Sheets calls invalidate() after
+       its own saves. */
+    var cache = null;
+
+    function invalidate() {
+        cache = null;
+    }
+
+    window.addEventListener("storage", function (ev) {
+        if (!ev.key || ev.key === KEY) invalidate();
+    });
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") invalidate();
+    });
+
+    function firstWord(text) {
+        var i = text.indexOf(" ");
+        return i === -1 ? text : text.slice(0, i);
+    }
+
+    function index() {
+        if (cache) return cache;
+        var routes = readRoutes();
+        var lines = [];
+        var byWord = {};
+        var byNumber = {};
+        var towns = {};
+        function add(map, k, i) {
+            (map[k] || (map[k] = [])).push(i);
+        }
+        routes.forEach(function (r) {
+            (r.streets || []).forEach(function (s) {
+                var key = normalize(s);
+                if (!key) return;
+                var where = (r.cities && r.cities[key]) || "";
+                var i = lines.length;
+                var home = /^\d/.test(key);
+                lines.push({ r: r, line: s, key: key, home: home, where: where, whereKey: normalize(where) });
+                if (home) {
+                    add(byNumber, firstWord(key), i);
+                } else {
+                    // Both "n main st" and "main st" lead here, so a missing or extra N. still finds it
+                    variants(key).forEach(function (v) { add(byWord, firstWord(v), i); });
+                }
+                if (where && !towns[normalize(where)]) towns[normalize(where)] = where;
+            });
+        });
+        cache = { routes: routes, lines: lines, byWord: byWord, byNumber: byNumber,
+            towns: Object.keys(towns).map(function (k) { return towns[k]; }).sort() };
+        return cache;
+    }
+
+    function loadRoutes() {
+        return index().routes;
     }
 
     // "n main st" -> ["n main st", "main st"], so "N Main St" and "Main St" find each other
@@ -71,14 +133,25 @@
         });
     }
 
-    // The town a route's street or address is in: saved per line by the Excel import (column G).
-    // Lines typed in by hand have none and match in any town.
-    function lineCity(r, line) {
-        return (r.cities && r.cities[normalize(line)]) || "";
-    }
-
+    // Each line's town comes from the route's cities map, saved per line by the Excel import
+    // (column G). Lines typed in by hand have none and match in any town.
     // find(address) or find(address, city). With a city, streets listed in a different town are
     // left out, so "Main St" in Washington and "Main St" in East Washington don't collide.
+    // The index lines that could match: homes with the same house number, and streets starting
+    // with the same word as the address's street (with and without a leading N./S./E./W.).
+    // Kept in Route Sheets order, so results come out in the order routes were entered.
+    function candidates(ix, full, target) {
+        var picked = {};
+        if (/^\d/.test(full)) (ix.byNumber[firstWord(full)] || []).forEach(function (i) { picked[i] = true; });
+        if (target) {
+            variants(target).forEach(function (v) {
+                (ix.byWord[firstWord(v)] || []).forEach(function (i) { picked[i] = true; });
+            });
+        }
+        return Object.keys(picked).map(Number).sort(function (a, b) { return a - b; })
+            .map(function (i) { return ix.lines[i]; });
+    }
+
     function find(address, city) {
         var full = normalize(address);
         var target = streetPart(address);
@@ -86,17 +159,14 @@
         if (!full) return [];
         var best = 0;
         var hits = [];
-        loadRoutes().forEach(function (r) {
-            (r.streets || []).forEach(function (s) {
-                var key = normalize(s);
-                if (!key) return;
-                var where = lineCity(r, s);
-                if (town && where && normalize(where) !== town) return;
+        candidates(index(), full, target).forEach(function (entry) {
+            (function (r, s, key, where) {
+                if (town && where && entry.whereKey !== town) return;
                 // A listed home beats any street; among streets, a longer one ("main st ext")
                 // beats a shorter one ("main st"). A line whose town matches the given city
                 // edges out one with no town on record.
                 var score = 0;
-                if (isAddress(s)) {
+                if (entry.home) {
                     if (matchesAddress(full, key)) score = 100000 + key.length;
                 } else if (target && startsWithStreet(target, key)) {
                     score = key.length;
@@ -108,30 +178,19 @@
                     hits = [];
                 }
                 // One hit per route and town: the same street can be on a route in two towns
-                var dup = hits.some(function (h) { return h.route === r.route && normalize(h.city) === normalize(where); });
+                var dup = hits.some(function (h) { return h.route === r.route && normalize(h.city) === entry.whereKey; });
                 if (score === best && !dup) {
                     hits.push({ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: s,
-                        city: where, kind: isAddress(s) ? "address" : "street" });
+                        city: where, kind: entry.home ? "address" : "street" });
                 }
-            });
+            })(entry.r, entry.line, entry.key, entry.where);
         });
         return hits;
     }
 
     // Every town listed in Route Sheets, for a City field's suggestions
     function cities() {
-        var seen = {};
-        var out = [];
-        loadRoutes().forEach(function (r) {
-            Object.keys(r.cities || {}).forEach(function (k) {
-                var c = r.cities[k];
-                if (c && !seen[normalize(c)]) {
-                    seen[normalize(c)] = true;
-                    out.push(c);
-                }
-            });
-        });
-        return out.sort();
+        return index().towns.slice();
     }
 
     // A street split between routes, until its break points are known, gets every route and
@@ -371,6 +430,7 @@
         normalize: normalize,
         isAddress: isAddress,
         cities: cities,
+        invalidate: invalidate,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
 })();

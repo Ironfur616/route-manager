@@ -647,7 +647,12 @@
         });
     }
 
-    searchEl.addEventListener("input", render);
+    // Redraw once typing pauses, not on every keystroke
+    var searchTimer = null;
+    searchEl.addEventListener("input", function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(render, 200);
+    });
     filterStatus.addEventListener("change", render);
     filterYellow.addEventListener("change", render);
     filterNoRoute.addEventListener("change", render);

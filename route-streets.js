@@ -83,9 +83,10 @@
         return Object.keys(seen).length > 1;
     }
 
-    // "Main Street (Washington)" on routes that span towns; just "Main Street" otherwise
-    function withTown(r, line) {
-        var c = hasSeveralTowns(r) ? cityOf(r, line) : "";
+    // "Main Street (Washington)" on routes that span towns; just "Main Street" otherwise.
+    // Pass severalTowns in (worked out once per route) rather than checking for every line.
+    function withTown(r, line, severalTowns) {
+        var c = severalTowns ? cityOf(r, line) : "";
         return c ? line + " (" + c + ")" : line;
     }
 
@@ -131,6 +132,7 @@
     function save(list) {
         try {
             localStorage.setItem(KEY, JSON.stringify(list));
+            if (window.RouteLookup) RouteLookup.invalidate();
             document.getElementById("rs-storage-warning").hidden = true;
             return true;
         } catch (e) {
@@ -220,12 +222,20 @@
             var all = el("details", "rs-all-streets");
             all.appendChild(el("summary", null, matchingStreets.length ? "Everything on this route"
                 : groups.addresses.length ? "Show streets and addresses" : "Show streets"));
-            [["Streets", groups.streets], ["Individual addresses", groups.addresses]].forEach(function (g) {
-                if (!g[1].length) return;
-                if (groups.addresses.length) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
-                var ul = el("ul", "rs-streets");
-                g[1].forEach(function (s) { ul.appendChild(el("li", null, withTown(r, s))); });
-                all.appendChild(ul);
+            // Built the first time it's opened: with every route's full list in the page at once,
+            // a few dozen routes meant tens of thousands of elements and slow searching
+            var built = false;
+            all.addEventListener("toggle", function () {
+                if (!all.open || built) return;
+                built = true;
+                var several = hasSeveralTowns(r);
+                [["Streets", groups.streets], ["Individual addresses", groups.addresses]].forEach(function (g) {
+                    if (!g[1].length) return;
+                    if (groups.addresses.length) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
+                    var ul = el("ul", "rs-streets");
+                    g[1].forEach(function (s) { ul.appendChild(el("li", null, withTown(r, s, several))); });
+                    all.appendChild(ul);
+                });
             });
             card.appendChild(all);
         }
@@ -435,7 +445,7 @@
                         doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
                         doc.setFontSize(10);
                         color("setTextColor", INK);
-                        doc.text(doc.splitTextToSize(withTown(r, items[n]), half - 40)[0], x + 26, y + 12);
+                        doc.text(doc.splitTextToSize(withTown(r, items[n], severalTowns), half - 40)[0], x + 26, y + 12);
                         color("setDrawColor", RULE);
                         doc.setLineWidth(0.5);
                         doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
@@ -446,6 +456,7 @@
             }
 
             var groups = splitStops(streets);
+            var severalTowns = hasSeveralTowns(r);
             listSection("Streets", groups.streets, groups.addresses.length
                 ? "No whole streets on this route." : "No streets entered for this route.");
             if (groups.addresses.length) listSection("Individual Addresses", groups.addresses, "");
@@ -630,7 +641,12 @@
         });
     }
 
-    searchEl.addEventListener("input", render);
+    // Redraw once typing pauses, not on every keystroke
+    var searchTimer = null;
+    searchEl.addEventListener("input", function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(render, 200);
+    });
 
     /* ---------- Import from Excel ---------- */
     /* One .xlsx file per route. The file name is "<route> <driver>" ("MS-52-1 Bill Vaughn.xlsx");
