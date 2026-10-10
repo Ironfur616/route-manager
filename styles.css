@@ -1298,6 +1298,18 @@ body.shell {
     margin-top: 1rem;
 }
 
+/* Yellow tags only / No route entered only: side by side, wrapping on narrow screens */
+.mt-filter-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+    margin-top: 1rem;
+}
+
+.mt-filters .mt-filter-checks .field {
+    margin-top: 0;
+}
+
 .mt-count {
     margin: 1rem 0 0.75rem;
     color: var(--deep-navy);
@@ -1705,15 +1717,15 @@ body.shell {
 
     .mt-filters {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-columns: 2fr 1fr;
         align-items: end;
         gap: 1rem 1.5rem;
     }
 
-    /* The Yellow tags only checkbox field has no label row above it like the others,
-       so nudge it down to line up with the Search/Status inputs */
-    .mt-filters .field:has(> input[type="checkbox"]) {
-        padding-bottom: 0.625rem;
+    /* The checkboxes take their own row under Search and Status */
+    .mt-filters .mt-filter-checks {
+        grid-column: 1 / -1;
+        margin-top: 0;
     }
 
     .mt-filters .field + .field {

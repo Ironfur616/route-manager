@@ -72,6 +72,7 @@
     var searchEl = document.getElementById("mt-search");
     var filterStatus = document.getElementById("mt-filter-status");
     var filterYellow = document.getElementById("mt-filter-yellow");
+    var filterNoRoute = document.getElementById("mt-filter-noroute");
 
     var editingId = null;
 
@@ -372,15 +373,17 @@
         var term = searchEl.value.trim().toLowerCase();
         var status = filterStatus.value;
         var yellowOnly = filterYellow.checked;
+        var noRouteOnly = filterNoRoute.checked;
 
         renderStats(entries, counts);
         renderDatalists(entries);
         renderBackfill(entries);
         updateAddressHint();
 
-        var filtering = !!(term || status || yellowOnly);
+        var filtering = !!(term || status || yellowOnly || noRouteOnly);
         var shown = entries.filter(function (e) {
-            return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) && matchesSearch(e, term);
+            return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) &&
+                (!noRouteOnly || !String(e.route || "").trim()) && matchesSearch(e, term);
         });
         var recent = shown.filter(function (e) { return !isArchived(e); });
         var archived = shown.filter(isArchived);
@@ -647,6 +650,7 @@
     searchEl.addEventListener("input", render);
     filterStatus.addEventListener("change", render);
     filterYellow.addEventListener("change", render);
+    filterNoRoute.addEventListener("change", render);
 
     /* ---------- CSV export ---------- */
 
