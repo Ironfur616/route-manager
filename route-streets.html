@@ -28,8 +28,11 @@
 <body>
     <section class="emp-info-section mt-section">
         <div class="form-actions">
+            <button type="button" class="send-email" id="rs-import-open">Import from Excel</button>
             <button type="button" class="generate-pdf" id="rs-open">+ Add Route</button>
         </div>
+        <input type="file" id="rs-import-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden>
+        <p class="mt-message" id="rs-import-done" role="status" aria-live="polite"></p>
         <p class="mt-warning" id="rs-storage-warning" hidden>This browser is blocking storage, so routes cannot be saved. Export to CSV before closing.</p>
     </section>
 
@@ -88,7 +91,7 @@
 
                 <div class="field field-wide">
                     <label for="rs-streets">Streets</label>
-                    <textarea id="rs-streets" name="streets" rows="8" placeholder="One street per line"></textarea>
+                    <textarea id="rs-streets" name="streets" rows="8" placeholder="One street or address per line"></textarea>
                     <p class="mt-hint" id="rs-streets-count" aria-live="polite"></p>
                 </div>
 
@@ -109,7 +112,24 @@
         </form>
     </dialog>
 
+    <dialog class="send-dialog mt-dialog rs-import-dialog" id="rs-import-dialog" aria-labelledby="rs-import-title">
+        <div class="mt-dialog-head">
+            <h2 id="rs-import-title">Import Route Sheets</h2>
+            <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+        </div>
+        <div class="rs-import-body">
+            <p class="mt-hint rs-import-help">Each file is one route, named like <strong>MS-52-1 Bill Vaughn.xlsx</strong> (route, then driver). Site addresses are read from column E and the city from column G, starting at row 2. A street name becomes a whole street; an entry starting with a house number becomes an individual address.</p>
+            <p class="mt-count rs-import-status" id="rs-import-status" aria-live="polite"></p>
+            <div class="rs-import-list" id="rs-import-list"></div>
+        </div>
+        <div class="form-actions mt-dialog-actions">
+            <button type="button" class="send-email" data-dialog-close>Cancel</button>
+            <button type="button" class="generate-pdf" id="rs-import-go" disabled>Import</button>
+        </div>
+    </dialog>
+
     <script src="jspdf.umd.min.js" defer></script>
+    <script src="route-lookup.js" defer></script>
     <script src="pdf-store.js" defer></script>
     <script src="tracker-dialog.js" defer></script>
     <script src="route-streets.js" defer></script>

@@ -53,22 +53,50 @@
         });
     }
 
+    // An entry that starts with a house number is one home (a subscription stop), not a street
+    function isAddress(line) {
+        return /^\d/.test(normalize(line));
+    }
+
+    // "1234 n main st" -> ["1234 n main st", "1234 main st"], so the N. is optional either way
+    function addressVariants(text) {
+        var m = /^(\d+[a-z]?)\s+[nsew]\s+(.+)$/.exec(text);
+        return m ? [text, m[1] + " " + m[2]] : [text];
+    }
+
+    // "1234 n main st" matches "1234 N Main Street" and "1234 Main St Apt 2", never "12345 Main St"
+    function matchesAddress(full, key) {
+        return addressVariants(full).some(function (t) {
+            return addressVariants(key).some(function (k) { return t === k || t.indexOf(k + " ") === 0; });
+        });
+    }
+
     function find(address) {
+        var full = normalize(address);
         var target = streetPart(address);
-        if (!target) return [];
+        if (!full) return [];
         var best = 0;
         var hits = [];
         loadRoutes().forEach(function (r) {
             (r.streets || []).forEach(function (s) {
                 var key = normalize(s);
-                // A longer listed street ("main st ext") wins over a shorter one ("main st")
-                if (!key || !startsWithStreet(target, key)) return;
-                if (key.length > best) {
-                    best = key.length;
+                if (!key) return;
+                // A listed home beats any street; among streets, a longer one ("main st ext")
+                // beats a shorter one ("main st")
+                var score = 0;
+                if (isAddress(s)) {
+                    if (matchesAddress(full, key)) score = 100000 + key.length;
+                } else if (target && startsWithStreet(target, key)) {
+                    score = key.length;
+                }
+                if (!score) return;
+                if (score > best) {
+                    best = score;
                     hits = [];
                 }
-                if (key.length === best && !hits.some(function (h) { return h.route === r.route; })) {
-                    hits.push({ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: s });
+                if (score === best && !hits.some(function (h) { return h.route === r.route; })) {
+                    hits.push({ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: s,
+                        kind: isAddress(s) ? "address" : "street" });
                 }
             });
         });
@@ -266,6 +294,8 @@
         find: find,
         combine: combine,
         attach: attach,
+        normalize: normalize,
+        isAddress: isAddress,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
 })();

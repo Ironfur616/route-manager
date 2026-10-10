@@ -1,7 +1,9 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v87";
+var CACHE_NAME = "fleet-mgr-v88";
+// Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
+var SHARE_INBOX = "routeiq-share-inbox";
 
 var PRECACHE_URLS = [
     "./",
@@ -32,6 +34,7 @@ var PRECACHE_URLS = [
     "./tabs.js",
     "./signature-pad.js",
     "./jspdf.umd.min.js",
+    "./xlsx.mini.min.js",
     "./pdf-viewer.js",
     "./pdf-store.js",
     "./saved-pdfs.js",
@@ -78,7 +81,7 @@ self.addEventListener("activate", function (event) {
                 return Promise.all(
                     keys
                         .filter(function (key) {
-                            return key !== CACHE_NAME;
+                            return key !== CACHE_NAME && key !== SHARE_INBOX;
                         })
                         .map(function (key) {
                             return caches.delete(key);
@@ -93,6 +96,13 @@ self.addEventListener("activate", function (event) {
 
 self.addEventListener("fetch", function (event) {
     var request = event.request;
+
+    // .xlsx files shared to Route IQ (manifest share_target): keep them, then open the app,
+    // which sends them to Route Sheets for import
+    if (request.method === "POST" && new URL(request.url).pathname.endsWith("/share-import")) {
+        event.respondWith(receiveShare(request));
+        return;
+    }
 
     if (request.method !== "GET") {
         return;
@@ -146,3 +156,24 @@ self.addEventListener("fetch", function (event) {
         })
     );
 });
+
+function receiveShare(request) {
+    var landing = new URL("./index.html?import-shared=1", self.registration.scope).href;
+    return request.formData()
+        .then(function (data) {
+            var files = data.getAll("files").filter(function (f) { return f && f.name; });
+            return caches.open(SHARE_INBOX).then(function (cache) {
+                return Promise.all(files.map(function (file, i) {
+                    var key = new URL("./share-inbox/" + Date.now() + "-" + i, self.registration.scope).href;
+                    return cache.put(key, new Response(file, {
+                        headers: {
+                            "Content-Type": file.type || "application/octet-stream",
+                            "X-File-Name": encodeURIComponent(file.name)
+                        }
+                    }));
+                }));
+            });
+        })
+        .catch(function () { /* nothing usable was shared; the app still opens */ })
+        .then(function () { return Response.redirect(landing, 303); });
+}

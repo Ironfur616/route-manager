@@ -401,4 +401,18 @@
     // Land on the most recently edited draft, else the first pinned tab
     if (latestDraft) activate(latestDraft, false);
     else if (tabs.length) activate(tabs[0], false);
+
+    // Opened by sharing spreadsheets to Route IQ: show Route Sheets, which imports them
+    if (/[?&]import-shared=1/.test(location.search)) {
+        try { history.replaceState(null, "", location.pathname); } catch (e) { /* cosmetic only */ }
+        var SHEETS = "route-streets.html";
+        var sheetsTab = tabs.filter(function (t) { return t.href === SHEETS; })[0];
+        if (sheetsTab) {
+            activate(sheetsTab, false);
+            // Already loaded: ask it to look for the shared files (a tab still loading checks on its own)
+            try { sheetsTab.frame.contentWindow.dispatchEvent(new Event("rs-check-shared")); } catch (e) { /* loading */ }
+        } else if (titles[SHEETS]) {
+            openTab(SHEETS, titles[SHEETS]);
+        }
+    }
 })();

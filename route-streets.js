@@ -8,6 +8,15 @@
    it in the app's own viewer, with Print / Share there (see Printing below). Each route
    starts on its own page.
 
+   A route's list can mix whole streets ("Main Street") and individual homes for subscription
+   service ("1234 N. Main Street"); anything starting with a house number is a home. They're
+   counted, listed and printed separately.
+
+   Import from Excel (or sharing .xlsx files to Route IQ) builds routes from spreadsheets: the file
+   name gives the route and driver ("MS-52-1 Bill Vaughn.xlsx"), column E the site addresses and
+   column G the city, from row 2 down. A preview comes first; re-importing a route replaces its
+   list, driver and area but keeps its service day and notes.
+
    Each route record has room for a mapUrl, for the custom route maps planned later. */
 (function () {
     "use strict";
@@ -49,6 +58,25 @@
 
     function dateString(d) {
         return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+
+    // A line starting with a house number is one home, not a whole street
+    function isAddress(line) {
+        return /^\s*\d/.test(String(line));
+    }
+
+    function splitStops(lines) {
+        return {
+            streets: (lines || []).filter(function (s) { return !isAddress(s); }),
+            addresses: (lines || []).filter(isAddress)
+        };
+    }
+
+    function stopCount(lines) {
+        var p = splitStops(lines);
+        var parts = [p.streets.length + " street" + (p.streets.length === 1 ? "" : "s")];
+        if (p.addresses.length) parts.push(p.addresses.length + " address" + (p.addresses.length === 1 ? "" : "es"));
+        return parts.join(" \u00B7 ");
     }
 
     // One street per line; blank lines and repeats (ignoring case) dropped, order kept
@@ -139,7 +167,7 @@
         var title = el("h3", "mt-entry-address");
         title.appendChild(highlighted("Route " + r.route, term));
         head.appendChild(title);
-        head.appendChild(el("span", "mt-entry-date", streets.length + " street" + (streets.length === 1 ? "" : "s")));
+        head.appendChild(el("span", "mt-entry-date", stopCount(streets)));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -171,11 +199,17 @@
         }
 
         if (streets.length) {
+            var groups = splitStops(streets);
             var all = el("details", "rs-all-streets");
-            all.appendChild(el("summary", null, matchingStreets.length ? "All streets on this route" : "Show streets"));
-            var ul = el("ul", "rs-streets");
-            streets.forEach(function (s) { ul.appendChild(el("li", null, s)); });
-            all.appendChild(ul);
+            all.appendChild(el("summary", null, matchingStreets.length ? "Everything on this route"
+                : groups.addresses.length ? "Show streets and addresses" : "Show streets"));
+            [["Streets", groups.streets], ["Individual addresses", groups.addresses]].forEach(function (g) {
+                if (!g[1].length) return;
+                if (groups.addresses.length) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
+                var ul = el("ul", "rs-streets");
+                g[1].forEach(function (s) { ul.appendChild(el("li", null, s)); });
+                all.appendChild(ul);
+            });
             card.appendChild(all);
         }
 
@@ -215,7 +249,8 @@
         listEl.textContent = "";
         shown.forEach(function (r) { listEl.appendChild(buildCard(r, term)); });
 
-        var streetTotal = list.reduce(function (n, r) { return n + (r.streets || []).length; }, 0);
+        var streetTotal = list.reduce(function (n, r) { return n + splitStops(r.streets).streets.length; }, 0);
+        var addressTotal = list.reduce(function (n, r) { return n + splitStops(r.streets).addresses.length; }, 0);
         if (!list.length) {
             countEl.textContent = "No routes yet. Tap Add Route to add the first one.";
         } else if (!shown.length) {
@@ -224,7 +259,8 @@
             countEl.textContent = shown.length + " route" + (shown.length === 1 ? "" : "s") + " match.";
         } else {
             countEl.textContent = list.length + " route" + (list.length === 1 ? "" : "s") + ", " +
-                streetTotal + " street" + (streetTotal === 1 ? "" : "s") + ".";
+                streetTotal + " street" + (streetTotal === 1 ? "" : "s") +
+                (addressTotal ? ", " + addressTotal + " individual address" + (addressTotal === 1 ? "" : "es") : "") + ".";
         }
         document.getElementById("rs-export").disabled = !list.length;
         document.getElementById("rs-print-all").disabled = !list.length;
@@ -308,10 +344,16 @@
 
             // Day, area, street count and print date across one shaded box
             var info = [["Service Day", r.day || "N/A"], ["Driver", r.driver || "N/A"], ["Area", r.area || "N/A"],
-                ["Streets", String(streets.length)], ["Printed", prettyToday()]];
+                ["Streets / Addr.", splitStops(streets).streets.length + " / " + splitStops(streets).addresses.length],
+                ["Printed", prettyToday()]];
             var colW = CONTENT_W / info.length;
+            // A long value (an area covering several towns) wraps to a second, smaller line
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            var wraps = info.some(function (pair) { return doc.splitTextToSize(String(pair[1]), colW - 16).length > 1; });
+            var boxH = wraps ? 48 : 40;
             color("setFillColor", TINT);
-            doc.roundedRect(M, y, CONTENT_W, 40, 4, 4, "F");
+            doc.roundedRect(M, y, CONTENT_W, boxH, 4, 4, "F");
             info.forEach(function (pair, i) {
                 var x = M + 12 + i * colW;
                 doc.setFont("helvetica", "bold");
@@ -321,9 +363,16 @@
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
                 color("setTextColor", INK);
-                doc.text(doc.splitTextToSize(String(pair[1]), colW - 16)[0], x, y + 30);
+                var valueLines = doc.splitTextToSize(String(pair[1]), colW - 16);
+                if (valueLines.length > 1) {
+                    doc.setFontSize(8.5);
+                    valueLines = doc.splitTextToSize(String(pair[1]), colW - 16).slice(0, 2);
+                    doc.text(valueLines, x, y + 28, { lineHeightFactor: 1.2 });
+                } else {
+                    doc.text(valueLines[0] || "", x, y + 30);
+                }
             });
-            y += 40 + 16;
+            y += boxH + 16;
 
             if (r.notes) {
                 sectionBar("Notes");
@@ -335,40 +384,54 @@
                 y += lines.length * 12.5 + 12;
             }
 
-            // Two streets per row, read left to right, so numbering stays in order across pages.
-            // A page break repeats the bar with the route number, so loose pages can't be mixed up.
-            sectionBar("Route " + r.route + "  \u00B7  Streets");
-            if (!streets.length) {
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(9.5);
-                color("setTextColor", INK);
-                doc.text("No streets entered for this route.", M, y + 10);
-                return;
-            }
-            var half = CONTENT_W / 2;
-            for (var i = 0; i < streets.length; i += 2) {
-                if (y + ROW_H > BOTTOM) {
+            // Two per row, read left to right, so numbering stays in order across pages. A page
+            // break repeats the bar with the route number, so loose pages can't be mixed up.
+            function listSection(title, items, emptyText) {
+                if (y + 24 + ROW_H > BOTTOM) {
                     doc.addPage();
                     y = M;
                     pageRoute[doc.getNumberOfPages()] = r.route;
-                    sectionBar("Route " + r.route + "  \u00B7  Streets (continued)");
                 }
-                [i, i + 1].forEach(function (n, col) {
-                    if (n >= streets.length) return;
-                    var x = M + col * half;
+                sectionBar("Route " + r.route + "  \u00B7  " + title);
+                if (!items.length) {
                     doc.setFont("helvetica", "normal");
-                    doc.setFontSize(9);
-                    color("setTextColor", GRAY);
-                    doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
-                    doc.setFontSize(10);
+                    doc.setFontSize(9.5);
                     color("setTextColor", INK);
-                    doc.text(doc.splitTextToSize(streets[n], half - 40)[0], x + 26, y + 12);
-                    color("setDrawColor", RULE);
-                    doc.setLineWidth(0.5);
-                    doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
-                });
-                y += ROW_H;
+                    doc.text(emptyText, M, y + 10);
+                    y += 22;
+                    return;
+                }
+                var half = CONTENT_W / 2;
+                for (var i = 0; i < items.length; i += 2) {
+                    if (y + ROW_H > BOTTOM) {
+                        doc.addPage();
+                        y = M;
+                        pageRoute[doc.getNumberOfPages()] = r.route;
+                        sectionBar("Route " + r.route + "  \u00B7  " + title + " (continued)");
+                    }
+                    [i, i + 1].forEach(function (n, col) {
+                        if (n >= items.length) return;
+                        var x = M + col * half;
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(9);
+                        color("setTextColor", GRAY);
+                        doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
+                        doc.setFontSize(10);
+                        color("setTextColor", INK);
+                        doc.text(doc.splitTextToSize(items[n], half - 40)[0], x + 26, y + 12);
+                        color("setDrawColor", RULE);
+                        doc.setLineWidth(0.5);
+                        doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
+                    });
+                    y += ROW_H;
+                }
+                y += 14;
             }
+
+            var groups = splitStops(streets);
+            listSection("Streets", groups.streets, groups.addresses.length
+                ? "No whole streets on this route." : "No streets entered for this route.");
+            if (groups.addresses.length) listSection("Individual Addresses", groups.addresses, "");
         });
 
         // Footer: which route, and its page count, so each sheet stands on its own
@@ -432,8 +495,8 @@
     /* ---------- Form ---------- */
 
     function updateStreetsCount() {
-        var n = parseStreets(fields.streets.value).length;
-        streetsCount.textContent = n ? n + " street" + (n === 1 ? "" : "s") : "";
+        var lines = parseStreets(fields.streets.value);
+        streetsCount.textContent = lines.length ? stopCount(lines) : "";
     }
 
     function readForm() {
@@ -545,6 +608,207 @@
 
     searchEl.addEventListener("input", render);
 
+    /* ---------- Import from Excel ---------- */
+    /* One .xlsx file per route. The file name is "<route> <driver>" ("MS-52-1 Bill Vaughn.xlsx");
+       on the first sheet, column E holds the site addresses and column G the city, from row 2
+       down (column F, a second address line, and H/I, state and zip, aren't needed). Files come
+       from the Import from Excel button or from sharing them to Route IQ (sw.js keeps shared
+       files in the "routeiq-share-inbox" cache until this page picks them up). */
+
+    var SHARE_INBOX = "routeiq-share-inbox";
+    var COL_ADDRESS = 4; // E
+    var COL_CITY = 6;    // G
+    var importList = document.getElementById("rs-import-list");
+    var importStatus = document.getElementById("rs-import-status");
+    var importGo = document.getElementById("rs-import-go");
+    var importDone = document.getElementById("rs-import-done");
+    var pendingImport = [];
+    var xlsxPromise = null;
+
+    var importDialog = TrackerDialog(document.getElementById("rs-import-dialog"), {
+        onClose: function () {
+            pendingImport = [];
+            importList.textContent = "";
+        }
+    });
+
+    function loadXlsx() {
+        if (window.XLSX) return Promise.resolve(window.XLSX);
+        if (!xlsxPromise) {
+            xlsxPromise = new Promise(function (resolve, reject) {
+                var script = document.createElement("script");
+                script.src = "xlsx.mini.min.js";
+                script.onload = function () { resolve(window.XLSX); };
+                script.onerror = function () {
+                    xlsxPromise = null;
+                    reject(new Error("Spreadsheet reader failed to load"));
+                };
+                document.head.appendChild(script);
+            });
+        }
+        return xlsxPromise;
+    }
+
+    function keyOf(line) {
+        return window.RouteLookup ? RouteLookup.normalize(line) : String(line).trim().toLowerCase();
+    }
+
+    // "MS-52-1 Bill Vaughn.xlsx" -> { route: "MS-52-1", driver: "Bill Vaughn" }
+    function nameParts(fileName) {
+        var base = String(fileName).replace(/\.xlsx$/i, "").replace(/\s+/g, " ").trim();
+        var m = /^(\S+)\s+(.+)$/.exec(base);
+        return m ? { route: m[1], driver: m[2] } : { route: base, driver: "" };
+    }
+
+    function readFile(XLSX, file) {
+        var parts = nameParts(file.name);
+        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], area: "", error: "" };
+        return file.arrayBuffer().then(function (buf) {
+            var wb = XLSX.read(new Uint8Array(buf), { type: "array" });
+            var sheet = wb.Sheets[wb.SheetNames[0]];
+            var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+            var seen = {};
+            var cities = {};
+            rows.slice(1).forEach(function (row) {
+                var line = String(row[COL_ADDRESS] || "").replace(/\s+/g, " ").trim();
+                if (!line) return;
+                var k = keyOf(line);
+                if (!k || seen[k]) return;
+                seen[k] = true;
+                result.lines.push(line);
+                var city = String(row[COL_CITY] || "").trim();
+                if (city) cities[city] = (cities[city] || 0) + 1;
+            });
+            // Most common city first; a route covering several towns lists up to three
+            result.area = Object.keys(cities).sort(function (a, b) { return cities[b] - cities[a]; }).slice(0, 3).join(" / ");
+            if (!result.lines.length) result.error = "No site addresses found in column E (starting at row 2).";
+        }).catch(function () {
+            result.error = "Couldn't read this file as an Excel workbook (.xlsx).";
+        }).then(function () { return result; });
+    }
+
+    function renderImportPreview() {
+        var existing = {};
+        load().forEach(function (r) { existing[String(r.route).toLowerCase()] = r; });
+        var seenRoutes = {};
+        importList.textContent = "";
+        var good = 0;
+
+        pendingImport.forEach(function (item) {
+            var row = el("article", "rs-import-item" + (item.error ? " is-error" : ""));
+            // A file that couldn't be used is named as-is; its name isn't a route
+            row.appendChild(el("p", "rs-import-route", item.error ? item.fileName
+                : "Route " + item.route + (item.driver ? " \u00B7 " + item.driver : "")));
+            if (!item.error) row.appendChild(el("p", "rs-import-file", item.fileName));
+            if (item.error) {
+                row.appendChild(el("p", "rs-import-note is-error", item.error));
+            } else {
+                var key = String(item.route).toLowerCase();
+                var before = existing[key];
+                var detail = stopCount(item.lines) + (item.area ? " \u00B7 " + item.area : "");
+                row.appendChild(el("p", "rs-import-note", detail));
+                var status = seenRoutes[key] ? "Also in another file here; this one is used"
+                    : before ? "Replaces Route " + before.route + " (" + stopCount(before.streets) + " now)" : "New route";
+                row.appendChild(el("span", "mt-chip rs-import-chip" + (before || seenRoutes[key] ? " is-replace" : " is-new"), status));
+                if (!item.driver) row.appendChild(el("p", "rs-import-note is-warn", "No driver in the file name (expected \u201cMS-52-1 Bill Vaughn.xlsx\u201d)."));
+                seenRoutes[key] = true;
+                good++;
+            }
+            importList.appendChild(row);
+        });
+
+        importStatus.textContent = pendingImport.length + " file" + (pendingImport.length === 1 ? "" : "s") + " read. " +
+            (good ? "Check the routes below, then tap Import." : "Nothing here can be imported.");
+        importGo.disabled = !good;
+        importGo.textContent = good ? "Import " + good + " route" + (good === 1 ? "" : "s") : "Import";
+    }
+
+    function handleFiles(files) {
+        files = Array.prototype.slice.call(files || []);
+        if (!files.length) return;
+        importDone.textContent = "";
+        pendingImport = [];
+        importList.textContent = "";
+        importGo.disabled = true;
+        importStatus.textContent = "Reading " + files.length + " file" + (files.length === 1 ? "" : "s") + "\u2026";
+        importDialog.open();
+        loadXlsx().then(function (XLSX) {
+            return Promise.all(files.map(function (f) { return readFile(XLSX, f); }));
+        }).then(function (results) {
+            pendingImport = results;
+            renderImportPreview();
+        }).catch(function () {
+            importStatus.textContent = "The spreadsheet reader couldn't load. Check the connection once, then try again.";
+        });
+    }
+
+    importGo.addEventListener("click", function () {
+        var list = load();
+        var byRoute = {};
+        list.forEach(function (r) { byRoute[String(r.route).toLowerCase()] = r; });
+        var added = 0, updated = 0;
+        // Later files win when two files name the same route
+        pendingImport.filter(function (i) { return !i.error; }).forEach(function (item) {
+            var key = String(item.route).toLowerCase();
+            var r = byRoute[key];
+            if (r) {
+                // The file is the source of truth for the list, driver and area; day and notes stay
+                r.streets = item.lines.slice();
+                if (item.driver) r.driver = item.driver;
+                if (item.area) r.area = item.area;
+                r.updated = Date.now();
+                updated++;
+            } else {
+                r = { id: newId(), route: item.route, day: "", driver: item.driver, area: item.area,
+                    streets: item.lines.slice(), notes: "", mapUrl: "", created: Date.now() };
+                list.push(r);
+                byRoute[key] = r;
+                added++;
+            }
+        });
+        if (!save(list)) {
+            importStatus.textContent = "Could not save. Storage is unavailable in this browser.";
+            return;
+        }
+        render();
+        importDialog.close();
+        var parts = [];
+        if (added) parts.push(added + " new");
+        if (updated) parts.push(updated + " updated");
+        importDone.textContent = "Imported " + (added + updated) + " route" + (added + updated === 1 ? "" : "s") +
+            " (" + parts.join(", ") + ").";
+    });
+
+    var fileInput = document.getElementById("rs-import-file");
+    document.getElementById("rs-import-open").addEventListener("click", function () { fileInput.click(); });
+    fileInput.addEventListener("change", function () {
+        handleFiles(fileInput.files);
+        fileInput.value = "";
+    });
+
+    // Files shared to Route IQ from another app wait in the service worker's inbox
+    function checkSharedFiles() {
+        if (!window.caches) return;
+        caches.open(SHARE_INBOX).then(function (cache) {
+            return cache.keys().then(function (requests) {
+                if (!requests.length) return;
+                return Promise.all(requests.map(function (req) {
+                    return cache.match(req).then(function (res) {
+                        return res.blob().then(function (blob) {
+                            var name = decodeURIComponent(res.headers.get("X-File-Name") || "shared.xlsx");
+                            return new File([blob], name, { type: blob.type });
+                        });
+                    });
+                })).then(function (files) {
+                    return Promise.all(requests.map(function (req) { return cache.delete(req); })).then(function () {
+                        handleFiles(files);
+                    });
+                });
+            });
+        }).catch(function () { /* no inbox: nothing was shared */ });
+    }
+    window.addEventListener("rs-check-shared", checkSharedFiles);
+
     /* ---------- CSV export ---------- */
 
     function csvCell(value) {
@@ -555,10 +819,12 @@
 
     // One row per street, so the file sorts and filters well in a spreadsheet
     document.getElementById("rs-export").addEventListener("click", function () {
-        var rows = [["Route", "Service Day", "Driver", "Area", "Street", "Notes"]];
+        var rows = [["Route", "Service Day", "Driver", "Area", "Type", "Street / Address", "Notes"]];
         load().sort(byRoute).forEach(function (r) {
             var streets = (r.streets || []).length ? r.streets : [""];
-            streets.forEach(function (s) { rows.push([r.route, r.day, r.driver, r.area, s, r.notes]); });
+            streets.forEach(function (s) {
+                rows.push([r.route, r.day, r.driver, r.area, s ? (isAddress(s) ? "Address" : "Street") : "", s, r.notes]);
+            });
         });
         var csv = "﻿" + rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
 
@@ -586,4 +852,5 @@
     });
     resetForm();
     render();
+    checkSharedFiles();
 })();

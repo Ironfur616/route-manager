@@ -3305,3 +3305,111 @@ body.shell {
         grid-column: 1 / -1;
     }
 }
+
+
+/* ---------- Route Sheets: import from Excel ---------- */
+.rs-group-title {
+    margin: 0.75rem 0 0;
+    color: var(--deep-navy);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+#rs-import-done:empty {
+    display: none;
+}
+
+.rs-import-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.rs-import-help {
+    margin: 0;
+    color: var(--drk-gray);
+    font-weight: 400;
+}
+
+.rs-import-status {
+    margin: 0;
+}
+
+.rs-import-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rs-import-item {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--white);
+}
+
+.rs-import-item.is-error {
+    border-left-color: #B3261E;
+    background-color: #FDF1F0;
+}
+
+.rs-import-route {
+    margin: 0;
+    color: var(--deep-navy);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.rs-import-file,
+.rs-import-note {
+    margin: 0.125rem 0 0;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.rs-import-file {
+    color: var(--drk-gray);
+}
+
+.rs-import-note {
+    color: var(--drk-gray);
+    font-weight: 600;
+}
+
+.rs-import-note.is-error {
+    color: #B3261E;
+}
+
+.rs-import-note.is-warn {
+    color: #8A4B00;
+}
+
+.rs-import-chip {
+    display: inline-block;
+    margin-top: 0.375rem;
+}
+
+.rs-import-chip.is-new {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--white);
+}
+
+.rs-import-chip.is-replace {
+    border-color: #8A4B00;
+    color: #8A4B00;
+}
+
+@media (min-width: 48em) {
+    .rs-import-dialog {
+        max-width: 40rem;
+    }
+
+    .rs-import-body {
+        padding: 1.25rem 1.5rem;
+    }
+}
