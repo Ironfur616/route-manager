@@ -38,6 +38,25 @@
         if (overlay) {
             overlay.remove();
         }
+        unlockFrames();
+    }
+
+    /* Tabs that reopen at start (pinned tabs, autosaved drafts) load behind the PIN screen,
+       see the session as locked, and hide themselves. Unlocking only checks once per page load,
+       so without this they stayed blank until the app was reloaded. Each open tab is same-origin,
+       so it can be unlocked in place. */
+    function unlockFrames() {
+        Array.prototype.forEach.call(document.querySelectorAll("iframe"), function (frame) {
+            try {
+                var doc = frame.contentDocument;
+                if (!doc || !doc.documentElement) return;
+                doc.documentElement.classList.remove("pin-locked");
+                var inner = doc.getElementById("pin-lock-overlay");
+                if (inner) inner.remove();
+                // Lets the page lay itself out now that it can be seen (signature pads, charts)
+                frame.contentWindow.dispatchEvent(new Event("resize"));
+            } catch (e) { /* not this app's page */ }
+        });
     }
 
     if (isUnlocked()) {
