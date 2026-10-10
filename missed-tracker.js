@@ -58,6 +58,9 @@
     var message = document.getElementById("mt-message");
     var addressHint = document.getElementById("mt-address-hint");
     var listEl = document.getElementById("mt-list");
+    var archiveEl = document.getElementById("mt-archive");
+    var archiveListEl = document.getElementById("mt-archive-list");
+    var archiveCountEl = document.getElementById("mt-archive-count");
     var countEl = document.getElementById("mt-count");
     var searchEl = document.getElementById("mt-search");
     var filterStatus = document.getElementById("mt-filter-status");
@@ -211,10 +214,21 @@
         return counts;
     }
 
-    function renderStats(entries, counts) {
+    // First date of the "Last 7 days" window (today and the six days before it). Anything dated
+    // earlier is archived: listed in the Archived section instead of the main list. That's only
+    // how it's displayed; archived entries stay in the log, in the counts, in search and in exports.
+    function recentCutoff() {
         var cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 6);
-        var cutoffStr = dateString(cutoff);
+        return dateString(cutoff);
+    }
+
+    function isArchived(e) {
+        return e.date < recentCutoff();
+    }
+
+    function renderStats(entries, counts) {
+        var cutoffStr = recentCutoff();
         var repeats = Object.keys(counts).filter(function (k) { return k && counts[k] > 1; }).length;
 
         document.getElementById("stat-open").textContent =
@@ -321,19 +335,35 @@
         renderDatalists(entries);
         updateAddressHint();
 
+        var filtering = !!(term || status || yellowOnly);
         var shown = entries.filter(function (e) {
             return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) && matchesSearch(e, term);
         });
+        var recent = shown.filter(function (e) { return !isArchived(e); });
+        var archived = shown.filter(isArchived);
 
         listEl.textContent = "";
-        shown.forEach(function (e) { listEl.appendChild(buildCard(e, counts)); });
+        recent.forEach(function (e) { listEl.appendChild(buildCard(e, counts)); });
+
+        archiveListEl.textContent = "";
+        archived.forEach(function (e) { archiveListEl.appendChild(buildCard(e, counts)); });
+        archiveCountEl.textContent = archived.length;
+        archiveEl.hidden = !archived.length;
+        // A search or filter that finds archived entries opens the section so they're seen
+        if (filtering && archived.length) archiveEl.open = true;
 
         if (!entries.length) {
             countEl.textContent = "No missed collections logged yet. Tap Log Missed Collection to add the first one.";
         } else if (!shown.length) {
             countEl.textContent = "Nothing matches the current search or filter.";
+        } else if (!recent.length) {
+            countEl.textContent = filtering
+                ? "No matches in the last 7 days. " + archived.length + " in Archived below."
+                : "Nothing logged in the last 7 days. Older misses are in Archived below.";
         } else {
-            countEl.textContent = "Showing " + shown.length + " of " + entries.length;
+            countEl.textContent = "Showing " + recent.length + " from the last 7 days" +
+                (archived.length ? ", " + archived.length + " archived" : "") +
+                (filtering ? " (" + shown.length + " of " + entries.length + " match)" : "") + ".";
         }
         document.getElementById("mt-export").disabled = !entries.length;
     }
