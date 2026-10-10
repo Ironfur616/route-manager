@@ -4,8 +4,9 @@
    data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step.
 
    Route and driver come from Route Sheets where they can (route-lookup.js): typing the address
-   fills them in unless they were typed by hand, a street on several routes offers each route
-   to pick from, and Fill from Route Sheets completes older entries that are missing them. */
+   fills them in unless they were typed by hand, a street split between routes gets all of them
+   ("12 / 9", "Sam / Kim") with buttons to narrow it to one, and Fill from Route Sheets
+   completes older entries that are missing them. */
 (function () {
     "use strict";
 
@@ -464,11 +465,29 @@
                 routeMatchEl.appendChild(use);
             }
         } else if (matches.length > 1) {
-            // Keep a route already picked from these buttons while the rest of the address is typed
+            // Split street: fill in every route and driver ("12 / 9", "Sam / Kim") until its break
+            // points are known. A single route picked from the buttons below is kept while the
+            // rest of the address is typed.
+            var both = RouteLookup.combine(matches);
             var current = String(fields.route.value).toLowerCase();
-            if (apply && !matches.some(function (x) { return String(x.route).toLowerCase() === current; })) clearAutoFilled();
-            routeMatchEl.appendChild(el("p", "mt-route-found", matches[0].street + " is on more than one route. Pick the right one:"));
+            var pickedOne = matches.some(function (x) { return String(x.route).toLowerCase() === current; });
+            if (apply && !pickedOne) fillFrom(both);
+            current = String(fields.route.value).toLowerCase(); // what the buttons below should show as chosen
+            routeMatchEl.appendChild(el("p", "mt-route-found", matches[0].street + " is split between " +
+                matches.map(matchLabel).join(" and ") + ". Both are filled in; tap one if you know which:"));
             var picks = el("div", "mt-route-picks");
+            var bothBtn = el("button", "mt-btn mt-route-pick", "Both");
+            bothBtn.type = "button";
+            var bothChosen = current === String(both.route).toLowerCase();
+            if (bothChosen) bothBtn.classList.add("is-selected");
+            bothBtn.setAttribute("aria-pressed", String(bothChosen));
+            bothBtn.addEventListener("click", function () {
+                source.route = "auto";
+                source.driver = "auto";
+                fillFrom(both);
+                updateRouteMatch(false);
+            });
+            picks.appendChild(bothBtn);
             matches.forEach(function (match) {
                 var b = el("button", "mt-btn mt-route-pick", matchLabel(match));
                 b.type = "button";
@@ -502,15 +521,16 @@
 
     /* ---------- Fill older entries from Route Sheets ---------- */
 
-    // Entries missing a route (or a driver) whose street is on exactly one route in Route
-    // Sheets. Only empty fields are ever filled; nothing already entered is changed.
+    // Entries missing a route (or a driver) whose street is in Route Sheets. A street split
+    // between routes gets them all ("12 / 9"). Only empty fields are ever filled; nothing
+    // already entered is changed.
     function backfillCandidates(entries) {
         if (!window.RouteLookup || !RouteLookup.hasRoutes()) return [];
         return entries.map(function (e) {
             if (e.route && e.driver) return null;
             var matches = RouteLookup.find(e.address);
-            if (matches.length !== 1) return null;
-            var m = matches[0];
+            if (!matches.length) return null;
+            var m = matches.length === 1 ? matches[0] : RouteLookup.combine(matches);
             var patch = {};
             if (!e.route) patch.route = m.route;
             // A driver only comes along when the route agrees with Route Sheets

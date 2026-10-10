@@ -8,8 +8,8 @@
    The house number is dropped and the rest is matched against each route's streets with the
    same spelling rules as the trackers ("Street" = "St", "North" = "N", punctuation ignored).
    The longest matching street wins, so "N Main St Ext" beats "Main St". A street listed on
-   more than one route returns every one of those routes, for the person to pick from; the
-   lookup never guesses between them. */
+   more than one route returns every one of those routes; the lookup never guesses between
+   them. combine() joins them ("12 / 9") for streets whose break points aren't known yet. */
 (function () {
     "use strict";
 
@@ -75,8 +75,25 @@
         return hits;
     }
 
+    // A street split between routes, until its break points are known, gets every route and
+    // driver at once, joined with " / " ("12 / 9", "Sam / Kim"), in Route Sheets order
+    function combine(matches) {
+        function joined(key) {
+            var seen = {};
+            return matches.map(function (m) { return m[key]; }).filter(function (v) {
+                var k = String(v || "").toLowerCase();
+                if (!k || seen[k]) return false;
+                seen[k] = true;
+                return true;
+            }).join(" / ");
+        }
+        return { route: joined("route"), driver: joined("driver"), area: joined("area"), day: joined("day"),
+            street: matches.length ? matches[0].street : "" };
+    }
+
     window.RouteLookup = {
         find: find,
+        combine: combine,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
 })();
