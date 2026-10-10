@@ -5,7 +5,10 @@
 
    Each tab also autosaves what has been entered to localStorage, so a dead battery, a crash
    or an accidental reload does not lose an unsaved observation. On the next start every saved
-   draft reopens as a tab. A tab's draft is deleted when its PDF is generated or the tab is closed. */
+   draft reopens as a tab. A tab's draft is deleted when its PDF is generated or the tab is closed.
+
+   Any tab can be pinned. A pinned tab sits at the front of the bar, has no close button (unpin it
+   first), and reopens every time the app starts. Pins are remembered by page (one per form). */
 (function () {
     "use strict";
 
@@ -20,6 +23,10 @@
     var active = null;
 
     var DRAFT_PREFIX = "fleetMgrDraft:";
+    var PINS_KEY = "fleetMgrPinnedTabs";
+    var PIN_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">' +
+        '<path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" fill="currentColor"/>' +
+        '<path d="M12 14v7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     var SAVE_DELAY = 400;
     var warnedStorage = false;
 
@@ -133,6 +140,52 @@
         return found.sort(function (a, b) { return a.created - b.created; });
     }
 
+    /* ---------- Pinned tabs ---------- */
+
+    function loadPins() {
+        try {
+            var data = JSON.parse(localStorage.getItem(PINS_KEY) || "[]");
+            return Array.isArray(data) ? data.filter(function (h) { return typeof h === "string"; }) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    // Saved in the order the pinned tabs sit in the bar
+    function savePins() {
+        try {
+            localStorage.setItem(PINS_KEY, JSON.stringify(tabs.filter(function (t) { return t.pinned; })
+                .map(function (t) { return t.href; })));
+        } catch (e) { /* storage unavailable: pins last until the app closes */ }
+    }
+
+    // Pinned tabs first, in pin order; the rest keep their order after them
+    function arrangeTabs() {
+        var pinned = tabs.filter(function (t) { return t.pinned; });
+        var rest = tabs.filter(function (t) { return !t.pinned; });
+        tabs = pinned.concat(rest);
+        tabs.forEach(function (t) { bar.appendChild(t.el); });
+    }
+
+    function setPinned(tab, on) {
+        if (on) {
+            // One pinned tab per page: pinning this one unpins any other copy of the same form
+            tabs.forEach(function (t) { if (t !== tab && t.href === tab.href) t.pinned = false; });
+            // Newly pinned goes to the end of the pinned group
+            tab.pinned = true;
+            tabs.splice(tabs.indexOf(tab), 1);
+            var lastPinned = -1;
+            tabs.forEach(function (t, i) { if (t.pinned) lastPinned = i; });
+            tabs.splice(lastPinned + 1, 0, tab);
+        } else {
+            tab.pinned = false;
+        }
+        arrangeTabs();
+        savePins();
+        refreshLabels();
+        tab.el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+
     function baseLabel(tab) {
         var sameForm = tabs.filter(function (t) { return t.href === tab.href; });
         var n = sameForm.indexOf(tab) + 1;
@@ -146,6 +199,12 @@
             tab.selectBtn.textContent = label;
             tab.selectBtn.title = label;
             tab.closeBtn.setAttribute("aria-label", "Close " + label);
+            tab.el.classList.toggle("is-pinned", !!tab.pinned);
+            tab.pinBtn.setAttribute("aria-pressed", String(!!tab.pinned));
+            tab.pinBtn.setAttribute("aria-label", (tab.pinned ? "Unpin " : "Pin ") + label);
+            tab.pinBtn.title = tab.pinned ? "Unpin tab" : "Pin tab";
+            // A pinned tab can't be closed by accident: unpin it first
+            tab.closeBtn.hidden = !!tab.pinned;
         });
     }
 
@@ -165,6 +224,7 @@
     }
 
     function closeTab(tab) {
+        if (tab.pinned) return;
         if (tab.dirty && !confirm("Close this tab? Anything entered on it will be lost.")) return;
         removeDraft(tab);
         var i = tabs.indexOf(tab);
@@ -258,7 +318,14 @@
         tab.closeBtn.textContent = "×";
         tab.closeBtn.addEventListener("click", function () { closeTab(tab); });
 
+        tab.pinBtn = document.createElement("button");
+        tab.pinBtn.type = "button";
+        tab.pinBtn.className = "tab-pin";
+        tab.pinBtn.innerHTML = PIN_ICON;
+        tab.pinBtn.addEventListener("click", function () { setPinned(tab, !tab.pinned); });
+
         tab.el.appendChild(tab.selectBtn);
+        tab.el.appendChild(tab.pinBtn);
         tab.el.appendChild(tab.closeBtn);
         bar.appendChild(tab.el);
 
@@ -277,6 +344,7 @@
         empty.hidden = true;
         refreshLabels();
         activate(tab, false);
+        return tab;
     }
 
     // Arrow keys move between tabs, as a tablist is expected to
@@ -308,9 +376,29 @@
     // Reopen anything that was still unsaved when the app last closed, most recently edited on top
     var drafts = loadDrafts(titles);
     drafts.forEach(function (d) { openTab(d.href, titles[d.href], d); });
+    var latestDraft = null;
     if (drafts.length) {
         var latest = 0;
         drafts.forEach(function (d, i) { if (d.updated > drafts[latest].updated) latest = i; });
-        activate(tabs[latest], false);
+        latestDraft = tabs[latest];
     }
+
+    // Reopen pinned tabs. A pinned form that came back with a draft is that same tab, not a second copy.
+    var pins = loadPins().filter(function (href) { return titles[href]; });
+    pins.forEach(function (href) {
+        var tab = tabs.filter(function (t) { return t.href === href && !t.pinned; })[0] || openTab(href, titles[href]);
+        tab.pinned = true;
+    });
+    if (pins.length) {
+        // Keep the saved pin order, pinned tabs first
+        var order = {};
+        pins.forEach(function (href, i) { order[href] = i; });
+        var pinned = tabs.filter(function (t) { return t.pinned; }).sort(function (a, b) { return order[a.href] - order[b.href]; });
+        tabs = pinned.concat(tabs.filter(function (t) { return !t.pinned; }));
+        arrangeTabs();
+        refreshLabels();
+    }
+    // Land on the most recently edited draft, else the first pinned tab
+    if (latestDraft) activate(latestDraft, false);
+    else if (tabs.length) activate(tabs[0], false);
 })();

@@ -988,7 +988,35 @@ body.shell {
     background-color: rgba(4, 57, 96, 0.12);
 }
 
+/* Pin: muted until pinned, then forest green (and the close button is hidden) */
+.tab-pin {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: rgba(4, 57, 96, 0.45);
+    cursor: pointer;
+}
+
+.tab-pin:hover {
+    background-color: rgba(4, 57, 96, 0.12);
+    color: var(--deep-navy);
+}
+
+.tab.is-pinned .tab-pin {
+    color: var(--forest-green);
+}
+
+.tab-close[hidden] {
+    display: none;
+}
+
 .tab-select:focus-visible,
+.tab-pin:focus-visible,
 .tab-close:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
