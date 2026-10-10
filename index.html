@@ -4,12 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
     <script>
         (function () {
-            // PIN gate switched off: the app opens straight in. Marking the session unlocked here,
-            // before anything else loads, also lets every tab's page through. Set this back to
-            // false to turn the PIN screen on again (the PIN itself lives in pin-lock.js).
-            var PIN_GATE_SUSPENDED = true;
             try {
-                if (PIN_GATE_SUSPENDED) sessionStorage.setItem("fleetMgrUnlocked", "yes");
                 if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
                     document.documentElement.classList.add("pin-locked");
                 }
