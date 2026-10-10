@@ -436,6 +436,37 @@
         return "Route " + m.route + (m.driver ? " \u00B7 " + m.driver : "");
     }
 
+    // Says why the driver didn't fill in, instead of leaving it to guesswork: a route with no
+    // driver in Route Sheets, or a driver already entered by hand that the lookup won't overwrite
+    // (with a button to use the Route Sheets driver instead)
+    function driverNotes(matches) {
+        var routeNow = String(fields.route.value).trim().toLowerCase();
+        var combined = RouteLookup.combine(matches);
+        var forRoute = String(combined.route).toLowerCase() === routeNow ? matches
+            : matches.filter(function (m) { return String(m.route).toLowerCase() === routeNow; });
+        if (!forRoute.length) return;
+
+        var missing = forRoute.filter(function (m) { return !m.driver; });
+        if (missing.length) {
+            routeMatchEl.appendChild(el("p", "mt-route-none", "No driver listed for " +
+                missing.map(function (m) { return "Route " + m.route; }).join(" or ") +
+                " in Route Sheets. Add it there to have it filled in here."));
+        }
+
+        var expected = RouteLookup.combine(forRoute).driver;
+        if (expected && source.driver === "manual" && fields.driver.value.trim().toLowerCase() !== expected.toLowerCase()) {
+            routeMatchEl.appendChild(el("p", "mt-route-none", "Driver was entered by hand, so it was left as is."));
+            var use = el("button", "mt-btn mt-route-pick", "Use " + expected);
+            use.type = "button";
+            use.addEventListener("click", function () {
+                fields.driver.value = expected;
+                source.driver = "auto";
+                updateRouteMatch(false);
+            });
+            routeMatchEl.appendChild(use);
+        }
+    }
+
     function updateRouteMatch(apply) {
         routeMatchEl.textContent = "";
         if (!window.RouteLookup || !RouteLookup.hasRoutes()) return;
@@ -463,6 +494,8 @@
                     updateRouteMatch(false);
                 });
                 routeMatchEl.appendChild(use);
+            } else {
+                driverNotes(matches);
             }
         } else if (matches.length > 1) {
             // Split street: fill in every route and driver ("12 / 9", "Sam / Kim") until its break
@@ -503,6 +536,7 @@
                 picks.appendChild(b);
             });
             routeMatchEl.appendChild(picks);
+            driverNotes(matches);
         } else {
             if (apply) clearAutoFilled();
             if (/[a-z]/i.test(fields.address.value)) {
