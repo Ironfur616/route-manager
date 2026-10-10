@@ -105,6 +105,21 @@
             .map(function (w) { return SUFFIXES[w] || w; }).join(" ");
     }
 
+    // "Oct 9, 2026, 8:15 AM"
+    function prettyStamp(ms) {
+        return new Date(ms).toLocaleString(undefined, {
+            month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
+        });
+    }
+
+    // Stamps the moment an entry becomes Resolved, and clears it if it's reopened. Entries resolved
+    // before this was recorded have no resolvedAt, so no resolved time is shown for them.
+    function applyStatus(e, status) {
+        if (status === "resolved" && e.status !== "resolved") e.resolvedAt = Date.now();
+        if (status !== "resolved") e.resolvedAt = null;
+        e.status = status;
+    }
+
     function hasYellowTag(e) {
         return (e.reasons || []).indexOf(YELLOW_TAG_REASON) !== -1;
     }
@@ -290,6 +305,15 @@
         if (meta.length) card.appendChild(el("p", "mt-entry-meta", meta.join(" · ")));
         if (e.notes) card.appendChild(el("p", "mt-entry-notes", e.notes));
 
+        var stamps = [];
+        if (e.created) stamps.push("Added " + prettyStamp(e.created));
+        if (e.status === "resolved" && e.resolvedAt) stamps.push("Resolved " + prettyStamp(e.resolvedAt));
+        if (stamps.length) {
+            var stampsEl = el("p", "mt-entry-stamps");
+            stamps.forEach(function (t) { stampsEl.appendChild(el("span", null, t)); });
+            card.appendChild(stampsEl);
+        }
+
         var actions = el("div", "mt-entry-actions");
         var contactedId = "mt-boro-" + e.id;
         var contacted = el("div", "mt-entry-contacted");
@@ -468,11 +492,13 @@
         var existing = editingId ? list.filter(function (e) { return e.id === editingId; })[0] : null;
 
         if (existing) {
-            Object.keys(data).forEach(function (k) { existing[k] = data[k]; });
+            applyStatus(existing, data.status);
+            Object.keys(data).forEach(function (k) { if (k !== "status") existing[k] = data[k]; });
             existing.updated = Date.now();
         } else {
             data.id = newId();
             data.created = Date.now();
+            data.resolvedAt = data.status === "resolved" ? data.created : null;
             list.push(data);
         }
         if (!save(list)) {
@@ -501,7 +527,7 @@
         var list = load();
         list.forEach(function (e) {
             if (e.id === id) {
-                e.status = value;
+                applyStatus(e, value);
                 e.updated = Date.now();
             }
         });
@@ -554,10 +580,12 @@
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
         var rows = [["Date", "Route", "Address", "Service", "Reasons", "Driver", "Unit", "Status",
-            "Contacted Boro / Twp", "Misses at address", "Notes"]];
+            "Contacted Boro / Twp", "Misses at address", "Added At", "Resolved At", "Notes"]];
         entries.forEach(function (e) {
             rows.push([e.date, e.route, e.address, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
-                labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)], e.notes]);
+                labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)],
+                e.created ? prettyStamp(e.created) : "", e.status === "resolved" && e.resolvedAt ? prettyStamp(e.resolvedAt) : "",
+                e.notes]);
         });
         var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
 

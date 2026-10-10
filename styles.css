@@ -1386,6 +1386,17 @@ body.shell {
     white-space: pre-wrap;
 }
 
+/* Added / Resolved times on a missed collection card */
+.mt-entry-stamps {
+    margin: 0.5rem 0 0;
+    color: var(--drk-gray);
+    font-size: 0.8rem;
+}
+
+.mt-entry-stamps span {
+    display: block;
+}
+
 .mt-entry-actions {
     display: flex;
     flex-wrap: wrap;
