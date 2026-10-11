@@ -1,13 +1,15 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v91";
+var CACHE_NAME = "fleet-mgr-v92";
 // Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
 var SHARE_INBOX = "routeiq-share-inbox";
 
 var PRECACHE_URLS = [
     "./",
     "./index.html",
+    "./theme.js",
+    "./settings.js",
     "./kpi-dashboard.html",
     "./kpi-dashboard.js",
     "./resi-driver.html",

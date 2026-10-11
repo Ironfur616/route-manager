@@ -7,6 +7,91 @@
 }
 
 
+/* ---------- Color roles ----------
+   Rules use these roles rather than raw colors, so dark mode (theme.js sets data-theme on
+   <html>) only has to swap the values below. The light values are the app's original colors. */
+:root {
+    color-scheme: light;
+    --page: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #f4f6f8;
+    --chrome: #eef3f7;
+    --tab-idle: #dbe5ee;
+    --viewer-bg: #E6E9ED;
+    --ink: #1A1A1A;
+    --ink-rgb: 26, 26, 26;
+    --heading: #043960;
+    --line: #043960;
+    --navy-rgb: 4, 57, 96;
+    --green-rgb: 4, 102, 53;
+    --fill-navy: #043960;
+    --on-accent: #FFFFFF;
+    --green-ink: #046635;
+    --danger: #B3261E;
+    --danger-fill: #B3261E;
+    --danger-fill-hover: #8C1D17;
+    --danger-bg: #FDF1F0;
+    --warn-ink: #8A4B00;
+    --purple-ink: #5B2C83;
+    --purple-fill: #5B2C83;
+    --good-bg: #E8F5EC;
+    --pending-bg: #FFF3E6;
+    --yellow-bg: #FFFBEB;
+    --mark-bg: #FFE58A;
+}
+
+/* Dark mode: theme.js sets data-theme="dark" on <html> (by time of day, or the Settings choice).
+   Every text/background pair here clears 4.5:1 contrast. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --forest-green: #157a46;
+    --page: #0f1720;
+    --surface: #18232f;
+    --surface-2: #213040;
+    --chrome: #121c26;
+    --tab-idle: #1d2a37;
+    --viewer-bg: #0f1720;
+    --ink: #e3e9ef;
+    --ink-rgb: 227, 233, 239;
+    --heading: #9fc6ee;
+    --line: #7f9bbb;
+    --navy-rgb: 159, 190, 224;
+    --green-rgb: 111, 207, 151;
+    --fill-navy: #2a5a88;
+    --on-accent: #FFFFFF;
+    --green-ink: #74d39d;
+    --danger: #ff8a80;
+    --danger-fill: #c0352b;
+    --danger-fill-hover: #a52a22;
+    --danger-bg: #3a1c1a;
+    --warn-ink: #f0b866;
+    --purple-ink: #c7a6ee;
+    --purple-fill: #6a3a96;
+    --good-bg: #183a28;
+    --pending-bg: #3b2a16;
+    --yellow-bg: #35300f;
+    --mark-bg: #7a6500;
+}
+
+/* Signatures stay ink on white, like paper, in both modes */
+:root[data-theme="dark"] .signature-pad {
+    background-color: #FFFFFF;
+}
+
+/* The navy logo artwork would vanish on dark: the PIN card shows it on a white plate, and the
+   start-screen watermark is drawn in white instead */
+:root[data-theme="dark"] .pin-lock-logo {
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background-color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .tab-empty::before {
+    filter: brightness(0) invert(1);
+    opacity: 0.06;
+}
+
+
 /* Mobile first: base styles target small screens.
    Larger screens are layered on with min-width media queries. */
 
@@ -21,8 +106,8 @@ body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
-    color: var(--drk-gray);
-    background-color: var(--white);
+    color: var(--ink);
+    background-color: var(--page);
 }
 
 /* ---------- App header ---------- */
@@ -37,7 +122,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    background-color: var(--white);
+    background-color: var(--surface);
     border-bottom: 4px solid var(--forest-green);
 }
 
@@ -81,7 +166,8 @@ body {
     width: 22px;
     height: 2px;
     border-radius: 2px;
-    background-color: var(--deep-navy);
+    /* Drawn like text (heading color), so the icon stays visible in dark mode */
+    background-color: var(--heading);
     transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
@@ -122,7 +208,7 @@ body {
 .nav-close {
     font-size: 1.75rem;
     line-height: 1;
-    color: var(--deep-navy);
+    color: var(--heading);
 }
 
 /* ---------- Off-canvas nav drawer ---------- */
@@ -135,7 +221,7 @@ body {
     z-index: 200;
     width: min(85vw, 320px);
     overflow-y: auto;
-    background-color: var(--white);
+    background-color: var(--surface);
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
     transform: translateX(-100%);
     transition: transform 0.25s ease;
@@ -150,11 +236,11 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.5rem 0.5rem 1rem;
-    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .site-nav-heading {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
 }
 
@@ -233,7 +319,7 @@ body {
     margin: 0;
     min-height: 36px;
     padding: 0 0.25rem;
-    color: var(--forest-green);
+    color: var(--green-ink);
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -250,14 +336,14 @@ body {
 }
 
 .nav-link-list li + li {
-    border-top: 1px solid rgba(4, 57, 96, 0.1);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.1);
 }
 
 .nav-link-list a {
     display: block;
     padding: 0.5rem;
     min-height: 40px;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 600;
     text-decoration: none;
     border-radius: 4px;
@@ -276,14 +362,14 @@ body {
 /* Current page: add aria-current="page" to that page's link */
 .nav-link-list a[aria-current="page"] {
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 /* Top-level section heading: always open, not a button */
 .nav-section-plain {
     margin: 0 0 0.25rem;
     padding: 0 0 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -299,8 +385,8 @@ body {
     justify-content: flex-end;
     margin-top: auto;
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
-    background-color: var(--white);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
 }
 
 .nav-icon-btn {
@@ -313,7 +399,7 @@ body {
     border: none;
     border-radius: 4px;
     background-color: transparent;
-    color: var(--deep-navy);
+    color: var(--heading);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -371,14 +457,14 @@ body.nav-open {
     margin: 0;
     padding: 1rem;
     min-width: 0;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .emp-info legend {
     padding: 0 0.5rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
 }
@@ -390,7 +476,7 @@ body.nav-open {
 .emp-info .field label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -402,10 +488,10 @@ body.nav-open {
     min-width: 0;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
     transition: border-color 0.15s ease;
@@ -447,13 +533,13 @@ body.nav-open {
 
 /* Auto-filled name reads as fixed text, not an editable field */
 .emp-info .field input[readonly] {
-    background-color: rgba(4, 57, 96, 0.06);
+    background-color: rgba(var(--navy-rgb), 0.06);
 }
 
 .signature-field label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -462,9 +548,9 @@ body.nav-open {
     display: block;
     width: 100%;
     height: 10rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     touch-action: none;
     cursor: crosshair;
 }
@@ -473,10 +559,10 @@ body.nav-open {
     min-height: 44px;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -505,7 +591,7 @@ body.nav-open {
     border: 0;
     border-radius: 4px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1.125rem;
     font-weight: 700;
@@ -513,11 +599,11 @@ body.nav-open {
 }
 
 .send-email {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .generate-pdf:hover {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .send-email:hover {
@@ -544,22 +630,29 @@ body.nav-open {
     border: 0;
     border-top: 4px solid var(--forest-green);
     border-radius: 6px;
-    color: var(--drk-gray);
+    /* Set outright: left to the browser, a dialog is white in light mode but near-black in dark */
+    background-color: var(--surface);
+    color: var(--ink);
 }
 
 .send-dialog::backdrop {
-    background-color: rgba(4, 57, 96, 0.55);
+    background-color: rgba(var(--navy-rgb), 0.55);
+}
+
+/* In dark mode the navy tint turns pale, which would wash the page out; dim it instead */
+:root[data-theme="dark"] .send-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.65);
 }
 
 .send-form h2 {
     margin: 0 0 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
 }
 
 .send-help {
     margin: 0 0 1rem;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .send-field + .send-field {
@@ -570,7 +663,7 @@ body.nav-open {
 .send-field .send-label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -578,10 +671,10 @@ body.nav-open {
 .send-attachment {
     margin: 0;
     padding: 0.625rem 0.75rem;
-    border: 1px solid rgba(4, 57, 96, 0.25);
+    border: 1px solid rgba(var(--navy-rgb), 0.25);
     border-radius: 4px;
-    background-color: rgba(4, 102, 53, 0.06);
-    color: var(--drk-gray);
+    background-color: rgba(var(--green-rgb), 0.06);
+    color: var(--ink);
     font-weight: 600;
     overflow-wrap: anywhere;
 }
@@ -593,10 +686,10 @@ body.nav-open {
     min-width: 0;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -609,7 +702,7 @@ body.nav-open {
 
 .send-error {
     margin: 1rem 0 0;
-    color: #b22222;
+    color: var(--danger);
     font-weight: 600;
 }
 
@@ -632,15 +725,15 @@ body.nav-open {
 }
 
 .send-cancel {
-    border: 1px solid var(--deep-navy);
-    background-color: var(--white);
-    color: var(--deep-navy);
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--heading);
 }
 
 .send-submit {
     border: 0;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .send-cancel:focus-visible,
@@ -690,14 +783,14 @@ body.nav-open {
 
 .obs-key {
     padding: 1rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .obs-key h2 {
     margin: 0 0 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
 }
@@ -718,9 +811,9 @@ body.nav-open {
 .obs-key dt {
     min-width: 2.75rem;
     padding: 0.25rem 0.5rem;
-    border: 2px solid var(--deep-navy);
+    border: 2px solid var(--line);
     border-radius: 4px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     text-align: center;
 }
@@ -752,11 +845,11 @@ body.nav-open {
 }
 
 .practice + .practice {
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .practice-head span {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     text-align: center;
 }
@@ -789,7 +882,7 @@ body.nav-open {
 
 .practice-text {
     padding: 0.5rem 0 0.5rem 0.5rem;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 /* Stays inline with the practice text it belongs to, at 75% size */
 #note {
@@ -812,7 +905,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .pin-lock-card {
@@ -821,7 +914,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     padding: 2rem 1.5rem;
     border-bottom: 4px solid var(--forest-green);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     text-align: center;
 }
 
@@ -833,14 +926,14 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 
 .pin-lock-card h2 {
     margin: 0 0 0.5rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
     font-weight: 700;
 }
 
 .pin-lock-hint {
     margin: 0 0 1.25rem;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.9rem;
 }
 
@@ -849,10 +942,10 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     width: 100%;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1.5rem;
     letter-spacing: 0.5rem;
@@ -868,7 +961,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 .pin-lock-error {
     min-height: 1.25rem;
     margin: 0.5rem 0 0;
-    color: #B3261E;
+    color: var(--danger);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -881,7 +974,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     border: none;
     border-radius: 4px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1rem;
     font-weight: 700;
@@ -890,7 +983,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 }
 
 .pin-lock-submit:hover {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .pin-lock-submit:focus-visible {
@@ -929,8 +1022,8 @@ body.shell {
     gap: 0.25rem;
     padding: 0.5rem 0.5rem 0;
     overflow-x: auto;
-    border-bottom: 1px solid var(--deep-navy);
-    background-color: #eef3f7;
+    border-bottom: 1px solid var(--line);
+    background-color: var(--chrome);
     scrollbar-width: thin;
 }
 
@@ -943,16 +1036,16 @@ body.shell {
     flex: 0 0 auto;
     align-items: stretch;
     max-width: 14rem;
-    border: 1px solid rgba(4, 57, 96, 0.3);
+    border: 1px solid rgba(var(--navy-rgb), 0.3);
     border-bottom: 0;
     border-radius: 6px 6px 0 0;
-    background-color: #dbe5ee;
+    background-color: var(--tab-idle);
 }
 
 .tab.is-active {
-    border-color: var(--deep-navy);
+    border-color: var(--line);
     border-top: 3px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
     /* Covers the bar's bottom rule so the active tab joins its panel */
     margin-bottom: -1px;
 }
@@ -963,7 +1056,7 @@ body.shell {
     padding: 0 0.5rem 0 0.75rem;
     border: 0;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     text-align: left;
@@ -978,14 +1071,14 @@ body.shell {
     width: 36px;
     border: 0;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
 }
 
 .tab-close:hover {
-    background-color: rgba(4, 57, 96, 0.12);
+    background-color: rgba(var(--navy-rgb), 0.12);
 }
 
 /* Pin: muted until pinned, then forest green (and the close button is hidden) */
@@ -998,17 +1091,17 @@ body.shell {
     padding: 0;
     border: 0;
     background: none;
-    color: rgba(4, 57, 96, 0.45);
+    color: rgba(var(--navy-rgb), 0.45);
     cursor: pointer;
 }
 
 .tab-pin:hover {
-    background-color: rgba(4, 57, 96, 0.12);
-    color: var(--deep-navy);
+    background-color: rgba(var(--navy-rgb), 0.12);
+    color: var(--heading);
 }
 
 .tab.is-pinned .tab-pin {
-    color: var(--forest-green);
+    color: var(--green-ink);
 }
 
 .tab-close[hidden] {
@@ -1034,7 +1127,7 @@ body.shell {
     width: 100%;
     height: 100%;
     border: 0;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .tab-frame[hidden] {
@@ -1045,7 +1138,7 @@ body.shell {
     max-width: 30rem;
     margin: 0;
     padding: 2rem 1rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
 }
 
@@ -1070,7 +1163,7 @@ body.shell {
 .emp-info .field-label,
 .emp-info .field select {
     display: block;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -1090,9 +1183,9 @@ body.shell {
     gap: 0.5rem;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 600;
     cursor: pointer;
 }
@@ -1117,9 +1210,9 @@ body.shell {
     width: 100%;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     font: inherit;
     font-size: 1rem;
     font-weight: 400;
@@ -1134,8 +1227,8 @@ body.shell {
 /* Sections for the role that was not picked */
 .emp-info fieldset.role-locked {
     opacity: 0.45;
-    background-color: rgba(4, 57, 96, 0.06);
-    border-bottom-color: rgba(4, 57, 96, 0.3);
+    background-color: rgba(var(--navy-rgb), 0.06);
+    border-bottom-color: rgba(var(--navy-rgb), 0.3);
 }
 
 .emp-info fieldset.role-locked .check,
@@ -1215,7 +1308,7 @@ body.shell {
 }
 
 .mt-stat-yellow .mt-stat-num {
-    color: #8A4B00;
+    color: var(--warn-ink);
 }
 
 .mt-stat {
@@ -1223,33 +1316,33 @@ body.shell {
     flex-direction: column;
     align-items: center;
     padding: 0.75rem 0.25rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
     text-align: center;
 }
 
 .mt-stat-num {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.1;
 }
 
 .mt-stat-label {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
     font-weight: 600;
 }
 
 .mt-warning {
     margin: 0.75rem 0 0;
-    color: #B3261E;
+    color: var(--danger);
     font-weight: 600;
 }
 
 .mt-hint {
     margin: 0.25rem 0 0;
-    color: #8A4B00;
+    color: var(--warn-ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -1264,10 +1357,10 @@ body.shell {
     width: 100%;
     min-width: 0;
     padding: 0.25rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -1278,7 +1371,7 @@ body.shell {
 
 #mt-reasons option:checked {
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 #mt-reasons:focus {
@@ -1290,7 +1383,7 @@ body.shell {
 .mt-message {
     min-height: 1.5rem;
     margin: 0.75rem 0 0;
-    color: var(--forest-green);
+    color: var(--green-ink);
     font-weight: 600;
 }
 
@@ -1312,7 +1405,7 @@ body.shell {
 
 .mt-count {
     margin: 1rem 0 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -1324,16 +1417,16 @@ body.shell {
 
 .mt-entry {
     padding: 0.75rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
-    border-left: 6px solid #B3261E;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--danger);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 /* Yellow tag entries get a soft wash across the whole card, on top of the status border,
    so they're easy to spot while scanning a long list */
 .mt-entry.mt-yellow-tag {
-    background-color: #FFFBEB;
+    background-color: var(--yellow-bg);
 }
 
 .mt-entry.mt-status-notified {
@@ -1341,7 +1434,7 @@ body.shell {
 }
 
 .mt-entry.mt-status-district_notified {
-    border-left-color: var(--deep-navy);
+    border-left-color: var(--line);
 }
 
 .mt-entry.mt-status-resolved {
@@ -1358,13 +1451,13 @@ body.shell {
 
 .mt-entry-address {
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.0625rem;
     overflow-wrap: anywhere;
 }
 
 .mt-entry-date {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -1379,22 +1472,22 @@ body.shell {
 .mt-chip {
     max-width: 100%;
     padding: 0.125rem 0.5rem;
-    border: 1px solid rgba(4, 57, 96, 0.35);
+    border: 1px solid rgba(var(--navy-rgb), 0.35);
     border-radius: 999px;
     overflow-wrap: break-word;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 600;
 }
 
 .mt-chip-reason {
-    background-color: var(--deep-navy);
-    color: var(--white);
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
 }
 
 .mt-chip-repeat {
-    border-color: #8A4B00;
-    color: #8A4B00;
+    border-color: var(--warn-ink);
+    color: var(--warn-ink);
 }
 
 /* Yellow tag: a filled badge (not just an outlined chip) so it stands out at a glance */
@@ -1407,8 +1500,8 @@ body.shell {
 /* Boro / Twp contacted: filled purple flag. Only the badge changes; the card's color still follows its status. */
 .mt-chip-boro {
     border: none;
-    background-color: #5B2C83;
-    color: var(--white);
+    background-color: var(--purple-fill);
+    color: var(--on-accent);
 }
 
 .mt-entry-meta,
@@ -1418,7 +1511,7 @@ body.shell {
 }
 
 .mt-entry-meta {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.9rem;
 }
 
@@ -1443,11 +1536,11 @@ body.shell {
 }
 
 .mt-route-found {
-    color: var(--forest-green);
+    color: var(--green-ink);
 }
 
 .mt-route-none {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 400;
 }
 
@@ -1470,7 +1563,7 @@ body.shell {
 .mt-route-pick.is-selected {
     border-color: var(--forest-green);
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 /* "N misses are missing a route" + Fill from Route Sheets */
@@ -1481,7 +1574,7 @@ body.shell {
     gap: 0.5rem 0.75rem;
     margin-top: 1rem;
     padding: 0.75rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-left: 6px solid var(--sky-blue);
     border-radius: 4px;
     background-color: rgba(86, 157, 214, 0.08);
@@ -1494,7 +1587,7 @@ body.shell {
 .mt-backfill-text {
     flex: 1 1 14rem;
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -1509,7 +1602,7 @@ body.shell {
 /* Added / Resolved times on a missed collection card */
 .mt-entry-stamps {
     margin: 0.5rem 0 0;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
 }
 
@@ -1537,12 +1630,12 @@ body.shell {
     width: 1.5rem;
     height: 1.5rem;
     margin: 0;
-    accent-color: #5B2C83;
+    accent-color: var(--purple-ink);
     cursor: pointer;
 }
 
 .mt-entry-contacted label {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
     cursor: pointer;
 }
@@ -1552,10 +1645,10 @@ body.shell {
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -1564,18 +1657,18 @@ body.shell {
     flex: 1 1 0;
     min-height: 44px;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
 }
 
 .mt-btn-danger {
-    border-color: #B3261E;
-    color: #B3261E;
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .mt-btn:hover,
@@ -1608,13 +1701,13 @@ body.shell {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
-    background-color: var(--white);
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
 }
 
 .mt-dialog-head h2 {
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
 }
 
@@ -1625,14 +1718,14 @@ body.shell {
     border: 0;
     border-radius: 4px;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.75rem;
     line-height: 1;
     cursor: pointer;
 }
 
 .mt-dialog-close:hover {
-    background-color: rgba(4, 57, 96, 0.08);
+    background-color: rgba(var(--navy-rgb), 0.08);
 }
 
 .mt-dialog-close:focus-visible {
@@ -1669,8 +1762,8 @@ body.shell {
     bottom: 0;
     margin: 0;
     padding: 0.75rem 1rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
-    background-color: var(--white);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
 }
 
 @media (min-width: 48em) {
@@ -1763,11 +1856,11 @@ body.shell {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
 }
 
 .nc-entry.nc-stage-pending {
-    background-color: #FFF3E6;
+    background-color: var(--pending-bg);
     border-left: 6px solid #E07A1F;
 }
 
@@ -1790,7 +1883,7 @@ body.shell {
     align-items: center;
     gap: 0.5rem;
     min-height: 40px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
     cursor: pointer;
 }
@@ -1810,7 +1903,7 @@ body.shell {
 }
 
 .nc-notes-label {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1822,10 +1915,10 @@ body.shell {
     min-width: 0;
     height: 4.5rem;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 0.9rem;
     resize: none;
@@ -1840,14 +1933,14 @@ body.shell {
 .nc-established {
     margin-top: 1rem;
     padding-top: 0.75rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .nc-established summary {
     display: flex;
     align-items: center;
     min-height: 44px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1891,7 +1984,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .rca-evidence-list {
@@ -1902,9 +1995,9 @@ body.shell {
 
 .rca-evidence-item {
     padding: 0.5rem 0.625rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-radius: 4px;
-    background-color: rgba(4, 57, 96, 0.04);
+    background-color: rgba(var(--navy-rgb), 0.04);
 }
 
 .rca-evidence-head {
@@ -1915,20 +2008,20 @@ body.shell {
 }
 
 .rca-evidence-date {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     font-size: 0.875rem;
 }
 
 .rca-evidence-source {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
     font-style: italic;
 }
 
 .rca-evidence-desc {
     margin: 0.375rem 0 0;
-    color: var(--drk-gray);
+    color: var(--ink);
     white-space: pre-wrap;
 }
 
@@ -1943,7 +2036,7 @@ body.shell {
     display: block;
     max-width: 100%;
     max-height: 8rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-radius: 4px;
 }
 
@@ -1958,7 +2051,7 @@ body.shell {
     min-height: 36px;
     padding: 0 0.75rem;
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     font: inherit;
     font-size: 0.8rem;
     font-weight: 600;
@@ -1966,20 +2059,20 @@ body.shell {
 }
 
 .rca-evidence-edit-btn {
-    border: 1px solid var(--deep-navy);
-    color: var(--deep-navy);
+    border: 1px solid var(--line);
+    color: var(--heading);
 }
 
 .rca-evidence-edit-btn:hover,
 .rca-evidence-edit-btn:focus-visible {
-    background-color: rgba(4, 57, 96, 0.08);
+    background-color: rgba(var(--navy-rgb), 0.08);
     outline: 3px solid var(--sky-blue);
     outline-offset: 2px;
 }
 
 .rca-evidence-remove {
-    border: 1px solid #B3261E;
-    color: #B3261E;
+    border: 1px solid var(--danger);
+    color: var(--danger);
 }
 
 .rca-evidence-remove:hover,
@@ -1999,7 +2092,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.625rem;
-    border: 1px dashed rgba(4, 57, 96, 0.3);
+    border: 1px dashed rgba(var(--navy-rgb), 0.3);
     border-radius: 4px;
 }
 
@@ -2009,10 +2102,10 @@ body.shell {
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 0.9rem;
 }
@@ -2028,7 +2121,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.625rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-radius: 4px;
 }
 
@@ -2039,7 +2132,7 @@ body.shell {
 }
 
 .rca-evidence-category-name {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -2050,8 +2143,8 @@ body.shell {
     min-width: 1.5rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background-color: rgba(4, 57, 96, 0.08);
-    color: var(--deep-navy);
+    background-color: rgba(var(--navy-rgb), 0.08);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 700;
     text-align: center;
@@ -2064,7 +2157,7 @@ body.shell {
    "unresolved" on Missed Collections and would be a misleading alarm color here) split between
    the main list (upcoming) and the Completed Pickups disclosure once the date has passed. */
 .bp-entry {
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
 }
 
 
@@ -2079,9 +2172,9 @@ body.shell {
 }
 
 .sv-day {
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .sv-day.sv-today {
@@ -2095,7 +2188,7 @@ body.shell {
     gap: 0.25rem 0.5rem;
     min-height: 48px;
     padding: 0.5rem 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     cursor: pointer;
 }
 
@@ -2109,24 +2202,24 @@ body.shell {
 .sv-chip-today {
     border: none;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .sv-day-date {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
 
 .sv-chip-moved {
     border: none;
-    background-color: #5B2C83;
-    color: var(--white);
+    background-color: var(--purple-fill);
+    color: var(--on-accent);
 }
 
 .sv-day-count {
     margin-left: auto;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -2139,18 +2232,18 @@ body.shell {
 }
 
 .sv-entry {
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
 }
 
 .sv-entry.sv-done {
     border-left: 6px solid var(--forest-green);
-    background-color: #E8F5EC;
+    background-color: var(--good-bg);
 }
 
 .mt-chip-done {
     border: none;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .sv-check input {
@@ -2181,8 +2274,8 @@ body.shell {
 .sv-log-date {
     margin: 0;
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
-    color: var(--deep-navy);
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
+    color: var(--heading);
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -2193,11 +2286,11 @@ body.shell {
     padding: 0.5rem 0.75rem;
     border-left: 4px solid var(--forest-green);
     border-radius: 4px;
-    background-color: rgba(4, 102, 53, 0.05);
+    background-color: rgba(var(--green-rgb), 0.05);
 }
 
 .sv-log-address {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     overflow-wrap: anywhere;
 }
@@ -2205,9 +2298,9 @@ body.shell {
 /* This Week's Schedule: closed by default; the summary says whether any route was moved */
 .sv-schedule {
     margin-bottom: 1rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-radius: 4px;
-    background-color: rgba(4, 57, 96, 0.03);
+    background-color: rgba(var(--navy-rgb), 0.03);
 }
 
 .sv-schedule summary {
@@ -2217,7 +2310,7 @@ body.shell {
     gap: 0.25rem 0.75rem;
     min-height: 48px;
     padding: 0.5rem 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     cursor: pointer;
 }
 
@@ -2228,13 +2321,13 @@ body.shell {
 }
 
 .sv-schedule-status {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
 
 .sv-schedule-status.sv-schedule-changed {
-    color: #5B2C83;
+    color: var(--purple-ink);
 }
 
 .sv-schedule-body {
@@ -2243,7 +2336,7 @@ body.shell {
 
 .sv-schedule-help {
     margin: 0 0 0.75rem;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .sv-schedule-grid {
@@ -2258,7 +2351,7 @@ body.shell {
 }
 
 .emp-info .sv-schedule-field.sv-moved select {
-    border: 2px solid #5B2C83;
+    border: 2px solid var(--purple-ink);
 }
 
 .sv-schedule-actions {
@@ -2281,16 +2374,16 @@ body.shell {
 /* Delete confirmation (TrackerDialog.confirmDelete): the confirm button is red, not green */
 .mt-confirm h2 {
     margin: 0 0 0.5rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
 }
 
 .mt-confirm .mt-confirm-delete {
-    background-color: #B3261E;
+    background-color: var(--danger-fill);
 }
 
 .mt-confirm .mt-confirm-delete:hover {
-    background-color: #8C1D17;
+    background-color: var(--danger-fill-hover);
 }
 
 .mt-confirm .mt-confirm-delete:disabled {
@@ -2299,7 +2392,7 @@ body.shell {
 }
 
 .mt-confirm .mt-confirm-delete:disabled:hover {
-    background-color: #B3261E;
+    background-color: var(--danger-fill);
 }
 
 /* Extra tick-to-confirm step (requireCheck), for lists where a mistaken delete is costly */
@@ -2310,10 +2403,10 @@ body.shell {
     min-height: 44px;
     margin-bottom: 0.25rem;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #B3261E;
+    border: 1px solid var(--danger);
     border-radius: 4px;
-    background-color: #FDF1F0;
-    color: var(--deep-navy);
+    background-color: var(--danger-bg);
+    color: var(--heading);
     font-weight: 600;
     cursor: pointer;
 }
@@ -2327,7 +2420,7 @@ body.shell {
     width: 1.5rem;
     height: 1.5rem;
     margin: 0;
-    accent-color: #B3261E;
+    accent-color: var(--danger);
     cursor: pointer;
 }
 
@@ -2349,12 +2442,12 @@ body.shell {
     border: 0;
     border-radius: 4px;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     cursor: pointer;
 }
 
 .rc-open:hover {
-    background-color: rgba(4, 57, 96, 0.08);
+    background-color: rgba(var(--navy-rgb), 0.08);
 }
 
 .rc-open:focus-visible {
@@ -2371,10 +2464,10 @@ body.shell {
     justify-content: center;
     width: 20px;
     height: 20px;
-    border: 2px solid var(--white);
+    border: 2px solid var(--surface);
     border-radius: 50%;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font-size: 0.75rem;
     line-height: 1;
 }
@@ -2394,7 +2487,7 @@ body.shell {
 .rc-area-label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -2409,10 +2502,10 @@ body.shell {
     min-width: 0;
     min-height: 48px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 6px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-size: 1rem;
     font-weight: 700;
@@ -2427,7 +2520,7 @@ body.shell {
     border: 1px solid var(--forest-green);
     border-radius: 6px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1.75rem;
     font-weight: 700;
@@ -2444,7 +2537,7 @@ body.shell {
 .rc-add-area label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -2464,7 +2557,7 @@ body.shell {
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
     font: inherit;
     font-size: 1rem;
@@ -2485,15 +2578,15 @@ body.shell {
     flex-direction: column;
     gap: 0.125rem;
     padding: 0.75rem;
-    border-left: 6px solid rgba(4, 57, 96, 0.35);
+    border-left: 6px solid rgba(var(--navy-rgb), 0.35);
     border-radius: 4px;
-    background-color: rgba(4, 57, 96, 0.05);
-    color: var(--deep-navy);
+    background-color: rgba(var(--navy-rgb), 0.05);
+    color: var(--heading);
 }
 
 .rc-status.is-recycle {
     border-left-color: var(--forest-green);
-    background-color: #E8F5EC;
+    background-color: var(--good-bg);
 }
 
 .rc-status strong {
@@ -2501,7 +2594,7 @@ body.shell {
 }
 
 .rc-status span {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
 }
 
@@ -2522,7 +2615,7 @@ body.shell {
 .rc-month {
     flex: 1 1 auto;
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     text-align: center;
 }
@@ -2536,7 +2629,7 @@ body.shell {
 
 .rc-grid th {
     padding-bottom: 0.25rem;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
     font-weight: 700;
 }
@@ -2545,11 +2638,11 @@ body.shell {
     position: relative;
     height: 44px;
     text-align: center;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .rc-day.is-other-month {
-    color: rgba(26, 26, 26, 0.4);
+    color: rgba(var(--ink-rgb), 0.4);
 }
 
 .rc-day-num {
@@ -2562,18 +2655,18 @@ body.shell {
 }
 
 .rc-day.is-today .rc-day-num {
-    border: 2px solid var(--deep-navy);
+    border: 2px solid var(--line);
     font-weight: 700;
 }
 
 .rc-day.is-recycle {
-    background-color: #E8F5EC;
-    color: var(--forest-green);
+    background-color: var(--good-bg);
+    color: var(--green-ink);
     font-weight: 700;
 }
 
 .rc-day.is-recycle.is-other-month {
-    color: rgba(4, 102, 53, 0.55);
+    color: rgba(var(--green-rgb), 0.55);
 }
 
 .rc-day.run-start {
@@ -2589,7 +2682,7 @@ body.shell {
 /* First tap of a range, waiting for the last day */
 .rc-day.is-range-start .rc-day-num {
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .rc-week-icon {
@@ -2621,7 +2714,7 @@ body.shell {
 
 .rc-hint {
     margin: 0;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .rc-remove-area {
@@ -2664,7 +2757,7 @@ body.shell {
     margin: 0;
     padding: 0;
     border: 0;
-    background-color: #E6E9ED;
+    background-color: var(--viewer-bg);
 }
 
 .pdf-viewer[open] {
@@ -2683,7 +2776,7 @@ body.shell {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-bottom: 4px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .pdf-viewer-title {
@@ -2691,7 +2784,7 @@ body.shell {
     min-width: 0;
     margin: 0;
     overflow: hidden;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1rem;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2708,10 +2801,10 @@ body.shell {
     width: 44px;
     height: 44px;
     padding: 0;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-size: 1.375rem;
     font-weight: 700;
@@ -2731,8 +2824,8 @@ body.shell {
     padding: 0.5rem 1rem;
     border: 0;
     border-radius: 4px;
-    background-color: var(--deep-navy);
-    color: var(--white);
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1rem;
     font-weight: 700;
@@ -2747,7 +2840,7 @@ body.shell {
     border: 0;
     border-radius: 4px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1rem;
     font-weight: 700;
@@ -2778,14 +2871,14 @@ body.shell {
     flex: none;
     margin: 0 auto;
     max-width: none;
-    background-color: var(--white);
+    background-color: var(--surface);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 .pdf-viewer-status {
     align-self: stretch;
     margin: 2rem 1rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
     text-align: center;
 }
@@ -2817,10 +2910,10 @@ body.shell {
 }
 
 .sp-item {
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-left: 6px solid var(--forest-green);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 /* The whole top of the card opens the PDF */
@@ -2849,13 +2942,13 @@ body.shell {
 }
 
 .sp-name {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     overflow-wrap: anywhere;
 }
 
 .sp-meta {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
 }
 
@@ -2880,7 +2973,7 @@ body.shell {
 /* Reuses the tracker card and dialog classes. Plain cards (no status color); the street list
    is one column on phones and flows into columns on wider screens. */
 .rs-entry {
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
 }
 
 .rs-streets {
@@ -2891,7 +2984,7 @@ body.shell {
 
 .rs-streets li {
     padding: 0.375rem 0.5rem;
-    border-bottom: 1px solid rgba(4, 57, 96, 0.08);
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
     break-inside: avoid;
     overflow-wrap: anywhere;
 }
@@ -2900,7 +2993,7 @@ body.shell {
 .rs-matches li {
     border-bottom: 0;
     border-left: 4px solid var(--forest-green);
-    background-color: #E8F5EC;
+    background-color: var(--good-bg);
     font-weight: 700;
 }
 
@@ -2911,7 +3004,7 @@ body.shell {
 .rs-entry mark {
     padding: 0 0.125rem;
     border-radius: 2px;
-    background-color: #FFE58A;
+    background-color: var(--mark-bg);
     color: inherit;
 }
 
@@ -2923,7 +3016,7 @@ body.shell {
     display: flex;
     align-items: center;
     min-height: 44px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     cursor: pointer;
 }
@@ -2969,7 +3062,26 @@ body.shell {
     --kpi-axis: #c3c2b7;
     --kpi-good: #006300;
     --kpi-bad: #b3261e;
-    background-color: #f4f6f8;
+    background-color: var(--surface-2);
+}
+
+/* Dashboard chart tokens for dark (the series blue passes the palette checks on the dark card) */
+:root[data-theme="dark"] .kpi-page {
+    --kpi-series: #3987e5;
+    --kpi-surface: #18232f;
+    --kpi-ink: #e3e9ef;
+    --kpi-ink-2: #b8c3cf;
+    --kpi-muted: #94a1af;
+    --kpi-grid: #2a3846;
+    --kpi-axis: #3b4b5c;
+    --kpi-good: #5fd38d;
+    --kpi-bad: #ff8a80;
+}
+
+/* The tooltip is a dark chip in light mode; in dark mode it flips to a light chip */
+:root[data-theme="dark"] .kpi-tooltip {
+    background-color: #e3e9ef;
+    color: #0f1720;
 }
 
 .kpi-wrap {
@@ -2989,10 +3101,10 @@ body.shell {
 .kpi-range {
     display: flex;
     flex: 1 1 auto;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 6px;
     overflow: hidden;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .kpi-range-btn {
@@ -3001,7 +3113,7 @@ body.shell {
     padding: 0 0.5rem;
     border: 0;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font: inherit;
     font-weight: 700;
     white-space: nowrap;
@@ -3009,12 +3121,12 @@ body.shell {
 }
 
 .kpi-range-btn + .kpi-range-btn {
-    border-left: 1px solid var(--deep-navy);
+    border-left: 1px solid var(--line);
 }
 
 .kpi-range-btn.is-selected {
-    background-color: var(--deep-navy);
-    color: var(--white);
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
 }
 
 .kpi-range-btn:focus-visible,
@@ -3035,9 +3147,9 @@ body.shell {
 
 .kpi-customize {
     padding: 0.75rem 1rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-radius: 6px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .kpi-customize[hidden] {
@@ -3046,7 +3158,7 @@ body.shell {
 
 .kpi-customize-title {
     margin: 0 0 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
 }
 
@@ -3063,7 +3175,7 @@ body.shell {
 .kpi-card {
     min-width: 0;
     padding: 1rem;
-    border: 1px solid rgba(4, 57, 96, 0.12);
+    border: 1px solid rgba(var(--navy-rgb), 0.12);
     border-radius: 8px;
     background-color: var(--kpi-surface);
 }
@@ -3074,7 +3186,7 @@ body.shell {
 
 .kpi-card-title {
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.0625rem;
 }
 
@@ -3105,7 +3217,7 @@ body.shell {
     min-width: 0;
     padding: 0.625rem 0.75rem;
     border-radius: 6px;
-    background-color: #f4f6f8;
+    background-color: var(--surface-2);
 }
 
 .kpi-tile-label {
@@ -3236,7 +3348,7 @@ body.shell {
     display: flex;
     align-items: center;
     min-height: 44px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     cursor: pointer;
 }
@@ -3276,7 +3388,7 @@ body.shell {
     padding: 0.375rem 0.625rem;
     border-radius: 6px;
     background-color: var(--kpi-ink);
-    color: var(--white);
+    color: var(--on-accent);
     font-size: 0.8125rem;
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -3322,7 +3434,7 @@ body.shell {
 /* ---------- Route Sheets: import from Excel ---------- */
 .rs-group-title {
     margin: 0.75rem 0 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -3342,7 +3454,7 @@ body.shell {
 
 .rs-import-help {
     margin: 0;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 400;
 }
 
@@ -3358,20 +3470,20 @@ body.shell {
 
 .rs-import-item {
     padding: 0.625rem 0.75rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-left: 6px solid var(--forest-green);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .rs-import-item.is-error {
-    border-left-color: #B3261E;
-    background-color: #FDF1F0;
+    border-left-color: var(--danger);
+    background-color: var(--danger-bg);
 }
 
 .rs-import-route {
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     overflow-wrap: anywhere;
 }
@@ -3384,20 +3496,20 @@ body.shell {
 }
 
 .rs-import-file {
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .rs-import-note {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 600;
 }
 
 .rs-import-note.is-error {
-    color: #B3261E;
+    color: var(--danger);
 }
 
 .rs-import-note.is-warn {
-    color: #8A4B00;
+    color: var(--warn-ink);
 }
 
 .rs-import-chip {
@@ -3408,12 +3520,12 @@ body.shell {
 .rs-import-chip.is-new {
     border: none;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .rs-import-chip.is-replace {
-    border-color: #8A4B00;
-    color: #8A4B00;
+    border-color: var(--warn-ink);
+    color: var(--warn-ink);
 }
 
 @media (min-width: 48em) {
@@ -3423,5 +3535,118 @@ body.shell {
 
     .rs-import-body {
         padding: 1.25rem 1.5rem;
+    }
+}
+
+
+/* ---------- Settings (header gear + dialog, settings.js) ---------- */
+.settings-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+/* The gear takes the push to the right; the calendar sits beside it */
+.settings-open + .rc-open {
+    margin-left: 0;
+}
+
+.settings-open:hover {
+    background-color: rgba(var(--navy-rgb), 0.08);
+}
+
+.settings-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.settings-group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.settings-group legend {
+    padding: 0;
+    margin-bottom: 0.5rem;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.settings-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Each choice is a whole tappable row */
+.settings-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0.75rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.25);
+    border-radius: 6px;
+    background-color: var(--surface);
+    cursor: pointer;
+}
+
+.settings-option:has(input:checked) {
+    border: 2px solid var(--forest-green);
+    background-color: var(--good-bg);
+}
+
+.settings-option input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+    accent-color: var(--forest-green);
+}
+
+.settings-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.settings-option-title {
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.settings-option-hint {
+    color: var(--ink);
+    font-size: 0.875rem;
+}
+
+.settings-now {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+@media (min-width: 48em) {
+    .settings-dialog {
+        max-width: 30rem;
     }
 }
