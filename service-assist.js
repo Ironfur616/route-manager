@@ -486,6 +486,7 @@
             logEl.appendChild(group);
         });
 
+        document.getElementById("sv-log-total").textContent = log.length;
         logCountEl.textContent = log.length
             ? log.length + " completed service" + (log.length === 1 ? "" : "s") + " logged."
             : "Nothing logged yet. Completed customers are logged here the day after they're checked off.";

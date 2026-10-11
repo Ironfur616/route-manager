@@ -3650,3 +3650,10 @@ body.shell {
         max-width: 30rem;
     }
 }
+
+/* The Service Log sits closed under its heading; the summary shows the entry count */
+.sv-log-toggle {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}

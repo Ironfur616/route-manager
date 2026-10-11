@@ -63,11 +63,15 @@
         <div class="emp-info">
             <fieldset>
                 <legend>SERVICE LOG</legend>
-                <p class="mt-count" id="sv-log-count" aria-live="polite"></p>
-                <div class="sv-log" id="sv-log"></div>
-                <div class="form-actions">
-                    <button type="button" class="send-email" id="sv-export">Export Log CSV</button>
-                </div>
+                <!-- Closed each time the page opens; tap to look back through the log -->
+                <details class="nc-established sv-log-toggle" id="sv-log-toggle">
+                    <summary>Show service log (<span id="sv-log-total">0</span>)</summary>
+                    <p class="mt-count" id="sv-log-count" aria-live="polite"></p>
+                    <div class="sv-log" id="sv-log"></div>
+                    <div class="form-actions">
+                        <button type="button" class="send-email" id="sv-export">Export Log CSV</button>
+                    </div>
+                </details>
             </fieldset>
         </div>
     </section>
