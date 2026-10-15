@@ -3657,3 +3657,55 @@ body.shell {
     padding-top: 0;
     border-top: 0;
 }
+
+/* Handicap & Elderly cards: Edit / Delete as icons beside the address */
+.sv-entry-head {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+}
+
+.sv-entry-head .mt-entry-address {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 0.5rem;
+}
+
+.sv-entry-tools {
+    display: flex;
+    flex: none;
+    gap: 0.25rem;
+    margin: -0.25rem -0.25rem 0 0;
+}
+
+.sv-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+.sv-icon-btn:hover {
+    border-color: rgba(var(--navy-rgb), 0.3);
+    background-color: rgba(var(--navy-rgb), 0.06);
+}
+
+.sv-icon-btn.sv-icon-danger {
+    color: var(--danger);
+}
+
+.sv-icon-btn.sv-icon-danger:hover {
+    border-color: var(--danger);
+    background-color: var(--danger-bg);
+}
+
+.sv-icon-btn:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 1px;
+}

@@ -362,8 +362,13 @@
         var done = isDone(c);
         var card = el("article", "mt-entry sv-entry" + (done ? " sv-done" : ""));
 
-        var head = el("div", "mt-entry-head");
+        var head = el("div", "mt-entry-head sv-entry-head");
         head.appendChild(el("h3", "mt-entry-address", c.address));
+        // Edit and Delete as icons in the top-right corner, to keep each card compact
+        var tools = el("div", "sv-entry-tools");
+        tools.appendChild(iconButton("sv-icon-btn", EDIT_ICON, "Edit " + c.address, function () { startEdit(c.id); }));
+        tools.appendChild(iconButton("sv-icon-btn sv-icon-danger", DELETE_ICON, "Delete " + c.address, function () { remove(c.id); }));
+        head.appendChild(tools);
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -390,20 +395,22 @@
         check.appendChild(label);
         card.appendChild(check);
 
-        var actions = el("div", "mt-entry-actions");
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + c.address);
-        edit.addEventListener("click", function () { startEdit(c.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + c.address);
-        del.addEventListener("click", function () { remove(c.id); });
-        actions.appendChild(edit);
-        actions.appendChild(del);
-        card.appendChild(actions);
-
         return card;
+    }
+
+    var EDIT_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+        '<path d="M4 20h4L19 9l-4-4L4 16z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+    var DELETE_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+        '<path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function iconButton(className, svg, label, onClick) {
+        var b = el("button", className);
+        b.type = "button";
+        b.innerHTML = svg;
+        b.setAttribute("aria-label", label);
+        b.title = label.split(" ")[0];
+        b.addEventListener("click", onClick);
+        return b;
     }
 
     function renderDays(list) {
