@@ -17,6 +17,10 @@
    column G the city, from row 2 down. A preview comes first; re-importing a route replaces its
    list, driver and area but keeps its service day and notes.
 
+   Pull from County (county-pull.js) builds a route's house list from the county's address
+   points; the card shows how many houses are ticked. Imports also keep each whole spreadsheet
+   for it, so the house spreadsheet it writes keeps every column.
+
    Each route record has room for a mapUrl, for the custom route maps planned later. */
 (function () {
     "use strict";
@@ -205,7 +209,8 @@
             area.appendChild(highlighted(r.area, term));
             chips.appendChild(area);
         }
-        if (chips.childNodes.length) card.appendChild(chips);
+        if (r.county) chips.appendChild(el("span", "mt-chip mt-chip-houses", housesText(r.county)));
+        card.appendChild(chips);
 
         if (r.notes) card.appendChild(el("p", "mt-entry-notes", r.notes));
 
@@ -250,9 +255,36 @@
         print.setAttribute("aria-label", "Print route " + r.route);
         print.addEventListener("click", function () { printRoutes([r], print); });
         actions.appendChild(print);
+        if (window.CountyPull && (r.streets || []).length) {
+            var county = el("button", "mt-btn", r.county ? "County Houses" : "Pull from County");
+            county.type = "button";
+            county.setAttribute("aria-label", (r.county ? "County houses for route " : "Pull houses from the county for route ") + r.route);
+            county.addEventListener("click", function () { CountyPull.open(r, function (sum) { countySummary(r.id, sum, chips, county); }); });
+            actions.appendChild(county);
+        }
         card.appendChild(actions);
 
         return card;
+    }
+
+    function housesText(sum) {
+        return sum.kept + " house" + (sum.kept === 1 ? "" : "s") + " from county";
+    }
+
+    // The house list itself lives in county-pull.js's storage; the card keeps just the count
+    function countySummary(id, sum, chips, button) {
+        var list = load();
+        var r = list.filter(function (e) { return e.id === id; })[0];
+        if (!r) return;
+        r.county = sum;
+        save(list);
+        var chip = chips.querySelector(".mt-chip-houses");
+        if (!chip) {
+            chip = el("span", "mt-chip mt-chip-houses");
+            chips.appendChild(chip);
+        }
+        chip.textContent = housesText(sum);
+        button.textContent = "County Houses";
     }
 
     function matches(r, term) {
@@ -689,18 +721,20 @@
 
     // "MS-52-1 Bill Vaughn.xlsx" -> { route: "MS-52-1", driver: "Bill Vaughn" }
     function nameParts(fileName) {
-        var base = String(fileName).replace(/\.xlsx$/i, "").replace(/\s+/g, " ").trim();
+        // "(houses)" is what Pull from County adds to the spreadsheets it writes
+        var base = String(fileName).replace(/\.xlsx$/i, "").replace(/\(houses\)\s*$/i, "").replace(/\s+/g, " ").trim();
         var m = /^(\S+)\s+(.+)$/.exec(base);
         return m ? { route: m[1], driver: m[2] } : { route: base, driver: "" };
     }
 
     function readFile(XLSX, file) {
         var parts = nameParts(file.name);
-        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], cities: {}, area: "", error: "" };
+        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], cities: {}, area: "", rows: null, error: "" };
         return file.arrayBuffer().then(function (buf) {
             var wb = XLSX.read(new Uint8Array(buf), { type: "array" });
             var sheet = wb.Sheets[wb.SheetNames[0]];
             var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+            result.rows = rows;
             var seen = {};
             var cities = {};
             rows.slice(1).forEach(function (row) {
@@ -807,6 +841,12 @@
         if (!save(list)) {
             importStatus.textContent = "Could not save. Storage is unavailable in this browser.";
             return;
+        }
+        // The whole sheet is kept too, so Pull from County's spreadsheet carries every column through
+        if (window.CountyPull) {
+            pendingImport.filter(function (i) { return !i.error && i.rows; }).forEach(function (item) {
+                CountyPull.saveSheet(item.route, { fileName: item.fileName, rows: item.rows }).catch(function () {});
+            });
         }
         render();
         importDialog.close();

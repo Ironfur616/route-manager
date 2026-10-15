@@ -3496,6 +3496,156 @@ body.shell {
     }
 }
 
+/* ---------- County Houses (Pull from County, county-pull.js) ---------- */
+
+.rs-entry .mt-chips:empty {
+    display: none;
+}
+
+.mt-chip-houses {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.cp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.cp-status,
+.cp-sheet-note,
+.cp-source {
+    margin: 0;
+}
+
+.cp-sheet-note {
+    color: var(--warn-ink);
+}
+
+.cp-source {
+    font-size: 0.75rem;
+}
+
+.cp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cp-line {
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--surface);
+}
+
+.cp-line.is-error {
+    border-left-color: var(--danger);
+}
+
+.cp-line summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    min-height: 44px;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+}
+
+.cp-line-name {
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.cp-line-meta {
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.cp-line-note {
+    margin: 0;
+    padding: 0 0.75rem 0.5rem;
+    color: var(--ink);
+    font-size: 0.8125rem;
+}
+
+.cp-line-note.is-error {
+    color: var(--danger);
+}
+
+.cp-houses {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid rgba(var(--navy-rgb), 0.12);
+}
+
+.cp-house label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
+    cursor: pointer;
+}
+
+.cp-house input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+}
+
+.cp-house-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cp-house-addr {
+    color: var(--ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.cp-house-where {
+    color: var(--ink);
+    font-size: 0.8125rem;
+}
+
+.cp-house-why {
+    color: var(--warn-ink);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.cp-house.is-off .cp-house-addr {
+    color: rgba(var(--ink-rgb), 0.6);
+    text-decoration: line-through;
+}
+
+.cp-flip {
+    margin: 0.5rem 0.75rem 0.75rem;
+}
+
+@media (min-width: 48em) {
+    .cp-dialog {
+        max-width: 44rem;
+    }
+
+    .cp-body {
+        padding: 1.25rem 1.5rem;
+    }
+}
+
 
 /* ---------- Settings (header gear + dialog, settings.js) ---------- */
 .settings-open {
