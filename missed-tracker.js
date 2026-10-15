@@ -298,9 +298,14 @@
         var isYellow = hasYellowTag(e);
         var card = el("article", "mt-entry mt-status-" + e.status + (isYellow ? " mt-yellow-tag" : ""));
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", e.address));
-        head.appendChild(el("span", "mt-entry-date", prettyDate(e.date)));
+        var head = el("div", "mt-entry-head entry-head");
+        // Date under the address, so the address keeps the full width beside the icons
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", e.address));
+        title.appendChild(el("span", "mt-entry-date", prettyDate(e.date)));
+        head.appendChild(title);
+        // Edit and Delete as icons in the top-right corner, to keep each card compact
+        head.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -350,18 +355,8 @@
         fillSelect(status, STATUSES);
         status.value = e.status;
         status.addEventListener("change", function () { setStatus(e.id, status.value); });
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + e.address);
-        edit.addEventListener("click", function () { startEdit(e.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + e.address);
-        del.addEventListener("click", function () { remove(e.id); });
         actions.appendChild(contacted);
         actions.appendChild(status);
-        actions.appendChild(edit);
-        actions.appendChild(del);
         card.appendChild(actions);
 
         return card;

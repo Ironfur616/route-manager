@@ -3658,26 +3658,33 @@ body.shell {
     border-top: 0;
 }
 
-/* Handicap & Elderly cards: Edit / Delete as icons beside the address */
-.sv-entry-head {
+/* Cards with Edit / Delete as icons in the top-right corner (TrackerDialog.entryTools):
+   the address takes the room it needs and wraps beside them */
+.entry-head {
     flex-wrap: nowrap;
     align-items: flex-start;
 }
 
-.sv-entry-head .mt-entry-address {
+.entry-head > .mt-entry-address,
+.entry-head > .entry-title {
     flex: 1 1 auto;
     min-width: 0;
     padding-top: 0.5rem;
 }
 
-.sv-entry-tools {
+.entry-title .mt-entry-date {
+    display: block;
+    margin-top: 0.125rem;
+}
+
+.entry-tools {
     display: flex;
     flex: none;
     gap: 0.25rem;
     margin: -0.25rem -0.25rem 0 0;
 }
 
-.sv-icon-btn {
+.entry-icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3691,21 +3698,32 @@ body.shell {
     cursor: pointer;
 }
 
-.sv-icon-btn:hover {
+.entry-icon-btn:hover {
     border-color: rgba(var(--navy-rgb), 0.3);
     background-color: rgba(var(--navy-rgb), 0.06);
 }
 
-.sv-icon-btn.sv-icon-danger {
+.entry-icon-btn.entry-icon-danger {
     color: var(--danger);
 }
 
-.sv-icon-btn.sv-icon-danger:hover {
+.entry-icon-btn.entry-icon-danger:hover {
     border-color: var(--danger);
     background-color: var(--danger-bg);
 }
 
-.sv-icon-btn:focus-visible {
+.entry-icon-btn:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: 1px;
+}
+
+/* Tablet: Contacted Boro / Twp and the status dropdown share one row */
+@media (min-width: 48em) {
+    .mt-entry-actions .mt-entry-contacted {
+        flex: 1 1 auto;
+    }
+
+    .mt-entry-actions .mt-entry-status {
+        flex: 0 1 18rem;
+    }
 }

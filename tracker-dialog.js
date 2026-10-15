@@ -144,6 +144,36 @@
         });
     }
 
+    /* Edit / Delete as icon buttons for the top-right corner of a card, so cards don't need a
+       row of buttons at the bottom. name is what the card is (an address), for screen readers.
+
+         head.appendChild(TrackerDialog.entryTools("4 Hill St", onEdit, onDelete));
+    */
+    var EDIT_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+        '<path d="M4 20h4L19 9l-4-4L4 16z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+    var DELETE_ICON = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' +
+        '<path d="M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function iconButton(className, svg, label, title, onClick) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = className;
+        b.innerHTML = svg;
+        b.setAttribute("aria-label", label);
+        b.title = title;
+        b.addEventListener("click", onClick);
+        return b;
+    }
+
+    window.TrackerDialog.entryTools = function (name, onEdit, onDelete) {
+        var tools = document.createElement("div");
+        tools.className = "entry-tools";
+        tools.appendChild(iconButton("entry-icon-btn", EDIT_ICON, "Edit " + name, "Edit", onEdit));
+        tools.appendChild(iconButton("entry-icon-btn entry-icon-danger", DELETE_ICON, "Delete " + name, "Delete", onDelete));
+        return tools;
+    };
+
     window.TrackerDialog.confirmDelete = function (options, callback) {
         if (!confirmEl) buildConfirm();
         confirmEl.querySelector("#mt-confirm-title").textContent = options.title || "Delete?";
