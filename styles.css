@@ -2040,48 +2040,6 @@ body.shell {
     border-radius: 4px;
 }
 
-.rca-evidence-item-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.rca-evidence-edit-btn,
-.rca-evidence-remove {
-    min-height: 36px;
-    padding: 0 0.75rem;
-    border-radius: 4px;
-    background-color: var(--surface);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.rca-evidence-edit-btn {
-    border: 1px solid var(--line);
-    color: var(--heading);
-}
-
-.rca-evidence-edit-btn:hover,
-.rca-evidence-edit-btn:focus-visible {
-    background-color: rgba(var(--navy-rgb), 0.08);
-    outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
-}
-
-.rca-evidence-remove {
-    border: 1px solid var(--danger);
-    color: var(--danger);
-}
-
-.rca-evidence-remove:hover,
-.rca-evidence-remove:focus-visible {
-    background-color: rgba(179, 38, 30, 0.08);
-    outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
-}
-
 .rca-evidence-edit-actions {
     display: flex;
     gap: 0.5rem;
@@ -3726,4 +3684,28 @@ body.shell {
     .mt-entry-actions .mt-entry-status {
         flex: 0 1 18rem;
     }
+}
+
+/* RCA evidence entries: date and source on the left, Edit / Remove icons on the right */
+.rca-evidence-when {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    padding-top: 0.625rem;
+    text-align: left;
+}
+
+/* Saved PDFs: the file opens from the left; the trash icon sits on the right */
+.sp-top {
+    display: flex;
+    align-items: flex-start;
+}
+
+.sp-top .sp-open {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sp-top .entry-tools {
+    margin: 0.375rem 0.375rem 0 0;
 }

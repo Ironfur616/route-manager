@@ -95,12 +95,16 @@
             rows.forEach(function (row) {
                 var item = el("article", "sp-item");
 
+                var top = el("div", "sp-top");
                 var openRow = el("button", "sp-open");
                 openRow.type = "button";
                 openRow.appendChild(el("span", "sp-name", row.name));
                 openRow.appendChild(el("span", "sp-meta", prettyStamp(row.created) + " · " + prettySize(row.size)));
                 openRow.addEventListener("click", function () { view(row.id); });
-                item.appendChild(openRow);
+                top.appendChild(openRow);
+                // Delete as a trash icon in the corner, like the tracker cards
+                top.appendChild(TrackerDialog.entryTools(row.name, null, function () { remove(row); }));
+                item.appendChild(top);
 
                 var actions = el("div", "sp-actions");
                 if (sharing) {
@@ -110,12 +114,7 @@
                     shareBtn.addEventListener("click", function () { share(row.id); });
                     actions.appendChild(shareBtn);
                 }
-                var del = el("button", "mt-btn mt-btn-danger", "Delete");
-                del.type = "button";
-                del.setAttribute("aria-label", "Delete " + row.name);
-                del.addEventListener("click", function () { remove(row); });
-                actions.appendChild(del);
-                item.appendChild(actions);
+                if (actions.childNodes.length) item.appendChild(actions);
 
                 listEl.appendChild(item);
             });

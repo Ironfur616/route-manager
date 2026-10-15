@@ -128,9 +128,13 @@
     function buildCard(e) {
         var card = el("article", "mt-entry bp-entry");
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", e.address));
-        head.appendChild(el("span", "mt-entry-date", "Pickup " + prettyDate(e.pickupDate)));
+        // Edit and Delete as icons in the top-right corner; the date sits under the address
+        var head = el("div", "mt-entry-head entry-head");
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", e.address));
+        title.appendChild(el("span", "mt-entry-date", "Pickup " + prettyDate(e.pickupDate)));
+        head.appendChild(title);
+        head.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -154,19 +158,6 @@
         });
         notesField.appendChild(notes);
         card.appendChild(notesField);
-
-        var actions = el("div", "mt-entry-actions");
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + e.address);
-        edit.addEventListener("click", function () { startEdit(e.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + e.address);
-        del.addEventListener("click", function () { remove(e.id); });
-        actions.appendChild(edit);
-        actions.appendChild(del);
-        card.appendChild(actions);
 
         return card;
     }

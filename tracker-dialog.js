@@ -166,11 +166,14 @@
         return b;
     }
 
-    window.TrackerDialog.entryTools = function (name, onEdit, onDelete) {
+    // onEdit can be null for a card that can only be deleted. options.deleteWord changes
+    // "Delete" (for example to "Remove") in the label and tooltip.
+    window.TrackerDialog.entryTools = function (name, onEdit, onDelete, options) {
+        var word = (options && options.deleteWord) || "Delete";
         var tools = document.createElement("div");
         tools.className = "entry-tools";
-        tools.appendChild(iconButton("entry-icon-btn", EDIT_ICON, "Edit " + name, "Edit", onEdit));
-        tools.appendChild(iconButton("entry-icon-btn entry-icon-danger", DELETE_ICON, "Delete " + name, "Delete", onDelete));
+        if (onEdit) tools.appendChild(iconButton("entry-icon-btn", EDIT_ICON, "Edit " + name, "Edit", onEdit));
+        tools.appendChild(iconButton("entry-icon-btn entry-icon-danger", DELETE_ICON, word + " " + name, word, onDelete));
         return tools;
     };
 

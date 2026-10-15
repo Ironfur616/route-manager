@@ -182,11 +182,15 @@
         var matchingStreets = term ? streets.filter(function (s) { return s.toLowerCase().indexOf(term) !== -1; }) : [];
 
         var card = el("article", "mt-entry rs-entry");
-        var head = el("div", "mt-entry-head");
+        // Edit and Delete as icons in the top-right corner; the counts sit under the route
+        var head = el("div", "mt-entry-head entry-head");
+        var titleBlock = el("div", "entry-title");
         var title = el("h3", "mt-entry-address");
         title.appendChild(highlighted("Route " + r.route, term));
-        head.appendChild(title);
-        head.appendChild(el("span", "mt-entry-date", stopCount(streets)));
+        titleBlock.appendChild(title);
+        titleBlock.appendChild(el("span", "mt-entry-date", stopCount(streets)));
+        head.appendChild(titleBlock);
+        head.appendChild(TrackerDialog.entryTools("route " + r.route, function () { startEdit(r.id); }, function () { remove(r.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -246,16 +250,6 @@
         print.setAttribute("aria-label", "Print route " + r.route);
         print.addEventListener("click", function () { printRoutes([r], print); });
         actions.appendChild(print);
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit route " + r.route);
-        edit.addEventListener("click", function () { startEdit(r.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete route " + r.route);
-        del.addEventListener("click", function () { remove(r.id); });
-        actions.appendChild(edit);
-        actions.appendChild(del);
         card.appendChild(actions);
 
         return card;

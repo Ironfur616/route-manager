@@ -346,26 +346,16 @@
         }
 
         var item = el("div", "rca-evidence-item");
-        var head = el("div", "rca-evidence-head");
-        head.appendChild(el("span", "rca-evidence-date", prettyDate(ev.date)));
-        if (ev.source) head.appendChild(el("span", "rca-evidence-source", ev.source));
-        item.appendChild(head);
-        if (ev.description) item.appendChild(el("p", "rca-evidence-desc", ev.description));
-        var gallery = evidencePhotosGallery(ev);
-        if (gallery) item.appendChild(gallery);
-
-        var actions = el("div", "rca-evidence-item-actions");
-        var editBtn = el("button", "rca-evidence-edit-btn", "Edit");
-        editBtn.type = "button";
-        editBtn.setAttribute("aria-label", "Edit this evidence entry");
-        editBtn.addEventListener("click", function () {
+        // Edit and Remove as icons in the entry's top-right corner
+        var head = el("div", "rca-evidence-head entry-head");
+        var when = el("div", "entry-title rca-evidence-when");
+        when.appendChild(el("span", "rca-evidence-date", prettyDate(ev.date)));
+        if (ev.source) when.appendChild(el("span", "rca-evidence-source", ev.source));
+        head.appendChild(when);
+        head.appendChild(TrackerDialog.entryTools("this evidence entry", function () {
             editingEvidence = { caseId: c.id, evidenceId: ev.id };
             render();
-        });
-        var del = el("button", "rca-evidence-remove", "Remove");
-        del.type = "button";
-        del.setAttribute("aria-label", "Remove this evidence entry");
-        del.addEventListener("click", function () {
+        }, function () {
             TrackerDialog.confirmDelete({
                 title: "Remove evidence?",
                 message: "This evidence entry will be removed from “" + c.title + "”. This cannot be undone.",
@@ -373,10 +363,11 @@
             }, function () {
                 updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
             });
-        });
-        actions.appendChild(editBtn);
-        actions.appendChild(del);
-        item.appendChild(actions);
+        }, { deleteWord: "Remove" }));
+        item.appendChild(head);
+        if (ev.description) item.appendChild(el("p", "rca-evidence-desc", ev.description));
+        var gallery = evidencePhotosGallery(ev);
+        if (gallery) item.appendChild(gallery);
         return item;
     }
 
@@ -467,9 +458,13 @@
     function buildCard(c) {
         var card = el("article", "mt-entry rca-case rca-status-" + c.status);
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", c.title));
-        head.appendChild(el("span", "mt-entry-date", "Opened " + prettyDate(dateString(new Date(c.created)))));
+        // Edit and Delete as icons in the top-right corner; the date sits under the title
+        var head = el("div", "mt-entry-head entry-head");
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", c.title));
+        title.appendChild(el("span", "mt-entry-date", "Opened " + prettyDate(dateString(new Date(c.created)))));
+        head.appendChild(title);
+        head.appendChild(TrackerDialog.entryTools(c.title, function () { startEdit(c.id); }, function () { removeCase(c.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -584,17 +579,7 @@
                     pdfBtn.textContent = label;
                 });
         });
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + c.title);
-        edit.addEventListener("click", function () { startEdit(c.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + c.title);
-        del.addEventListener("click", function () { removeCase(c.id); });
         actions.appendChild(pdfBtn);
-        actions.appendChild(edit);
-        actions.appendChild(del);
         card.appendChild(actions);
 
         return card;
