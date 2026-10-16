@@ -11,7 +11,9 @@
    points is looked up as an alley: every parcel whose lot touches the alley is taken, and its
    house is listed under the alley with its real address. Corner lots (the lot touches the end
    of the alley but the house faces the cross street) are listed but left unticked. Any line
-   can be switched between street and alley in the review.
+   can be switched between street and alley in the review. A house that also fronts a street on
+   the route is ticked under that street and marked alley-backed (the spreadsheet's added
+   Collection Point column says "Alley-backed: E Ave").
 
    What's left out: the county data has no land-use code, so non-residential stops are spotted
    by the parcel owner's name. Churches, schools and government owners are unticked; buildings
@@ -447,34 +449,42 @@
         });
     }
 
-    // Sets each house's automatic tick and the reason shown beside it
+    /* Sets each house's automatic tick and the reason shown beside it. A house found on two
+       lines is ticked once: under its front street when that street is on the route (marked
+       alley-backed when it also backs onto one of the route's alleys), otherwise where it was
+       found first. */
     function classify(pull, ownerMap) {
-        var perParcel = {};
-        pull.lines.forEach(function (l) {
-            (l.houses || []).forEach(function (h) { if (h.upi) perParcel[h.upi] = (perParcel[h.upi] || 0) + 1; });
-        });
-        var seen = {};
+        var perParcel = {}, alleyOf = {}, home = {};
         pull.lines.forEach(function (l) {
             (l.houses || []).forEach(function (h) {
                 h.key = houseKey(h);
+                if (h.upi) (perParcel[h.upi] = perParcel[h.upi] || {})[h.key] = true;
+                if (l.mode === "alley" && h.front && !h.autoOff && !alleyOf[h.key]) alleyOf[h.key] = l.line;
+                var onOwnStreet = l.mode !== "alley";
+                if (!home[h.key] || (onOwnStreet && !home[h.key].own)) home[h.key] = { line: l, own: onOwnStreet };
+            });
+        });
+        pull.lines.forEach(function (l) {
+            (l.houses || []).forEach(function (h) {
+                h.okey = lineKey(l.line) + "#" + h.key;
                 h.owner = ownerMap[h.upi] || h.owner || "";
+                h.alley = alleyOf[h.key] || "";
                 var owner = h.owner.toUpperCase();
+                var units = h.upi ? Object.keys(perParcel[h.upi]).length : 1;
                 var auto = !h.autoOff;
                 var why = h.flag || "";
                 for (var i = 0; i < EXCLUDE.length; i++) {
                     if (EXCLUDE[i][0].test(owner)) { auto = false; why = EXCLUDE[i][1] + " (owner: " + titleCase(h.owner) + ")"; break; }
                 }
-                if (auto && perParcel[h.upi] >= APARTMENT_UNITS) {
+                if (auto && units >= APARTMENT_UNITS) {
                     auto = false;
-                    why = "Apartment building, " + perParcel[h.upi] + " units on one parcel";
+                    why = "Apartment building, " + units + " units on one parcel";
                 } else if (auto && COMPANY.test(owner)) {
                     why = "Company-owned, check (owner: " + titleCase(h.owner) + ")";
                 }
-                if (seen[h.key]) {
+                if (home[h.key].line !== l) {
                     auto = false;
-                    why = "Also listed under " + seen[h.key];
-                } else {
-                    seen[h.key] = l.line;
+                    why = "Listed under " + home[h.key].line.line;
                 }
                 h.auto = auto;
                 h.why = why;
@@ -482,8 +492,9 @@
         });
     }
 
+    // Ticks are kept per line, so a house's second listing can't be ticked along with its first
     function isKept(pull, h) {
-        return Object.prototype.hasOwnProperty.call(pull.overrides, h.key) ? pull.overrides[h.key] : h.auto;
+        return Object.prototype.hasOwnProperty.call(pull.overrides, h.okey) ? pull.overrides[h.okey] : h.auto;
     }
 
     function summary(pull) {
@@ -585,8 +596,8 @@
                     box2.type = "checkbox";
                     box2.checked = isKept(pull, h);
                     box2.addEventListener("change", function () {
-                        if (box2.checked === h.auto) delete pull.overrides[h.key];
-                        else pull.overrides[h.key] = box2.checked;
+                        if (box2.checked === h.auto) delete pull.overrides[h.okey];
+                        else pull.overrides[h.okey] = box2.checked;
                         li.classList.toggle("is-off", !box2.checked);
                         meta.textContent = (l.mode === "alley" ? "Alley · " : "") + lineCounts(pull, l) + " ticked";
                         savePull();
@@ -594,7 +605,8 @@
                     label.appendChild(box2);
                     var text = el("span", "cp-house-text");
                     text.appendChild(el("span", "cp-house-addr", houseLabel(h, false)));
-                    if (h.front && l.mode === "alley") text.appendChild(el("span", "cp-house-where", "Backs onto " + l.line));
+                    if (h.alley && l.mode !== "alley") text.appendChild(el("span", "cp-house-where cp-house-alley", "Alley-backed: " + h.alley));
+                    else if (h.front && l.mode === "alley") text.appendChild(el("span", "cp-house-where", "Backs onto " + l.line));
                     if (h.why) text.appendChild(el("span", "cp-house-why", h.why));
                     label.appendChild(text);
                     li.appendChild(label);
@@ -740,10 +752,16 @@
         if (blank(header[lat])) header[lat] = "Site Latitude";
         if (blank(header[lon])) header[lon] = "Site Longitude";
         var width = Math.max(header.length, lat + 1, lon + 1);
+        // Collection Point goes after the sheet's last column, so no existing column moves
+        var point = findCol(header, /collection point/i, -1);
+        if (point < 0) point = width;
+        while (header.length < point) header.push("");
+        header[point] = "Collection Point";
+        width = Math.max(width, point + 1);
         var byLine = {};
         pull.lines.forEach(function (l) { byLine[lineKey(l.line)] = l; });
         var out = [header];
-        var used = {};
+        var used = {}, written = {};
 
         function fit(row) {
             row = row.slice();
@@ -763,7 +781,8 @@
             out.push(row);
             if (!l || l.address || used[lineKey(line)]) return;
             used[lineKey(line)] = true;
-            (l.houses || []).filter(function (h) { return isKept(pull, h); }).forEach(function (h) {
+            (l.houses || []).filter(function (h) { return isKept(pull, h) && !written[h.key]; }).forEach(function (h) {
+                written[h.key] = true;
                 var add = row.map(function (v, i) { return PER_STOP.test(String(header[i] || "")) ? "" : v; });
                 add[COL.address] = houseLabel(h, true);
                 add[COL.line2] = h.unit ? (/^[A-Za-z]/.test(h.unit) && /\s/.test(h.unit) ? titleCase(h.unit) : "Unit " + h.unit) : "";
@@ -772,6 +791,7 @@
                 add[COL.zip] = h.zip;
                 add[lat] = h.lat;
                 add[lon] = h.lon;
+                add[point] = h.alley ? "Alley-backed: " + h.alley : "";
                 out.push(add);
             });
         });

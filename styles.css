@@ -3621,6 +3621,11 @@ body.shell {
     font-size: 0.8125rem;
 }
 
+.cp-house-alley {
+    color: var(--heading);
+    font-weight: 700;
+}
+
 .cp-house-why {
     color: var(--warn-ink);
     font-size: 0.8125rem;
