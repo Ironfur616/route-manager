@@ -13,7 +13,13 @@
 
    A street split at known break points is listed as a house-number range ("240-920 Allison
    Ave"): it's a street, not one home, and an address only matches it when its number falls in
-   the range (both sides of the street). */
+   the range (both sides of the street).
+
+   House lists: a route pulled from the county (county-pull.js) has a list of every house on
+   it, read here from house-store.js once the page loads. An address on a house list beats any
+   street match, so a house that's on a route only because it backs onto one of its alleys
+   still finds that route. house(address) says whether an address is on a list, left off one,
+   or missing from a pulled route's list, and where its cans go (alley or front street). */
 (function () {
     "use strict";
 
@@ -109,6 +115,91 @@
         return index().routes;
     }
 
+    /* ---------- House lists ---------- */
+    var houses = null;          // normalized address -> [{ route (key), on, alley, use, why, line, town }]
+    var pulledRoutes = {};      // route key -> true for routes with a house list
+    var housesStamp = null;
+    var houseListeners = [];
+
+    function readStamp() {
+        try { return localStorage.getItem("fleetMgrHouseIndex"); } catch (e) { return null; }
+    }
+
+    function loadHouses() {
+        if (!window.HouseStore) return;
+        var stamp = readStamp();
+        if (houses && stamp === housesStamp) return;
+        housesStamp = stamp;
+        HouseStore.all("index").then(function (records) {
+            var map = {}, pulled = {};
+            records.forEach(function (rec) {
+                pulled[rec.route] = true;
+                Object.keys(rec.houses || {}).forEach(function (k) {
+                    var v = rec.houses[k];
+                    var entry = { route: rec.route, on: !!v[0], alley: v[1], use: v[2] === 1 ? true : v[2] === 0 ? false : null,
+                        why: v[3], line: v[4], town: v[5] };
+                    // Filed with and without a leading direction, so "100 Beau St" finds "100 E Beau St"
+                    addressVariants(k).forEach(function (variant) { (map[variant] = map[variant] || []).push(entry); });
+                });
+            });
+            houses = map;
+            pulledRoutes = pulled;
+            houseListeners.forEach(function (fn) { try { fn(); } catch (e) { /* one page's problem */ } });
+        }).catch(function () { houses = houses || {}; });
+    }
+
+    window.addEventListener("storage", function (ev) {
+        if (ev.key === "fleetMgrHouseIndex") loadHouses();
+    });
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") loadHouses();
+    });
+
+    // The house-list entries for an address: "326 Shirls Ave Apt 2, Washington" finds "326 shirls ave"
+    function houseEntries(address) {
+        if (!houses) return [];
+        var full = normalize(address);
+        if (!/^\d/.test(full)) return [];
+        var words = full.split(" ");
+        for (var n = words.length; n >= 2; n--) {
+            var hit = houses[words.slice(0, n).join(" ")];
+            if (hit) return hit;
+        }
+        return [];
+    }
+
+    function routeByKey(key) {
+        return index().routes.filter(function (r) { return String(r.route).toLowerCase() === key; })[0];
+    }
+
+    /* house(address, city) -> null when no house list covers it, otherwise
+         { status: "on", route, alley, use }   on a route's house list (alley "" when it isn't alley-backed)
+         { status: "off", route, why }          on a pulled street but left off the list (church, school...)
+         { status: "missing", route }           its street is on a route with a house list, but this number isn't */
+    function house(address, city) {
+        var entries = houseEntries(address).filter(function (e) { return routeByKey(e.route); });
+        var town = normalize(city);
+        if (town) {
+            var inTown = entries.filter(function (e) { return !e.town || normalize(e.town) === town; });
+            if (inTown.length) entries = inTown;
+        }
+        // A house on a route only by its alley, confirmed to use its front street instead, isn't that route's
+        var on = entries.filter(function (e) { return e.on && !(e.use === false && e.line === e.alley); });
+        if (on.length) {
+            return { status: "on", route: routeByKey(on[0].route).route, alley: on[0].alley, use: on[0].use,
+                line: on[0].line, alleyOnly: !!on[0].alley && on[0].line === on[0].alley };
+        }
+        var off = entries.filter(function (e) { return !e.on; });
+        if (off.length) return { status: "off", route: routeByKey(off[0].route).route, why: off[0].why };
+        // Ticked but confirmed to use its own street: that street's route decides, no note needed
+        if (entries.length) return null;
+        if (!houses || !/^\d/.test(normalize(address))) return null;
+        var pulledHit = streetFind(address, city).filter(function (m) {
+            return m.kind === "street" && pulledRoutes[String(m.route).toLowerCase()];
+        })[0];
+        return pulledHit ? { status: "missing", route: pulledHit.route } : null;
+    }
+
     // "n main st" -> ["n main st", "main st"], so "N Main St" and "Main St" find each other
     function variants(text) {
         var bare = text.replace(/^[nsew]\s+/, "");
@@ -168,7 +259,18 @@
             .map(function (i) { return ix.lines[i]; });
     }
 
+    // An address on a route's house list goes to that route, ahead of any street match
     function find(address, city) {
+        var h = house(address, city);
+        if (h && h.status === "on") {
+            var r = routeByKey(String(h.route).toLowerCase());
+            return [{ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: h.line,
+                city: (r.cities && r.cities[normalize(h.line)]) || "", kind: "house", alley: h.alley, use: h.use }];
+        }
+        return streetFind(address, city);
+    }
+
+    function streetFind(address, city) {
         var full = normalize(address);
         var target = streetPart(address);
         var town = normalize(city);
@@ -358,6 +460,30 @@
             }
         }
 
+        // Where this house's cans go, or why it isn't on the route's house list
+        function houseNotes() {
+            var h = house(f.address.value, f.city ? f.city.value : "");
+            if (!h) return;
+            if (h.status === "on" && h.alley && h.use !== false) {
+                f.note.appendChild(el("p", "mt-route-alley", h.use
+                    ? "Collection point: " + h.alley + " (alley)."
+                    : "Backs onto " + h.alley + " (alley). Not yet checked whether the cans go there."));
+                // Unchecked and only on this route by its alley: its own street may be someone else's
+                if (h.alleyOnly && h.use === null) {
+                    var others = streetFind(f.address.value, f.city ? f.city.value : "").filter(function (m) { return !same(m.route, h.route); });
+                    if (others.length) {
+                        f.note.appendChild(el("p", "mt-route-none", "Its front street is on " +
+                            others.map(function (m) { return "Route " + m.route; }).join(" and ") +
+                            ". Check which route collects it, then set its alley use in Route Sheets."));
+                    }
+                }
+            } else if (h.status === "off") {
+                f.note.appendChild(el("p", "mt-route-none", "Left off Route " + h.route + "'s house list" + (h.why ? ": " + h.why : "") + "."));
+            } else if (h.status === "missing") {
+                f.note.appendChild(el("p", "mt-route-none", "This house number isn't on Route " + h.route + "'s house list from the county. Check the address."));
+            }
+        }
+
         function update(apply) {
             f.note.textContent = "";
             if (!loadRoutes().length) return;
@@ -374,7 +500,7 @@
                 if (apply) fillFrom(m);
                 var routeDiffers = f.route.value.trim() && !same(f.route.value, m.route);
                 f.note.appendChild(el("p", "mt-route-found",
-                    (routeDiffers ? "Route Sheets has " + m.street + " on " : "Found in Route Sheets: ") + matchLabel(m, !!m.city)));
+                    (routeDiffers ? "Route Sheets has " + m.street + " on " : m.kind === "house" ? "On the house list for " : "Found in Route Sheets: ") + matchLabel(m, !!m.city)));
                 // A route typed by hand that disagrees with Route Sheets: offer, don't overwrite
                 if (routeDiffers) f.note.appendChild(pickButton("Use " + matchLabel(m, !!m.city), null, function () { useMatch(m); }));
                 else driverNotes(matches);
@@ -416,6 +542,16 @@
             }
         }
 
+        var updateStreets = update;
+        update = function (apply) {
+            updateStreets(apply);
+            if (f.address.value.trim() && loadRoutes().length) houseNotes();
+        };
+        // House lists load a moment after the page; check again once they're in
+        houseListeners.push(function () {
+            if (f.address.value.trim()) update(false);
+        });
+
         f.address.addEventListener("input", function () { update(true); });
         f.route.addEventListener("input", function () {
             source.route = f.route.value.trim() ? "manual" : "kept";
@@ -452,8 +588,12 @@
         normalize: normalize,
         isAddress: isAddress,
         range: range,
+        house: house,
+        // fn runs whenever the house lists (re)load, so pages can redraw with them
+        onHouses: function (fn) { houseListeners.push(fn); if (houses) fn(); },
         cities: cities,
         invalidate: invalidate,
         hasRoutes: function () { return loadRoutes().length > 0; }
     };
+    loadHouses();
 })();

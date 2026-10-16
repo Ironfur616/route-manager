@@ -319,6 +319,13 @@
         chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
         var times = counts[addressKey(e.address)];
         if (times > 1) chips.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
+        // From the route's county house list: where the cans go, or a house that isn't on the list
+        var house = window.RouteLookup ? RouteLookup.house(e.address, e.city) : null;
+        if (house && house.status === "on" && house.alley && house.use !== false) {
+            chips.appendChild(el("span", "mt-chip mt-chip-alley", house.use ? "Alley: " + house.alley : "Backs onto " + house.alley + " (alley?)"));
+        } else if (house && house.status === "off") {
+            chips.appendChild(el("span", "mt-chip mt-chip-repeat", "Not on Route " + house.route + "'s house list"));
+        }
         card.appendChild(chips);
 
         var meta = [];
@@ -697,4 +704,6 @@
     fillSelect(filterStatus, STATUSES, "All statuses");
     resetForm(false);
     render();
+    // The county house lists load a moment later; redraw so the cards get their alley chips
+    if (window.RouteLookup && RouteLookup.onHouses) RouteLookup.onHouses(function () { render(); });
 })();

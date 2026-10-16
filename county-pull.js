@@ -23,9 +23,10 @@
    stay ticked but are flagged, since many are rentals. Every tick can be changed, and changes
    are kept when the route is pulled again.
 
-   Storage: IndexedDB "routeiq-houses" ("sheets": each imported spreadsheet's rows, so the export
-   keeps the columns Route Sheets doesn't use; "pulls": each route's house list). Route Sheets
-   keeps only the small summary shown on the card.
+   Storage: house-store.js ("sheets": each imported spreadsheet's rows, so the export keeps the
+   columns Route Sheets doesn't use; "pulls": each route's house list; "index": the summary the
+   route lookup reads, so a miss at a house on the list fills its route and shows its alley).
+   Route Sheets keeps only the small count shown on the card.
 
      CountyPull.saveSheet(routeKey, { fileName, rows })  -> Promise
      CountyPull.open(route, onSummary)  opens the dialog; onSummary({ kept, total, pulled })
@@ -42,47 +43,14 @@
 
     var COL = { address: 4, line2: 5, city: 6, state: 7, zip: 8, lat: 11, lon: 12 }; // E F G H I L M
 
-    /* ---------- Storage ---------- */
-
-    var DB_NAME = "routeiq-houses";
-    var dbPromise = null;
-
-    function openDb() {
-        if (!dbPromise) {
-            dbPromise = new Promise(function (resolve, reject) {
-                if (!window.indexedDB) return reject(new Error("IndexedDB unavailable"));
-                var req = indexedDB.open(DB_NAME, 1);
-                req.onupgradeneeded = function () {
-                    req.result.createObjectStore("sheets", { keyPath: "route" });
-                    req.result.createObjectStore("pulls", { keyPath: "route" });
-                };
-                req.onsuccess = function () { resolve(req.result); };
-                req.onerror = function () { reject(req.error); };
-            });
-            dbPromise.catch(function () { dbPromise = null; });
-        }
-        return dbPromise;
-    }
-
-    function dbRun(storeName, mode, fn) {
-        return openDb().then(function (db) {
-            return new Promise(function (resolve, reject) {
-                var tx = db.transaction(storeName, mode);
-                var req = fn(tx.objectStore(storeName));
-                tx.oncomplete = function () { resolve(req ? req.result : undefined); };
-                tx.onerror = function () { reject(tx.error); };
-                tx.onabort = function () { reject(tx.error); };
-            });
-        });
-    }
+    /* ---------- Storage (house-store.js) ---------- */
 
     function getRecord(storeName, key) {
-        return dbRun(storeName, "readonly", function (s) { return s.get(key); });
+        return HouseStore.get(storeName, key);
     }
 
     function putRecord(storeName, record) {
-        if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
-        return dbRun(storeName, "readwrite", function (s) { s.put(record); });
+        return HouseStore.put(storeName, record);
     }
 
     /* ---------- Names ---------- */
@@ -565,9 +533,30 @@
         clearTimeout(saveTimer);
         saveTimer = setTimeout(function () {
             putRecord("pulls", c.pull).catch(function () {});
+            putRecord("index", indexRecord(c)).catch(function () {});
         }, 300);
         if (c.onSummary) c.onSummary(summary(c.pull));
         updateStatus();
+    }
+
+    /* What the route lookup needs from a house list: per address (as normalized for matching),
+       [on the list 1/0, alley or "", alley use 1/0/-1 for not checked, why it was left out,
+       route line it's counted under, town]. Units share their building's address; the building
+       counts as on the list when any unit is. */
+    function indexRecord(c) {
+        var houses = {};
+        c.pull.lines.forEach(function (l) {
+            (l.houses || []).forEach(function (h) {
+                if (h.elsewhere) return;
+                var k = lineKey(h.number + h.numSuf + " " + streetLabel(h, true));
+                var kept = isKept(c.pull, h);
+                if (houses[k] && (houses[k][0] || !kept)) return;
+                var use = h.alley ? alleyUse(c.pull, h) : null;
+                houses[k] = [kept ? 1 : 0, h.alley || "", use === true ? 1 : use === false ? 0 : -1,
+                    kept ? "" : (h.why || "Unticked"), l.line, h.city || ""];
+            });
+        });
+        return { route: c.key, name: c.route.route, saved: Date.now(), houses: houses };
     }
 
     function prettyDate(ms) {
@@ -956,6 +945,16 @@
             }
         });
     }
+
+    // House lists pulled before the lookup index existed get one now
+    Promise.all([HouseStore.all("pulls"), HouseStore.all("index")]).then(function (both) {
+        var have = {};
+        both[1].forEach(function (rec) { have[rec.route] = true; });
+        both[0].forEach(function (pull) {
+            if (have[pull.route] || !pull.lines) return;
+            putRecord("index", indexRecord({ key: pull.route, route: { route: pull.route }, pull: pull })).catch(function () {});
+        });
+    }).catch(function () { /* no stored house lists */ });
 
     window.CountyPull = {
         open: open,
