@@ -3510,6 +3510,28 @@ body.shell {
     }
 }
 
+/* ---------- Route map icon beside the route's name ---------- */
+
+.rs-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.rs-title-row .mt-entry-address {
+    min-width: 0;
+}
+
+.rs-map-btn {
+    flex: none;
+    color: var(--green-ink);
+}
+
+/* No map yet: dimmed, tap to add the link */
+.rs-map-btn.is-empty {
+    color: rgba(var(--ink-rgb), 0.45);
+}
+
 /* ---------- County Houses (Pull from County, county-pull.js) ---------- */
 
 .rs-entry .mt-chips:empty {

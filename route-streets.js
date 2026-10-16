@@ -21,7 +21,10 @@
    points; the card shows how many houses are ticked. Imports also keep each whole spreadsheet
    for it, so the house spreadsheet it writes keeps every column.
 
-   Each route record has room for a mapUrl, for the custom route maps planned later. */
+   Route maps: each route can hold a map link (mapUrl, e.g. a Google My Maps share link), set in
+   its edit dialog. The map icon beside the route's heading opens it; with no link yet, the icon
+   opens the edit dialog at the Map link field. A map opens outside Route IQ (the browser or the
+   Maps app), so Back returns here. */
 (function () {
     "use strict";
 
@@ -35,7 +38,8 @@
         driver: document.getElementById("rs-driver"),
         area: document.getElementById("rs-area"),
         streets: document.getElementById("rs-streets"),
-        notes: document.getElementById("rs-notes")
+        notes: document.getElementById("rs-notes"),
+        map: document.getElementById("rs-map")
     };
     var submitBtn = document.getElementById("rs-submit");
     var formTitle = document.getElementById("rs-form-title");
@@ -192,7 +196,10 @@
         var titleBlock = el("div", "entry-title");
         var title = el("h3", "mt-entry-address");
         title.appendChild(highlighted("Route " + r.route, term));
-        titleBlock.appendChild(title);
+        var titleRow = el("div", "rs-title-row");
+        titleRow.appendChild(title);
+        titleRow.appendChild(mapButton(r));
+        titleBlock.appendChild(titleRow);
         titleBlock.appendChild(el("span", "mt-entry-date", stopCount(streets)));
         head.appendChild(titleBlock);
         head.appendChild(TrackerDialog.entryTools("route " + r.route, function () { startEdit(r.id); }, function () { remove(r.id); }));
@@ -286,6 +293,31 @@
         }
         chip.textContent = housesText(sum);
         button.textContent = "County Houses";
+    }
+
+    var MAP_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">' +
+        '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z M9 4v14 M15 6v14" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linejoin="round"/></svg>';
+
+    // Opens the route's map, or (no map yet) the edit dialog at the Map link field
+    function mapButton(r) {
+        var has = !!r.mapUrl;
+        var b = el("button", "entry-icon-btn rs-map-btn" + (has ? "" : " is-empty"));
+        b.type = "button";
+        b.innerHTML = MAP_ICON;
+        b.setAttribute("aria-label", (has ? "Open the map for route " : "Add a map for route ") + r.route);
+        b.title = has ? "Open map" : "Add map link";
+        b.addEventListener("click", function () {
+            if (has) window.open(r.mapUrl, "_blank", "noopener");
+            else startEdit(r.id, fields.map);
+        });
+        return b;
+    }
+
+    // A pasted share message ("Check out my map: https://...") keeps just the link
+    function mapLink(text) {
+        var m = /https?:\/\/\S+/i.exec(String(text || ""));
+        return m ? m[0].replace(/[).,]+$/, "") : "";
     }
 
     function matches(r, term) {
@@ -561,7 +593,8 @@
             area: fields.area.value.trim(),
             driver: fields.driver.value.trim(),
             streets: parseStreets(fields.streets.value),
-            notes: fields.notes.value.trim()
+            notes: fields.notes.value.trim(),
+            mapUrl: mapLink(fields.map.value)
         };
     }
 
@@ -574,7 +607,7 @@
         updateStreetsCount();
     }
 
-    function startEdit(id) {
+    function startEdit(id, focusField) {
         var r = load().filter(function (e) { return e.id === id; })[0];
         if (!r) return;
         editingId = id;
@@ -584,11 +617,13 @@
         fields.area.value = r.area || "";
         fields.streets.value = (r.streets || []).join("\n");
         fields.notes.value = r.notes || "";
+        fields.map.value = r.mapUrl || "";
         formTitle.textContent = "Edit Route " + r.route;
         submitBtn.textContent = "Save Changes";
         showError("");
         updateStreetsCount();
         entryDialog.open();
+        if (focusField) setTimeout(function () { focusField.focus(); }, 50);
     }
 
     /* ---------- Dialog ---------- */
@@ -618,6 +653,11 @@
             fields.route.focus();
             return;
         }
+        if (fields.map.value.trim() && !data.mapUrl) {
+            showError("The map link should be a web link starting with https://. Paste the map's share link.");
+            fields.map.focus();
+            return;
+        }
         var list = load();
         var duplicate = list.some(function (r) {
             return r.id !== editingId && String(r.route).toLowerCase() === data.route.toLowerCase();
@@ -641,7 +681,6 @@
             existing.updated = Date.now();
         } else {
             data.id = newId();
-            data.mapUrl = "";
             data.created = Date.now();
             list.push(data);
         }
