@@ -12,8 +12,10 @@
    house is listed under the alley with its real address. Corner lots (the lot touches the end
    of the alley but the house faces the cross street) are listed but left unticked. Any line
    can be switched between street and alley in the review. A house that also fronts a street on
-   the route is ticked under that street and marked alley-backed (the spreadsheet's added
-   Collection Point column says "Alley-backed: E Ave").
+   the route is ticked under that street and marked alley-backed; under the alley it's listed for
+   reference only. Each alley-backed house has an Alley use button (not checked yet / puts cans
+   in the alley / uses the front street) for confirming in the field, and the spreadsheet's added
+   Collection Point column says "Alley: E Ave", "Alley-backed: E Ave (not checked)" or nothing.
 
    What's left out: the county data has no land-use code, so non-residential stops are spotted
    by the parcel owner's name. Churches, schools and government owners are unticked; buildings
@@ -486,10 +488,9 @@
                 } else if (auto && COMPANY.test(owner)) {
                     why = "Company-owned, check (owner: " + titleCase(h.owner) + ")";
                 }
-                if (home[h.key].line !== l) {
-                    auto = false;
-                    why = "Listed under " + home[h.key].line.line;
-                }
+                // Counted on another line: shown here for reference only, never ticked twice
+                h.elsewhere = home[h.key].line !== l ? home[h.key].line.line : "";
+                if (h.elsewhere) auto = false;
                 h.auto = auto;
                 h.why = why;
             });
@@ -501,10 +502,20 @@
         return Object.prototype.hasOwnProperty.call(pull.overrides, h.okey) ? pull.overrides[h.okey] : h.auto;
     }
 
+    // Whether an alley-backed house puts its cans out in the alley: true, false, or not checked yet
+    function alleyUse(pull, h) {
+        var use = pull.alleyUse || {};
+        return Object.prototype.hasOwnProperty.call(use, h.key) ? use[h.key] : null;
+    }
+
     function summary(pull) {
         var kept = 0, total = 0;
         pull.lines.forEach(function (l) {
-            (l.houses || []).forEach(function (h) { total++; if (isKept(pull, h)) kept++; });
+            (l.houses || []).forEach(function (h) {
+                if (h.elsewhere) return;
+                total++;
+                if (isKept(pull, h)) kept++;
+            });
         });
         return { kept: kept, total: total, pulled: pull.pulled };
     }
@@ -569,21 +580,69 @@
         statusEl.textContent = s.kept + " house" + (s.kept === 1 ? "" : "s") + " ticked of " + s.total + " found. Pulled " + prettyDate(s.pulled) + ".";
     }
 
-    function lineCounts(pull, l) {
-        var kept = (l.houses || []).filter(function (h) { return isKept(pull, h); }).length;
-        return kept + " of " + (l.houses || []).length;
+    // "40 of 42 ticked"; an alley also says how many lots have been checked for alley use
+    function lineMeta(pull, l) {
+        if (l.error) return (l.mode === "alley" ? "Alley \u00B7 " : "") + "Couldn't load";
+        var own = (l.houses || []).filter(function (h) { return !h.elsewhere; });
+        var kept = own.filter(function (h) { return isKept(pull, h); }).length;
+        if (l.mode !== "alley") return kept + " of " + own.length + " ticked";
+        var backing = (l.houses || []).filter(function (h) { return h.alley === l.line; });
+        var uses = backing.filter(function (h) { return alleyUse(pull, h) === true; }).length;
+        var open = backing.filter(function (h) { return alleyUse(pull, h) === null; }).length;
+        return "Alley \u00B7 " + backing.length + " lots \u00B7 " + uses + " use it \u00B7 " + open + " not checked";
+    }
+
+    var ALLEY_STATES = [
+        [null, "Alley use: not checked yet", ""],
+        [true, "Puts cans in the alley", " is-yes"],
+        [false, "Uses the front street", " is-no"]
+    ];
+    var alleyButtons = {}; // house key -> its buttons in every list it appears in, kept in step
+
+    function alleyButton(pull, h, onChange) {
+        var btn = el("button", "cp-alley-btn");
+        btn.type = "button";
+        function paint() {
+            var state = alleyUse(pull, h);
+            var row = ALLEY_STATES.filter(function (st) { return st[0] === state; })[0];
+            btn.textContent = row[1].replace("the alley", h.alley);
+            btn.className = "cp-alley-btn" + row[2];
+            btn.setAttribute("aria-label", "Alley use for " + houseLabel(h, false) + ": " + btn.textContent + ". Tap to change.");
+        }
+        btn.addEventListener("click", function () {
+            var states = ALLEY_STATES.map(function (st) { return st[0]; });
+            var next = states[(states.indexOf(alleyUse(pull, h)) + 1) % states.length];
+            pull.alleyUse = pull.alleyUse || {};
+            if (next === null) delete pull.alleyUse[h.key];
+            else pull.alleyUse[h.key] = next;
+            (alleyButtons[h.key] || []).forEach(function (b) { b.paint(); });
+            onChange();
+            savePull();
+        });
+        btn.paint = paint;
+        (alleyButtons[h.key] = alleyButtons[h.key] || []).push(btn);
+        paint();
+        return btn;
+    }
+
+    var lineMetas = []; // [line, element] for refreshing counts after a change
+
+    function refreshMetas() {
+        lineMetas.forEach(function (pair) { pair[1].textContent = lineMeta(current.pull, pair[0]); });
     }
 
     function renderList() {
         var pull = current.pull;
         listEl.textContent = "";
+        alleyButtons = {};
+        lineMetas = [];
         pull.lines.forEach(function (l, index) {
             if (l.address) return;
             var box = el("details", "cp-line" + (l.error ? " is-error" : ""));
             var sum = el("summary");
             sum.appendChild(el("span", "cp-line-name", l.line));
-            var meta = el("span", "cp-line-meta",
-                (l.mode === "alley" ? "Alley · " : "") + (l.error ? "Couldn't load" : lineCounts(pull, l) + " ticked"));
+            var meta = el("span", "cp-line-meta", lineMeta(pull, l));
+            lineMetas.push([l, meta]);
             sum.appendChild(meta);
             box.appendChild(sum);
 
@@ -595,26 +654,41 @@
                 var ul = el("ul", "cp-houses");
                 (l.houses || []).forEach(function (h) {
                     var li = el("li", "cp-house");
-                    var label = el("label");
-                    var box2 = document.createElement("input");
-                    box2.type = "checkbox";
-                    box2.checked = isKept(pull, h);
-                    box2.addEventListener("change", function () {
-                        if (box2.checked === h.auto) delete pull.overrides[h.okey];
-                        else pull.overrides[h.okey] = box2.checked;
-                        li.classList.toggle("is-off", !box2.checked);
-                        meta.textContent = (l.mode === "alley" ? "Alley · " : "") + lineCounts(pull, l) + " ticked";
-                        savePull();
-                    });
-                    label.appendChild(box2);
                     var text = el("span", "cp-house-text");
                     text.appendChild(el("span", "cp-house-addr", houseLabel(h, false)));
-                    if (h.alley && l.mode !== "alley") text.appendChild(el("span", "cp-house-where cp-house-alley", "Alley-backed: " + h.alley));
-                    else if (h.front && l.mode === "alley") text.appendChild(el("span", "cp-house-where", "Backs onto " + l.line));
+                    if (h.elsewhere) {
+                        text.appendChild(el("span", "cp-house-where", "Counted under " + h.elsewhere));
+                    } else if (h.alley && l.mode !== "alley") {
+                        text.appendChild(el("span", "cp-house-where cp-house-alley", "Alley-backed: " + h.alley));
+                    } else if (h.front && l.mode === "alley") {
+                        text.appendChild(el("span", "cp-house-where", "Backs onto " + l.line));
+                    }
                     if (h.why) text.appendChild(el("span", "cp-house-why", h.why));
-                    label.appendChild(text);
-                    li.appendChild(label);
-                    if (!box2.checked) li.classList.add("is-off");
+
+                    if (h.elsewhere) {
+                        // Reference row: the house is ticked (or not) on its own street's list
+                        li.classList.add("is-ref");
+                        var row = el("div", "cp-house-row");
+                        row.appendChild(text);
+                        li.appendChild(row);
+                    } else {
+                        var label = el("label", "cp-house-row");
+                        var tick = document.createElement("input");
+                        tick.type = "checkbox";
+                        tick.checked = isKept(pull, h);
+                        tick.addEventListener("change", function () {
+                            if (tick.checked === h.auto) delete pull.overrides[h.okey];
+                            else pull.overrides[h.okey] = tick.checked;
+                            li.classList.toggle("is-off", !tick.checked);
+                            refreshMetas();
+                            savePull();
+                        });
+                        label.appendChild(tick);
+                        label.appendChild(text);
+                        li.appendChild(label);
+                        if (!tick.checked) li.classList.add("is-off");
+                    }
+                    if (h.alley) li.appendChild(alleyButton(pull, h, refreshMetas));
                     ul.appendChild(li);
                 });
                 box.appendChild(ul);
@@ -691,6 +765,7 @@
         if (previous) previous.lines.forEach(function (l) { if (l.forced) forced[lineKey(l.line)] = l.forced; });
         var pull = {
             route: c.key, pulled: Date.now(), overrides: previous ? previous.overrides : {},
+            alleyUse: previous && previous.alleyUse ? previous.alleyUse : {},
             lines: (c.route.streets || []).map(function (line) {
                 return { line: line, address: isAddress(line), forced: forced[lineKey(line)] || "" };
             })
@@ -795,7 +870,8 @@
                 add[COL.zip] = h.zip;
                 add[lat] = h.lat;
                 add[lon] = h.lon;
-                add[point] = h.alley ? "Alley-backed: " + h.alley : "";
+                var use = h.alley ? alleyUse(pull, h) : false;
+                add[point] = use === true ? "Alley: " + h.alley : use === null ? "Alley-backed: " + h.alley + " (not checked)" : "";
                 out.push(add);
             });
         });

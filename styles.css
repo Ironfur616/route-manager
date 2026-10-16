@@ -3587,14 +3587,49 @@ body.shell {
     border-top: 1px solid rgba(var(--navy-rgb), 0.12);
 }
 
-.cp-house label {
+.cp-house {
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
+}
+
+.cp-house-row {
     display: flex;
     align-items: flex-start;
     gap: 0.625rem;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
+}
+
+label.cp-house-row {
     cursor: pointer;
+}
+
+/* Counted on its own street's list: no tick here, so it lines up past the checkbox column */
+.cp-house.is-ref .cp-house-row {
+    padding-left: 2.625rem;
+}
+
+.cp-alley-btn {
+    min-height: 36px;
+    margin: 0 0.75rem 0.5rem 2.625rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px dashed rgba(var(--navy-rgb), 0.5);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--heading);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cp-alley-btn.is-yes {
+    border: 1px solid var(--forest-green);
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.cp-alley-btn.is-no {
+    border-style: solid;
 }
 
 .cp-house input {
