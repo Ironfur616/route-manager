@@ -64,9 +64,10 @@
         return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
     }
 
-    // A line starting with a house number is one home, not a whole street
+    // A line starting with a house number is one home, not a whole street; a range of numbers
+    // ("240-920 Allison Ave") is part of a street
     function isAddress(line) {
-        return /^\s*\d/.test(String(line));
+        return window.RouteLookup ? RouteLookup.isAddress(line) : /^\s*\d/.test(String(line));
     }
 
     function splitStops(lines) {

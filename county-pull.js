@@ -283,6 +283,7 @@
         if (s.type && !opts.anyType) parts.push("St_PosTyp = " + sql(s.type));
         // A line without a direction ("Beau St") covers East and West Beau St alike
         if (!opts.anyDir && s.preDir) parts.push("St_PreDir = " + sql(s.preDir));
+        if (s.span) parts.push("Add_Number >= " + s.span.from + " AND Add_Number <= " + s.span.to);
         if (opts.town) parts.push(opts.town);
         return parts.join(" AND ");
     }
@@ -328,7 +329,10 @@
        road exists, it's taken as an alley. A looser match (any direction, then any type) is
        tried only when no road of that exact name exists, and is flagged for checking. */
     function lookupStreet(line, town, forceMode) {
-        var s = parseStreet(line);
+        // "240-920 Allison Ave": only houses numbered in that range, both sides of the street
+        var span = window.RouteLookup && RouteLookup.range(line);
+        var s = parseStreet(span ? span.street : line);
+        if (span) s.span = span;
         var result = { mode: "street", note: "", houses: [] };
         if (!s.name) { result.note = "Couldn't read a street name."; return Promise.resolve(result); }
         if (forceMode === "alley") return lookupAlley(s, town, result);

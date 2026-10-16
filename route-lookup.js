@@ -9,7 +9,11 @@
    same spelling rules as the trackers ("Street" = "St", "North" = "N", punctuation ignored).
    The longest matching street wins, so "N Main St Ext" beats "Main St". A street listed on
    more than one route returns every one of those routes; the lookup never guesses between
-   them. combine() joins them ("12 / 9") for streets whose break points aren't known yet. */
+   them. combine() joins them ("12 / 9") for streets whose break points aren't known yet.
+
+   A street split at known break points is listed as a house-number range ("240-920 Allison
+   Ave"): it's a street, not one home, and an address only matches it when its number falls in
+   the range (both sides of the street). */
 (function () {
     "use strict";
 
@@ -82,8 +86,11 @@
                 if (!key) return;
                 var where = (r.cities && r.cities[key]) || "";
                 var i = lines.length;
-                var home = /^\d/.test(key);
-                lines.push({ r: r, line: s, key: key, home: home, where: where, whereKey: normalize(where) });
+                var span = range(s);
+                var home = !span && /^\d/.test(key);
+                lines.push({ r: r, line: s, key: span ? normalize(span.street) : key, span: span,
+                    home: home, where: where, whereKey: normalize(where) });
+                if (span) key = normalize(span.street);
                 if (home) {
                     add(byNumber, firstWord(key), i);
                 } else {
@@ -115,9 +122,18 @@
         });
     }
 
-    // An entry that starts with a house number is one home (a subscription stop), not a street
+    // "240-920 Allison Ave" -> { from: 240, to: 920, street: "Allison Ave" }; anything else -> null
+    function range(line) {
+        var m = /^\s*(\d+)\s*[-–—]\s*(\d+)\s+(\D.*)$/.exec(String(line || ""));
+        if (!m) return null;
+        var a = +m[1], b = +m[2];
+        return { from: Math.min(a, b), to: Math.max(a, b), street: m[3].trim() };
+    }
+
+    // An entry that starts with a house number is one home (a subscription stop), not a street,
+    // unless it's a range of house numbers
     function isAddress(line) {
-        return /^\d/.test(normalize(line));
+        return /^\d/.test(normalize(line)) && !range(line);
     }
 
     // "1234 n main st" -> ["1234 n main st", "1234 main st"], so the N. is optional either way
@@ -170,6 +186,12 @@
                     if (matchesAddress(full, key)) score = 100000 + key.length;
                 } else if (target && startsWithStreet(target, key)) {
                     score = key.length;
+                    if (entry.span) {
+                        // Only an address numbered inside the range; a number-less street name matches any range
+                        var number = /^(\d+)/.exec(full);
+                        if (number && (+number[1] < entry.span.from || +number[1] > entry.span.to)) score = 0;
+                        else if (number) score += 0.25; // a range that holds the number beats the bare street
+                    }
                 }
                 if (!score) return;
                 if (town && where) score += 0.5;
@@ -429,6 +451,7 @@
         attach: attach,
         normalize: normalize,
         isAddress: isAddress,
+        range: range,
         cities: cities,
         invalidate: invalidate,
         hasRoutes: function () { return loadRoutes().length > 0; }
