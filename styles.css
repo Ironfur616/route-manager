@@ -3637,6 +3637,20 @@ body.shell {
     background-color: rgba(var(--navy-rgb), 0.05);
 }
 
+.backup-dest:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.backup-drive-change {
+    align-self: flex-start;
+    margin-top: -0.25rem;
+}
+
+.backup-drive-change[hidden] {
+    display: none;
+}
+
 .backup-dest-device {
     border-left-color: rgba(var(--navy-rgb), 0.4);
 }

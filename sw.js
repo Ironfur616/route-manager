@@ -1,7 +1,7 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v105";
+var CACHE_NAME = "fleet-mgr-v106";
 // Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
 var SHARE_INBOX = "routeiq-share-inbox";
 
@@ -32,6 +32,7 @@ var PRECACHE_URLS = [
     "./route-streets.js",
     "./house-store.js",
     "./route-lookup.js",
+    "./drive-backup.js",
     "./backup.js",
     "./county-pull.js",
     "./styles.css",
@@ -110,6 +111,11 @@ self.addEventListener("fetch", function (event) {
     }
 
     if (request.method !== "GET") {
+        return;
+    }
+
+    // Other sites (Google sign-in and Drive, the county's map data) go straight to the network
+    if (new URL(request.url).origin !== self.location.origin) {
         return;
     }
 

@@ -329,7 +329,9 @@
         var info = readInfo();
         lastEl.textContent = info.last
             ? "Last backup: " + prettyStamp(info.last) + " (" + ago(info.last) + ")" +
-                (info.where === "device" ? ", saved on this tablet only." : info.where === "shared" ? ", sent to Drive or another app." : ".")
+                (info.where === "device" ? ", saved on this tablet only."
+                    : info.where === "drive" ? ", saved to Google Drive" + (window.DriveBackup && DriveBackup.folder() ? " (" + DriveBackup.folder().name + ")" : "") + "."
+                    : info.where === "shared" ? ", sent to Drive or another app." : ".")
             : "This tablet hasn't been backed up yet.";
         pdfTotal().then(function (t) {
             pdfText.textContent = "Include saved PDFs" + (t.count ? " (" + t.count + ", " + prettySize(t.bytes) + ")" : " (none yet)");
@@ -359,6 +361,11 @@
         "</div>" +
         '<div class="backup-body">' +
             '<p class="backup-ready"></p>' +
+            '<button type="button" class="backup-dest backup-dest-drive" hidden>' +
+                '<span class="backup-dest-title"></span>' +
+                '<span class="backup-dest-hint"></span>' +
+            "</button>" +
+            '<button type="button" class="mt-btn backup-drive-change" hidden>Use a different folder</button>' +
             '<button type="button" class="backup-dest backup-dest-share">' +
                 '<span class="backup-dest-title">Google Drive</span>' +
                 '<span class="backup-dest-hint">Opens the share screen. Tap <strong>Drive</strong>, then under <strong>Folder</strong> pick <strong>RouteIQ Backups</strong> and tap <strong>Save</strong>. Email works from there too.</span>' +
@@ -375,6 +382,8 @@
     document.body.appendChild(saveDialog);
 
     var readyEl = saveDialog.querySelector(".backup-ready");
+    var driveDest = saveDialog.querySelector(".backup-dest-drive");
+    var driveChange = saveDialog.querySelector(".backup-drive-change");
     var shareDest = saveDialog.querySelector(".backup-dest-share");
     var deviceDest = saveDialog.querySelector(".backup-dest-device");
     var saveStatus = saveDialog.querySelector(".backup-save-status");
@@ -385,11 +394,70 @@
         try { return !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { return false; }
     }
 
-    function recorded(where) {
-        writeInfo({ last: ready.created, size: ready.file.size, where: where, snoozeUntil: 0 });
+    function recorded(where, r) {
+        r = r || ready;
+        writeInfo({ last: r.created, size: r.file.size, where: where, snoozeUntil: 0 });
         hideReminder();
         describeLast();
     }
+
+    /* Straight to Google Drive (drive-backup.js): the first tap signs in and picks the folder,
+       later taps upload into it. Google's folder picker can't show over an open dialog, so the
+       dialog steps aside for it and comes back with the result. */
+    var drive = window.DriveBackup && DriveBackup.configured() ? DriveBackup : null;
+
+    function paintDrive() {
+        if (!drive) return;
+        var folder = drive.folder();
+        driveDest.hidden = false;
+        driveDest.querySelector(".backup-dest-title").textContent = folder ? "Google Drive \u00B7 " + folder.name : "Google Drive: pick a folder (one time)";
+        driveDest.querySelector(".backup-dest-hint").textContent = folder
+            ? "Saves straight into that folder."
+            : "Sign in to Google and pick the folder (RouteIQ Backups). After that, backups go straight there.";
+        driveChange.hidden = !folder;
+        // Shown as the share screen when Drive can be reached directly
+        shareDest.querySelector(".backup-dest-title").textContent = "Share screen (email or another app)";
+        shareDest.querySelector(".backup-dest-hint").textContent = "Opens the share screen to send it anywhere else.";
+        drive.preload();
+    }
+
+    function driveError(err) {
+        var kind = err && err.kind;
+        if (kind === "cancelled") return "No folder picked, so nothing was saved.";
+        if (kind === "loading") return "Still connecting to Google. Tap again in a moment.";
+        if (kind === "signin") return "Google sign-in didn\u2019t finish. Tap Google Drive to try again.";
+        if (kind === "expired") return "The Google sign-in ran out. Tap Google Drive again.";
+        if (kind === "folder") return "That Drive folder can\u2019t be found anymore. Tap Google Drive to pick it again.";
+        return navigator.onLine === false
+            ? "The tablet is offline. Connect, then tap Google Drive again."
+            : "The upload to Drive didn\u2019t finish. Try again, or use the share screen.";
+    }
+
+    function saveToDrive(chooseAgain) {
+        if (!ready || !drive) return;
+        var r = ready;
+        var stepped = false;
+        driveDest.disabled = true;
+        saveStatus.textContent = "Saving to Google Drive\u2026";
+        drive.save(r.file, {
+            chooseAgain: chooseAgain,
+            beforePicker: function () { stepped = true; saveModal.close(); }
+        }).then(function (done) {
+            recorded("drive", r);
+            return "Saved to Google Drive in " + done.folder + ".";
+        }, driveError).then(function (message) {
+            if (stepped) {
+                saveModal.open();
+                ready = r;
+            }
+            saveStatus.textContent = message;
+            driveDest.disabled = false;
+            paintDrive();
+        });
+    }
+
+    driveDest.addEventListener("click", function () { saveToDrive(false); });
+    driveChange.addEventListener("click", function () { saveToDrive(true); });
 
     shareDest.addEventListener("click", function () {
         if (!ready) return;
@@ -430,6 +498,7 @@
             ready = { file: file, created: backup.created };
             readyEl.textContent = name + " (" + prettySize(file.size) + ") is ready. Where should it go?";
             shareDest.hidden = !canShareFile(file);
+            paintDrive();
             saveStatus.textContent = shareDest.hidden ? "This browser can\u2019t share files, so it can only be saved to this tablet." : "";
             statusTarget.textContent = "";
             settingsDialogClose();
