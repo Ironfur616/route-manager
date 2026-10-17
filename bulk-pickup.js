@@ -21,7 +21,6 @@
         items: document.getElementById("bp-items")
     };
     var submitBtn = document.getElementById("bp-submit");
-    var cancelBtn = document.getElementById("bp-cancel");
     var formTitle = document.getElementById("bp-form-title");
     var message = document.getElementById("bp-message");
     var listEl = document.getElementById("bp-list");
@@ -129,9 +128,13 @@
     function buildCard(e) {
         var card = el("article", "mt-entry bp-entry");
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", e.address));
-        head.appendChild(el("span", "mt-entry-date", "Pickup " + prettyDate(e.pickupDate)));
+        // Edit and Delete as icons in the top-right corner; the date sits under the address
+        var head = el("div", "mt-entry-head entry-head");
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", e.address));
+        title.appendChild(el("span", "mt-entry-date", "Pickup " + prettyDate(e.pickupDate)));
+        head.appendChild(title);
+        head.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -156,19 +159,6 @@
         notesField.appendChild(notes);
         card.appendChild(notesField);
 
-        var actions = el("div", "mt-entry-actions");
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + e.address);
-        edit.addEventListener("click", function () { startEdit(e.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + e.address);
-        del.addEventListener("click", function () { remove(e.id); });
-        actions.appendChild(edit);
-        actions.appendChild(del);
-        card.appendChild(actions);
-
         return card;
     }
 
@@ -190,7 +180,7 @@
         completedCountEl.textContent = completed.length;
 
         if (!entries.length) {
-            countEl.textContent = "No bulk pickup requests logged yet. Use the form above to add the first one.";
+            countEl.textContent = "No bulk pickup requests logged yet. Tap Add Bulk Pickup Request to add the first one.";
         } else if (!upcoming.length) {
             countEl.textContent = term ? "Nothing matches the current search." : "No upcoming pickups. Check Completed Pickups below.";
         } else {
@@ -213,10 +203,10 @@
 
     function resetForm() {
         editingId = null;
-        formTitle.textContent = "ADD BULK PICKUP REQUEST";
+        formTitle.textContent = "Add Bulk Pickup Request";
         submitBtn.textContent = "Save Entry";
-        cancelBtn.hidden = true;
         form.reset();
+        routeFill.reset();
     }
 
     function startEdit(id) {
@@ -224,17 +214,41 @@
         if (!entry) return;
         editingId = id;
         fields.address.value = entry.address || "";
+        routeFill.editing(entry);
         fields.route.value = entry.route || "";
         fields.driver.value = entry.driver || "";
         fields.pickupDate.value = entry.pickupDate || "";
         fields.items.value = entry.items || "";
-        formTitle.textContent = "EDIT REQUEST";
+        formTitle.textContent = "Edit Request";
         submitBtn.textContent = "Save Changes";
-        cancelBtn.hidden = false;
         say("");
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        fields.address.focus({ preventScroll: true });
+        entryDialog.open();
     }
+
+    /* ---------- Route Sheets lookup ---------- */
+
+    // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
+    var routeFill = window.RouteLookup
+        ? RouteLookup.attach({ address: fields.address, route: fields.route, driver: fields.driver,
+            note: document.getElementById("bp-route-match") })
+        : { reset: function () {}, editing: function () {} };
+
+    /* ---------- Dialog ---------- */
+
+    // Close, the X and Escape all close it; anything typed but not saved is discarded
+    var entryDialog = TrackerDialog(document.getElementById("bp-dialog"), {
+        focus: fields.address,
+        onClose: function () {
+            resetForm();
+            say("");
+        }
+    });
+
+    document.getElementById("bp-open").addEventListener("click", function () {
+        resetForm();
+        say("");
+        entryDialog.open();
+    });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -257,22 +271,23 @@
         }
         if (!save(list)) return;
 
-        var wasEdit = !!existing;
-        resetForm();
         render();
-        say(wasEdit ? "Changes saved." : "Pickup request added.");
-    });
-
-    cancelBtn.addEventListener("click", function () {
-        resetForm();
-        say("");
+        entryDialog.close();
     });
 
     function remove(id) {
-        if (!confirm("Delete this pickup request? This cannot be undone.")) return;
-        save(load().filter(function (e) { return e.id !== id; }));
-        if (editingId === id) resetForm();
-        render();
+        var entry = load().filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete pickup request?",
+            message: "The bulk pickup at " + entry.address + " (" + prettyDate(entry.pickupDate) +
+                ") will be deleted. This cannot be undone.",
+            confirmLabel: "Delete request"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm();
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);

@@ -1,7 +1,12 @@
 /* Missed collection tracker (missed-tracker.html).
     Unlike the observation forms, this is a running log, not a draft: entries are kept in
     localStorage until they are deleted. The page opts out of the shell's draft handling with
-   data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step. */
+   data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step.
+
+   Route and driver come from Route Sheets where they can (route-lookup.js): typing the address
+   fills them in unless they were typed by hand, a street split between routes gets all of them
+   ("12 / 9", "Sam / Kim") with buttons to narrow it to one, and Fill from Route Sheets
+   completes older entries that are missing them. */
 (function () {
     "use strict";
 
@@ -47,22 +52,27 @@
         driver: document.getElementById("mt-driver"),
         unit: document.getElementById("mt-unit"),
         status: document.getElementById("mt-status"),
-        notes: document.getElementById("mt-notes")
+        notes: document.getElementById("mt-notes"),
+        city: document.getElementById("mt-city")
     };
     var reasonsSelect = document.getElementById("mt-reasons");
     var reasonsCount = document.getElementById("mt-reasons-count");
     var reasonsError = document.getElementById("mt-reasons-error");
     var yellowTagCheckbox = document.getElementById("mt-yellow-tag");
     var submitBtn = document.getElementById("mt-submit");
-    var cancelBtn = document.getElementById("mt-cancel");
     var formTitle = document.getElementById("mt-form-title");
     var message = document.getElementById("mt-message");
     var addressHint = document.getElementById("mt-address-hint");
+    var routeMatchEl = document.getElementById("mt-route-match");
     var listEl = document.getElementById("mt-list");
+    var archiveEl = document.getElementById("mt-archive");
+    var archiveListEl = document.getElementById("mt-archive-list");
+    var archiveCountEl = document.getElementById("mt-archive-count");
     var countEl = document.getElementById("mt-count");
     var searchEl = document.getElementById("mt-search");
     var filterStatus = document.getElementById("mt-filter-status");
     var filterYellow = document.getElementById("mt-filter-yellow");
+    var filterNoRoute = document.getElementById("mt-filter-noroute");
 
     var editingId = null;
 
@@ -101,6 +111,21 @@
     function addressKey(text) {
         return String(text).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean)
             .map(function (w) { return SUFFIXES[w] || w; }).join(" ");
+    }
+
+    // "Oct 9, 2026, 8:15 AM"
+    function prettyStamp(ms) {
+        return new Date(ms).toLocaleString(undefined, {
+            month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
+        });
+    }
+
+    // Stamps the moment an entry becomes Resolved, and clears it if it's reopened. Entries resolved
+    // before this was recorded have no resolvedAt, so no resolved time is shown for them.
+    function applyStatus(e, status) {
+        if (status === "resolved" && e.status !== "resolved") e.resolvedAt = Date.now();
+        if (status !== "resolved") e.resolvedAt = null;
+        e.status = status;
     }
 
     function hasYellowTag(e) {
@@ -212,10 +237,21 @@
         return counts;
     }
 
-    function renderStats(entries, counts) {
+    // First date of the "Last 7 days" window (today and the six days before it). Anything dated
+    // earlier is archived: listed in the Archived section instead of the main list. That's only
+    // how it's displayed; archived entries stay in the log, in the counts, in search and in exports.
+    function recentCutoff() {
         var cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - 6);
-        var cutoffStr = dateString(cutoff);
+        return dateString(cutoff);
+    }
+
+    function isArchived(e) {
+        return e.date < recentCutoff();
+    }
+
+    function renderStats(entries, counts) {
+        var cutoffStr = recentCutoff();
         var repeats = Object.keys(counts).filter(function (k) { return k && counts[k] > 1; }).length;
 
         document.getElementById("stat-open").textContent =
@@ -240,11 +276,21 @@
                     }
                 });
             });
+        var townSeen = {};
+        var towns = document.getElementById("dl-city");
+        towns.textContent = "";
+        (window.RouteLookup ? RouteLookup.cities() : []).concat(entries.map(function (e) { return (e.city || "").trim(); }))
+            .forEach(function (c) {
+                if (c && !townSeen[c.toLowerCase()]) {
+                    townSeen[c.toLowerCase()] = true;
+                    towns.appendChild(el("option")).value = c;
+                }
+            });
     }
 
     function matchesSearch(e, term) {
         if (!term) return true;
-        return [e.address, e.route, e.driver, e.unit, e.notes, e.service].concat(e.reasons || []).join(" ")
+        return [e.address, e.city, e.route, e.driver, e.unit, e.notes, e.service].concat(e.reasons || []).join(" ")
             .toLowerCase().indexOf(term) !== -1;
     }
 
@@ -252,13 +298,19 @@
         var isYellow = hasYellowTag(e);
         var card = el("article", "mt-entry mt-status-" + e.status + (isYellow ? " mt-yellow-tag" : ""));
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", e.address));
-        head.appendChild(el("span", "mt-entry-date", prettyDate(e.date)));
+        var head = el("div", "mt-entry-head entry-head");
+        // Date under the address, so the address keeps the full width beside the icons
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", e.address));
+        title.appendChild(el("span", "mt-entry-date", prettyDate(e.date)));
+        head.appendChild(title);
+        // Edit and Delete as icons in the top-right corner, to keep each card compact
+        head.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
         if (isYellow) chips.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
+        if (e.contactedBoro) chips.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
         // The yellow tag reason already gets its own badge above, so it's left out here to avoid repeating it
         (e.reasons || []).filter(function (r) { return r !== YELLOW_TAG_REASON; }).forEach(function (r) {
             chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
@@ -267,32 +319,51 @@
         chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
         var times = counts[addressKey(e.address)];
         if (times > 1) chips.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
+        // From the route's county house list: where the cans go, or a house that isn't on the list
+        var house = window.RouteLookup ? RouteLookup.house(e.address, e.city) : null;
+        if (house && house.status === "on" && house.alley && house.use !== false) {
+            chips.appendChild(el("span", "mt-chip mt-chip-alley", house.use ? "Alley: " + house.alley : "Backs onto " + house.alley + " (alley?)"));
+        } else if (house && house.status === "off") {
+            chips.appendChild(el("span", "mt-chip mt-chip-repeat", "Not on Route " + house.route + "'s house list"));
+        }
         card.appendChild(chips);
 
         var meta = [];
+        if (e.city) meta.push(e.city);
         if (e.route) meta.push("Route " + e.route);
         if (e.driver) meta.push(e.driver);
         if (e.unit) meta.push("Unit " + e.unit);
         if (meta.length) card.appendChild(el("p", "mt-entry-meta", meta.join(" · ")));
         if (e.notes) card.appendChild(el("p", "mt-entry-notes", e.notes));
 
+        var stamps = [];
+        if (e.created) stamps.push("Added " + prettyStamp(e.created));
+        if (e.status === "resolved" && e.resolvedAt) stamps.push("Resolved " + prettyStamp(e.resolvedAt));
+        if (stamps.length) {
+            var stampsEl = el("p", "mt-entry-stamps");
+            stamps.forEach(function (t) { stampsEl.appendChild(el("span", null, t)); });
+            card.appendChild(stampsEl);
+        }
+
         var actions = el("div", "mt-entry-actions");
+        var contactedId = "mt-boro-" + e.id;
+        var contacted = el("div", "mt-entry-contacted");
+        var contactedBox = el("input");
+        contactedBox.type = "checkbox";
+        contactedBox.id = contactedId;
+        contactedBox.checked = !!e.contactedBoro;
+        contactedBox.addEventListener("change", function () { setContacted(e.id, contactedBox.checked); });
+        var contactedLabel = el("label", null, "Contacted Boro / Twp");
+        contactedLabel.htmlFor = contactedId;
+        contacted.appendChild(contactedBox);
+        contacted.appendChild(contactedLabel);
         var status = el("select", "mt-entry-status");
         status.setAttribute("aria-label", "Status for " + e.address);
         fillSelect(status, STATUSES);
         status.value = e.status;
         status.addEventListener("change", function () { setStatus(e.id, status.value); });
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + e.address);
-        edit.addEventListener("click", function () { startEdit(e.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + e.address);
-        del.addEventListener("click", function () { remove(e.id); });
+        actions.appendChild(contacted);
         actions.appendChild(status);
-        actions.appendChild(edit);
-        actions.appendChild(del);
         card.appendChild(actions);
 
         return card;
@@ -304,29 +375,106 @@
         var term = searchEl.value.trim().toLowerCase();
         var status = filterStatus.value;
         var yellowOnly = filterYellow.checked;
+        var noRouteOnly = filterNoRoute.checked;
 
         renderStats(entries, counts);
         renderDatalists(entries);
+        renderBackfill(entries);
         updateAddressHint();
 
+        var filtering = !!(term || status || yellowOnly || noRouteOnly);
         var shown = entries.filter(function (e) {
-            return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) && matchesSearch(e, term);
+            return (!status || e.status === status) && (!yellowOnly || hasYellowTag(e)) &&
+                (!noRouteOnly || !String(e.route || "").trim()) && matchesSearch(e, term);
         });
+        var recent = shown.filter(function (e) { return !isArchived(e); });
+        var archived = shown.filter(isArchived);
 
         listEl.textContent = "";
-        shown.forEach(function (e) { listEl.appendChild(buildCard(e, counts)); });
+        recent.forEach(function (e) { listEl.appendChild(buildCard(e, counts)); });
+
+        archiveListEl.textContent = "";
+        archived.forEach(function (e) { archiveListEl.appendChild(buildCard(e, counts)); });
+        archiveCountEl.textContent = archived.length;
+        archiveEl.hidden = !archived.length;
+        // A search or filter that finds archived entries opens the section so they're seen
+        if (filtering && archived.length) archiveEl.open = true;
 
         if (!entries.length) {
-            countEl.textContent = "No missed collections logged yet. Use the form above to add the first one.";
+            countEl.textContent = "No missed collections logged yet. Tap Log Missed Collection to add the first one.";
         } else if (!shown.length) {
             countEl.textContent = "Nothing matches the current search or filter.";
+        } else if (!recent.length) {
+            countEl.textContent = filtering
+                ? "No matches in the last 7 days. " + archived.length + " in Archived below."
+                : "Nothing logged in the last 7 days. Older misses are in Archived below.";
         } else {
-            countEl.textContent = "Showing " + shown.length + " of " + entries.length;
+            countEl.textContent = "Showing " + recent.length + " from the last 7 days" +
+                (archived.length ? ", " + archived.length + " archived" : "") +
+                (filtering ? " (" + shown.length + " of " + entries.length + " match)" : "") + ".";
         }
         document.getElementById("mt-export").disabled = !entries.length;
     }
 
     /* ---------- Form ---------- */
+
+    /* ---------- Route Sheets lookup ---------- */
+
+    // Typing the address fills Route and Driver from Route Sheets (see RouteLookup.attach)
+    var routeFill = window.RouteLookup
+        ? RouteLookup.attach({ address: fields.address, city: fields.city, route: fields.route, driver: fields.driver, note: routeMatchEl })
+        : { reset: function () {}, editing: function () {} };
+
+    /* ---------- Fill older entries from Route Sheets ---------- */
+
+    // Entries missing a route (or a driver) whose street is in Route Sheets. A street split
+    // between routes gets them all ("12 / 9"). Only empty fields are ever filled; nothing
+    // already entered is changed.
+    function backfillCandidates(entries) {
+        if (!window.RouteLookup || !RouteLookup.hasRoutes()) return [];
+        return entries.map(function (e) {
+            if (e.route && e.driver) return null;
+            var matches = RouteLookup.find(e.address, e.city);
+            if (!matches.length) return null;
+            var m = matches.length === 1 ? matches[0] : RouteLookup.combine(matches);
+            var patch = {};
+            if (!e.route) patch.route = m.route;
+            // A driver only comes along when the route agrees with Route Sheets
+            if (!e.driver && m.driver && (!e.route || String(e.route).toLowerCase() === String(m.route).toLowerCase())) patch.driver = m.driver;
+            return Object.keys(patch).length ? { id: e.id, patch: patch } : null;
+        }).filter(Boolean);
+    }
+
+    function renderBackfill(entries) {
+        var box = document.getElementById("mt-backfill");
+        var todo = backfillCandidates(entries);
+        box.hidden = !todo.length;
+        if (!todo.length) return;
+        var routes = todo.filter(function (t) { return t.patch.route; }).length;
+        var drivers = todo.length - routes;
+        document.getElementById("mt-backfill-text").textContent =
+            (routes ? routes + " miss" + (routes === 1 ? " is" : "es are") + " missing a route" : "") +
+            (routes && drivers ? " and " : "") +
+            (drivers ? drivers + " " + (routes ? "more " : "") + "missing a driver" : "") +
+            " that Route Sheets can fill in.";
+    }
+
+    document.getElementById("mt-backfill-btn").addEventListener("click", function () {
+        var list = load();
+        var todo = backfillCandidates(list);
+        var byId = {};
+        todo.forEach(function (t) { byId[t.id] = t.patch; });
+        list.forEach(function (e) {
+            if (!byId[e.id]) return;
+            Object.keys(byId[e.id]).forEach(function (k) { e[k] = byId[e.id][k]; });
+            e.updated = Date.now();
+        });
+        if (save(list)) {
+            document.getElementById("mt-backfill-done").textContent =
+                "Filled in " + todo.length + " miss" + (todo.length === 1 ? "" : "es") + " from Route Sheets.";
+        }
+        render();
+    });
 
     function updateAddressHint() {
         var key = addressKey(fields.address.value);
@@ -350,7 +498,8 @@
             driver: fields.driver.value.trim(),
             unit: fields.unit.value.trim(),
             status: fields.status.value,
-            notes: fields.notes.value.trim()
+            notes: fields.notes.value.trim(),
+            city: fields.city.value.trim()
         };
     }
 
@@ -358,9 +507,8 @@
     // misses from the same route in a row. Only the parts that differ per stop are cleared.
     function resetForm(keepContext) {
         editingId = null;
-        formTitle.textContent = "LOG A MISSED COLLECTION";
+        formTitle.textContent = "Log a Missed Collection";
         submitBtn.textContent = "Save Entry";
-        cancelBtn.hidden = true;
 
         var keep = keepContext ? readForm() : {};
         form.reset();
@@ -368,11 +516,13 @@
         if (keep.route) fields.route.value = keep.route;
         if (keep.driver) fields.driver.value = keep.driver;
         if (keep.unit) fields.unit.value = keep.unit;
+        if (keep.city) fields.city.value = keep.city;
         fields.service.value = keep.service || SERVICES[0];
         fields.status.value = "open";
         updateReasonsCount();
         reasonsError.hidden = true;
         updateAddressHint();
+        routeFill.reset();
     }
 
     function startEdit(id) {
@@ -380,17 +530,37 @@
         if (!entry) return;
         editingId = id;
         Object.keys(fields).forEach(function (k) { fields[k].value = entry[k] || ""; });
+        routeFill.editing(entry);
         setCheckedReasons(entry.reasons);
         updateReasonsCount();
         reasonsError.hidden = true;
-        formTitle.textContent = "EDIT ENTRY";
+        formTitle.textContent = "Edit Entry";
         submitBtn.textContent = "Save Changes";
-        cancelBtn.hidden = false;
         say("");
         updateAddressHint();
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        fields.address.focus({ preventScroll: true });
+        openDialog();
     }
+
+    /* ---------- Dialog ---------- */
+
+    // Close, the X and Escape all close it. A half-typed new entry is dropped, but the
+    // date/route/driver/unit stay filled in for the next one; an unsaved edit is discarded.
+    var entryDialog = TrackerDialog(document.getElementById("mt-dialog"), {
+        focus: fields.address,
+        onClose: function () {
+            resetForm(!editingId);
+            say("");
+        }
+    });
+
+    function openDialog() {
+        entryDialog.open();
+    }
+
+    document.getElementById("mt-open").addEventListener("click", function () {
+        say("");
+        openDialog();
+    });
 
     function newId() {
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -408,11 +578,13 @@
         var existing = editingId ? list.filter(function (e) { return e.id === editingId; })[0] : null;
 
         if (existing) {
-            Object.keys(data).forEach(function (k) { existing[k] = data[k]; });
+            applyStatus(existing, data.status);
+            Object.keys(data).forEach(function (k) { if (k !== "status") existing[k] = data[k]; });
             existing.updated = Date.now();
         } else {
             data.id = newId();
             data.created = Date.now();
+            data.resolvedAt = data.status === "resolved" ? data.created : null;
             list.push(data);
         }
         if (!save(list)) {
@@ -420,16 +592,17 @@
             return;
         }
 
-        var wasEdit = !!existing;
-        resetForm(!wasEdit);
         render();
-        say(wasEdit ? "Changes saved." : "Entry saved. Route and driver kept for the next stop.");
-        if (!wasEdit) fields.address.focus();
-    });
-
-    cancelBtn.addEventListener("click", function () {
-        resetForm(false);
-        say("");
+        // An edit is done once saved. A new entry leaves the dialog open: a manager usually
+        // logs several misses from the same route in a row.
+        if (existing) {
+            entryDialog.close();
+            return;
+        }
+        resetForm(true);
+        say("Entry saved. Route and driver kept for the next stop.");
+        entryDialog.scrollToTop();
+        fields.address.focus();
     });
 
     fields.address.addEventListener("input", updateAddressHint);
@@ -440,7 +613,20 @@
         var list = load();
         list.forEach(function (e) {
             if (e.id === id) {
-                e.status = value;
+                applyStatus(e, value);
+                e.updated = Date.now();
+            }
+        });
+        save(list);
+        render();
+    }
+
+    // Saved on the entry rather than in the edit form, so it's one tap from the list
+    function setContacted(id, value) {
+        var list = load();
+        list.forEach(function (e) {
+            if (e.id === id) {
+                e.contactedBoro = value;
                 e.updated = Date.now();
             }
         });
@@ -449,15 +635,29 @@
     }
 
     function remove(id) {
-        if (!confirm("Delete this entry? This cannot be undone.")) return;
-        save(load().filter(function (e) { return e.id !== id; }));
-        if (editingId === id) resetForm(false);
-        render();
+        var entry = load().filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete entry?",
+            message: "The missed collection at " + entry.address + " on " + prettyDate(entry.date) +
+                " will be deleted. This cannot be undone.",
+            confirmLabel: "Delete entry"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm(false);
+            render();
+        });
     }
 
-    searchEl.addEventListener("input", render);
+    // Redraw once typing pauses, not on every keystroke
+    var searchTimer = null;
+    searchEl.addEventListener("input", function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(render, 200);
+    });
     filterStatus.addEventListener("change", render);
     filterYellow.addEventListener("change", render);
+    filterNoRoute.addEventListener("change", render);
 
     /* ---------- CSV export ---------- */
 
@@ -471,11 +671,13 @@
     document.getElementById("mt-export").addEventListener("click", function () {
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
-        var rows = [["Date", "Route", "Address", "Service", "Reasons", "Driver", "Unit", "Status",
-            "Misses at address", "Notes"]];
+        var rows = [["Date", "Route", "Address", "City", "Service", "Reasons", "Driver", "Unit", "Status",
+            "Contacted Boro / Twp", "Misses at address", "Added At", "Resolved At", "Notes"]];
         entries.forEach(function (e) {
-            rows.push([e.date, e.route, e.address, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
-                labelFor(STATUSES, e.status), counts[addressKey(e.address)], e.notes]);
+            rows.push([e.date, e.route, e.address, e.city, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
+                labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)],
+                e.created ? prettyStamp(e.created) : "", e.status === "resolved" && e.resolvedAt ? prettyStamp(e.resolvedAt) : "",
+                e.notes]);
         });
         var csv = "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
 
@@ -502,4 +704,6 @@
     fillSelect(filterStatus, STATUSES, "All statuses");
     resetForm(false);
     render();
+    // The county house lists load a moment later; redraw so the cards get their alley chips
+    if (window.RouteLookup && RouteLookup.onHouses) RouteLookup.onHouses(function () { render(); });
 })();

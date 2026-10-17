@@ -111,23 +111,6 @@
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
-    // Fetched once up front so clicking Generate PDF doesn't wait on it later. Resolves to null
-    // (report still works without the logo) if it can't be loaded, e.g. offline on first visit.
-    function loadLogo() {
-        return fetch("assets/icons/icon-192.png")
-            .then(function (r) { return r.blob(); })
-            .then(function (blob) {
-                return new Promise(function (resolve, reject) {
-                    var reader = new FileReader();
-                    reader.onload = function () { resolve(reader.result); };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-            })
-            .catch(function () { return null; });
-    }
-    var logoPromise = loadLogo();
-
     // Downscales + re-compresses a photo before it ever touches storage. A phone photo straight
     // off the camera can be several MB; localStorage only has a few MB total for the whole app,
     // shared with every other saved case, entry and draft. This keeps one photo to roughly
@@ -165,6 +148,24 @@
             return [];
         }
     }
+
+    // The Earthwise logo for the PDF header (the same one the observation PDFs use). Fetched once
+    // up front so Generate PDF doesn't wait on it later. Resolves to null (the report still works
+    // without the logo) if it can't be loaded, e.g. offline on first visit.
+    function loadLogo() {
+        return fetch("assets/icons/ew-logo-192.png")
+            .then(function (r) { return r.blob(); })
+            .then(function (blob) {
+                return new Promise(function (resolve, reject) {
+                    var reader = new FileReader();
+                    reader.onload = function () { resolve(reader.result); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            })
+            .catch(function () { return null; });
+    }
+    var logoPromise = loadLogo();
 
     function save(list) {
         try {
@@ -345,32 +346,28 @@
         }
 
         var item = el("div", "rca-evidence-item");
-        var head = el("div", "rca-evidence-head");
-        head.appendChild(el("span", "rca-evidence-date", prettyDate(ev.date)));
-        if (ev.source) head.appendChild(el("span", "rca-evidence-source", ev.source));
+        // Edit and Remove as icons in the entry's top-right corner
+        var head = el("div", "rca-evidence-head entry-head");
+        var when = el("div", "entry-title rca-evidence-when");
+        when.appendChild(el("span", "rca-evidence-date", prettyDate(ev.date)));
+        if (ev.source) when.appendChild(el("span", "rca-evidence-source", ev.source));
+        head.appendChild(when);
+        head.appendChild(TrackerDialog.entryTools("this evidence entry", function () {
+            editingEvidence = { caseId: c.id, evidenceId: ev.id };
+            render();
+        }, function () {
+            TrackerDialog.confirmDelete({
+                title: "Remove evidence?",
+                message: "This evidence entry will be removed from “" + c.title + "”. This cannot be undone.",
+                confirmLabel: "Remove evidence"
+            }, function () {
+                updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
+            });
+        }, { deleteWord: "Remove" }));
         item.appendChild(head);
         if (ev.description) item.appendChild(el("p", "rca-evidence-desc", ev.description));
         var gallery = evidencePhotosGallery(ev);
         if (gallery) item.appendChild(gallery);
-
-        var actions = el("div", "rca-evidence-item-actions");
-        var editBtn = el("button", "rca-evidence-edit-btn", "Edit");
-        editBtn.type = "button";
-        editBtn.setAttribute("aria-label", "Edit this evidence entry");
-        editBtn.addEventListener("click", function () {
-            editingEvidence = { caseId: c.id, evidenceId: ev.id };
-            render();
-        });
-        var del = el("button", "rca-evidence-remove", "Remove");
-        del.type = "button";
-        del.setAttribute("aria-label", "Remove this evidence entry");
-        del.addEventListener("click", function () {
-            if (!confirm("Remove this evidence entry? This cannot be undone.")) return;
-            updateCase(c.id, { evidence: (c.evidence || []).filter(function (e) { return e.id !== ev.id; }) });
-        });
-        actions.appendChild(editBtn);
-        actions.appendChild(del);
-        item.appendChild(actions);
         return item;
     }
 
@@ -461,9 +458,13 @@
     function buildCard(c) {
         var card = el("article", "mt-entry rca-case rca-status-" + c.status);
 
-        var head = el("div", "mt-entry-head");
-        head.appendChild(el("h3", "mt-entry-address", c.title));
-        head.appendChild(el("span", "mt-entry-date", "Opened " + prettyDate(dateString(new Date(c.created)))));
+        // Edit and Delete as icons in the top-right corner; the date sits under the title
+        var head = el("div", "mt-entry-head entry-head");
+        var title = el("div", "entry-title");
+        title.appendChild(el("h3", "mt-entry-address", c.title));
+        title.appendChild(el("span", "mt-entry-date", "Opened " + prettyDate(dateString(new Date(c.created)))));
+        head.appendChild(title);
+        head.appendChild(TrackerDialog.entryTools(c.title, function () { startEdit(c.id); }, function () { removeCase(c.id); }));
         card.appendChild(head);
 
         var chips = el("div", "mt-chips");
@@ -578,17 +579,7 @@
                     pdfBtn.textContent = label;
                 });
         });
-        var edit = el("button", "mt-btn", "Edit");
-        edit.type = "button";
-        edit.setAttribute("aria-label", "Edit " + c.title);
-        edit.addEventListener("click", function () { startEdit(c.id); });
-        var del = el("button", "mt-btn mt-btn-danger", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete " + c.title);
-        del.addEventListener("click", function () { removeCase(c.id); });
         actions.appendChild(pdfBtn);
-        actions.appendChild(edit);
-        actions.appendChild(del);
         card.appendChild(actions);
 
         return card;
@@ -687,10 +678,17 @@
     });
 
     function removeCase(id) {
-        if (!confirm("Delete this case and all of its evidence? This cannot be undone.")) return;
-        save(load().filter(function (c) { return c.id !== id; }));
-        if (editingId === id) resetForm();
-        render();
+        var c = load().filter(function (e) { return e.id === id; })[0];
+        if (!c) return;
+        TrackerDialog.confirmDelete({
+            title: "Delete case?",
+            message: "“" + c.title + "” and all of its evidence will be deleted. This cannot be undone.",
+            confirmLabel: "Delete case"
+        }, function () {
+            save(load().filter(function (e) { return e.id !== id; }));
+            if (editingId === id) resetForm();
+            render();
+        });
     }
 
     searchEl.addEventListener("input", render);
@@ -745,14 +743,14 @@
         var PAGE_W = 612, PAGE_H = 792, M = 40;
         var CONTENT_W = PAGE_W - M * 2;
         var BOTTOM = PAGE_H - 54;
-        var LOGO_SIZE = 50;
+        var LOGO_SIZE = 60;
 
         var doc = new window.jspdf.jsPDF({ unit: "pt", format: "letter" });
         var y = M;
         function color(fn, col) { doc[fn](col[0], col[1], col[2]); }
         function ensure(h) { if (y + h > BOTTOM) { doc.addPage(); y = M; return true; } return false; }
 
-        if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO_SIZE, M - 4, LOGO_SIZE, LOGO_SIZE);
+        if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO_SIZE + 6, M - 12, LOGO_SIZE, LOGO_SIZE);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
@@ -901,7 +899,10 @@
         }
 
         var fileSafeTitle = (c.title || "RCA-Case").replace(/[\\/:*?"<>|]/g, "");
-        doc.save(fileSafeTitle + " - " + dateString(new Date()) + ".pdf");
+        var pdfName = fileSafeTitle + " - " + dateString(new Date()) + ".pdf";
+        doc.save(pdfName);
+        // Keep the app's own copy for Saved PDFs in the menu
+        if (window.PdfStore) window.PdfStore.add(pdfName, doc.output("blob")).catch(function () {});
     }
 
     // Another open copy of this page changed the log

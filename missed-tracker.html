@@ -2,7 +2,8 @@
 <html lang="en" data-no-draft>
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <script src="theme.js"></script>
     <script>
         (function () {
             try {
@@ -34,12 +35,20 @@
             <div class="mt-stat mt-stat-yellow"><span class="mt-stat-num" id="stat-yellow">0</span><span class="mt-stat-label">Yellow tags</span></div>
         </div>
         <p class="mt-warning" id="mt-storage-warning" hidden>This browser is blocking storage, so entries cannot be saved. Export to CSV before closing.</p>
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="mt-open">+ Log Missed Collection</button>
+        </div>
     </section>
 
-    <section class="emp-info-section mt-section">
+    <dialog class="send-dialog mt-dialog" id="mt-dialog" aria-labelledby="mt-form-title">
         <form class="emp-info" id="mt-form" data-title="Missed Collection">
+            <div class="mt-dialog-head">
+                <h2 id="mt-form-title">Log a Missed Collection</h2>
+                <button type="button" class="mt-dialog-close" id="mt-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+
             <fieldset class="emp-fields">
-                <legend id="mt-form-title">LOG A MISSED COLLECTION</legend>
+                <legend class="visually-hidden">Missed collection details</legend>
 
                 <div class="field">
                     <label for="mt-date">Date</label>
@@ -55,6 +64,12 @@
                     <label for="mt-address">Address / Location</label>
                     <input type="text" id="mt-address" name="address" list="dl-address" autocomplete="off" required>
                     <p class="mt-hint" id="mt-address-hint" aria-live="polite"></p>
+                    <div class="mt-route-match" id="mt-route-match" aria-live="polite"></div>
+                </div>
+
+                <div class="field">
+                    <label for="mt-city">City</label>
+                    <input type="text" id="mt-city" name="city" list="dl-city" autocomplete="off">
                 </div>
 
                 <div class="field">
@@ -99,14 +114,15 @@
             <datalist id="dl-address"></datalist>
             <datalist id="dl-driver"></datalist>
             <datalist id="dl-unit"></datalist>
+            <datalist id="dl-city"></datalist>
 
-            <div class="form-actions">
-                <button type="button" class="send-email" id="mt-cancel" hidden>Cancel</button>
+            <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" id="mt-cancel" data-dialog-close>Close</button>
                 <button type="submit" class="generate-pdf" id="mt-submit">Save Entry</button>
             </div>
-            <p class="mt-message" id="mt-message" role="status" aria-live="polite"></p>
         </form>
-    </section>
+    </dialog>
 
     <section class="emp-info-section mt-section">
         <div class="emp-info">
@@ -122,14 +138,31 @@
                         <label for="mt-filter-status">Status</label>
                         <select id="mt-filter-status"></select>
                     </div>
-                    <div class="field">
-                        <input type="checkbox" id="mt-filter-yellow" name="filter-yellow">
-                        <label for="mt-filter-yellow">Yellow tags only</label>
+                    <div class="mt-filter-checks">
+                        <div class="field">
+                            <input type="checkbox" id="mt-filter-yellow" name="filter-yellow">
+                            <label for="mt-filter-yellow">Yellow tags only</label>
+                        </div>
+                        <div class="field">
+                            <input type="checkbox" id="mt-filter-noroute" name="filter-noroute">
+                            <label for="mt-filter-noroute">No route entered only</label>
+                        </div>
                     </div>
                 </div>
 
+                <div class="mt-backfill" id="mt-backfill" hidden>
+                    <p class="mt-backfill-text" id="mt-backfill-text"></p>
+                    <button type="button" class="mt-btn" id="mt-backfill-btn">Fill from Route Sheets</button>
+                </div>
+                <p class="mt-message mt-backfill-done" id="mt-backfill-done" role="status" aria-live="polite"></p>
+
                 <p class="mt-count" id="mt-count" aria-live="polite"></p>
                 <div class="mt-list" id="mt-list"></div>
+
+                <details class="nc-established" id="mt-archive">
+                    <summary>Archived &ndash; older than 7 days (<span id="mt-archive-count">0</span>)</summary>
+                    <div class="mt-list" id="mt-archive-list"></div>
+                </details>
 
                 <div class="form-actions">
                     <button type="button" class="send-email" id="mt-export">Export CSV</button>
@@ -138,6 +171,9 @@
         </div>
     </section>
 
+    <script src="tracker-dialog.js" defer></script>
+    <script src="house-store.js" defer></script>
+    <script src="route-lookup.js" defer></script>
     <script src="missed-tracker.js" defer></script>
     <script type="module" src="firebase-init.js"></script>
     <script src="auth-gate.js" defer></script>

@@ -1,11 +1,17 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v55";
+var CACHE_NAME = "fleet-mgr-v104";
+// Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
+var SHARE_INBOX = "routeiq-share-inbox";
 
 var PRECACHE_URLS = [
     "./",
     "./index.html",
+    "./theme.js",
+    "./settings.js",
+    "./kpi-dashboard.html",
+    "./kpi-dashboard.js",
     "./resi-driver.html",
     "./resi-helper.html",
     "./resi-trainee.html",
@@ -20,16 +26,31 @@ var PRECACHE_URLS = [
     "./bulk-pickup.js",
     "./rca.html",
     "./rca.js",
+    "./service-assist.html",
+    "./service-assist.js",
+    "./route-streets.html",
+    "./route-streets.js",
+    "./house-store.js",
+    "./route-lookup.js",
+    "./county-pull.js",
     "./styles.css",
     "./nav.js",
     "./tabs.js",
     "./signature-pad.js",
     "./jspdf.umd.min.js",
+    "./xlsx.mini.min.js",
+    "./pdf-viewer.js",
+    "./pdf-store.js",
+    "./saved-pdfs.js",
+    "./pdf.min.js",
+    "./pdf.worker.min.js",
     "./generate-pdf.js",
     "./trainee-role.js",
     "./firebase-init.js",
     "./auth-gate.js",
     "./sw-register.js",
+    "./tracker-dialog.js",
+    "./recycle-calendar.js",
     "./manifest.webmanifest",
     "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js",
     "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js",
@@ -48,7 +69,12 @@ self.addEventListener("install", function (event) {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(function (cache) {
-                return cache.addAll(PRECACHE_URLS);
+                // cache: "reload" skips the browser's HTTP cache. GitHub Pages sends max-age=600,
+                // so without it a new version could precache 10-minute-old copies of the files
+                // it was meant to replace, and then keep serving them.
+                return cache.addAll(PRECACHE_URLS.map(function (url) {
+                    return new Request(url, { cache: "reload" });
+                }));
             })
             .then(function () {
                 return self.skipWaiting();
@@ -63,7 +89,7 @@ self.addEventListener("activate", function (event) {
                 return Promise.all(
                     keys
                         .filter(function (key) {
-                            return key !== CACHE_NAME;
+                            return key !== CACHE_NAME && key !== SHARE_INBOX;
                         })
                         .map(function (key) {
                             return caches.delete(key);
@@ -79,32 +105,47 @@ self.addEventListener("activate", function (event) {
 self.addEventListener("fetch", function (event) {
     var request = event.request;
 
+    // .xlsx files shared to Route IQ (manifest share_target): keep them, then open the app,
+    // which sends them to Route Sheets for import
+    if (request.method === "POST" && new URL(request.url).pathname.endsWith("/share-import")) {
+        event.respondWith(receiveShare(request));
+        return;
+    }
+
     if (request.method !== "GET") {
         return;
     }
 
-    // Page navigations: try the network first so field crews always get the
-    // latest form when online, falling back to the cached copy offline.
-    if (request.mode === "navigate") {
+    // Pages, scripts and styles: network first so field crews always get the latest
+    // code when online, falling back to the cached copy offline. "no-cache" makes the
+    // browser check with the server (a cheap 304 when nothing changed) instead of
+    // reusing its own copy for up to 10 minutes.
+    var isCode = request.mode === "navigate" ||
+        request.destination === "script" || request.destination === "style";
+    if (isCode && new URL(request.url).origin === self.location.origin) {
         event.respondWith(
-            fetch(request)
+            fetch(request.url, { cache: "no-cache", credentials: "same-origin" })
                 .then(function (response) {
-                    var copy = response.clone();
-                    caches.open(CACHE_NAME).then(function (cache) {
-                        cache.put(request, copy);
-                    });
+                    if (response && response.ok) {
+                        var copy = response.clone();
+                        caches.open(CACHE_NAME).then(function (cache) {
+                            cache.put(request, copy);
+                        });
+                    }
                     return response;
                 })
                 .catch(function () {
-                    return caches.match(request).then(function (cached) {
-                        return cached || caches.match("./index.html");
+                    return caches.match(request, { ignoreSearch: true }).then(function (cached) {
+                        if (cached) return cached;
+                        if (request.mode === "navigate") return caches.match("./index.html");
+                        return Response.error();
                     });
                 })
         );
         return;
     }
 
-    // Everything else (CSS, JS, icons, fonts): cache-first, filling in and
+    // Everything else (icons, images, fonts): cache-first, filling in and
     // refreshing the cache from the network when a new asset is requested.
     event.respondWith(
         caches.match(request).then(function (cached) {
@@ -126,3 +167,24 @@ self.addEventListener("fetch", function (event) {
         })
     );
 });
+
+function receiveShare(request) {
+    var landing = new URL("./index.html?import-shared=1", self.registration.scope).href;
+    return request.formData()
+        .then(function (data) {
+            var files = data.getAll("files").filter(function (f) { return f && f.name; });
+            return caches.open(SHARE_INBOX).then(function (cache) {
+                return Promise.all(files.map(function (file, i) {
+                    var key = new URL("./share-inbox/" + Date.now() + "-" + i, self.registration.scope).href;
+                    return cache.put(key, new Response(file, {
+                        headers: {
+                            "Content-Type": file.type || "application/octet-stream",
+                            "X-File-Name": encodeURIComponent(file.name)
+                        }
+                    }));
+                }));
+            });
+        })
+        .catch(function () { /* nothing usable was shared; the app still opens */ })
+        .then(function () { return Response.redirect(landing, 303); });
+}

@@ -2,6 +2,7 @@
 <html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="theme.js"></script>
 <script>
     (function () {
         try {
@@ -379,7 +380,7 @@
         <dialog class="send-dialog" id="send-dialog" aria-labelledby="send-dialog-title">
             <form class="send-form" id="send-form" novalidate>
                 <h2 id="send-dialog-title">Send Report</h2>
-                <p class="send-help">Save the form first, then choose the saved PDF below.</p>
+                <p class="send-help">The PDF of this form is created and attached for you.</p>
 
                 <div class="send-field">
                     <label for="send-email-to">Email address</label>
@@ -387,8 +388,8 @@
                 </div>
 
                 <div class="send-field">
-                    <label for="send-pdf">PDF report</label>
-                    <input type="file" id="send-pdf" name="pdf" accept="application/pdf,.pdf" required>
+                    <span class="send-label">Attached</span>
+                    <p class="send-attachment" id="send-attachment"></p>
                 </div>
 
                 <p class="send-error" id="send-error" role="alert" hidden></p>
@@ -403,6 +404,7 @@
     </section>
     <script src="signature-pad.js" defer></script>
     <script src="jspdf.umd.min.js" defer></script>
+    <script src="pdf-store.js" defer></script>
     <script src="generate-pdf.js" defer></script>
     <script type="module" src="firebase-init.js"></script>
     <script src="auth-gate.js" defer></script>

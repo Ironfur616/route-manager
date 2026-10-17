@@ -7,6 +7,91 @@
 }
 
 
+/* ---------- Color roles ----------
+   Rules use these roles rather than raw colors, so dark mode (theme.js sets data-theme on
+   <html>) only has to swap the values below. The light values are the app's original colors. */
+:root {
+    color-scheme: light;
+    --page: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-2: #f4f6f8;
+    --chrome: #eef3f7;
+    --tab-idle: #dbe5ee;
+    --viewer-bg: #E6E9ED;
+    --ink: #1A1A1A;
+    --ink-rgb: 26, 26, 26;
+    --heading: #043960;
+    --line: #043960;
+    --navy-rgb: 4, 57, 96;
+    --green-rgb: 4, 102, 53;
+    --fill-navy: #043960;
+    --on-accent: #FFFFFF;
+    --green-ink: #046635;
+    --danger: #B3261E;
+    --danger-fill: #B3261E;
+    --danger-fill-hover: #8C1D17;
+    --danger-bg: #FDF1F0;
+    --warn-ink: #8A4B00;
+    --purple-ink: #5B2C83;
+    --purple-fill: #5B2C83;
+    --good-bg: #E8F5EC;
+    --pending-bg: #FFF3E6;
+    --yellow-bg: #FFFBEB;
+    --mark-bg: #FFE58A;
+}
+
+/* Dark mode: theme.js sets data-theme="dark" on <html> (by time of day, or the Settings choice).
+   Every text/background pair here clears 4.5:1 contrast. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --forest-green: #157a46;
+    --page: #0f1720;
+    --surface: #18232f;
+    --surface-2: #213040;
+    --chrome: #121c26;
+    --tab-idle: #1d2a37;
+    --viewer-bg: #0f1720;
+    --ink: #e3e9ef;
+    --ink-rgb: 227, 233, 239;
+    --heading: #9fc6ee;
+    --line: #7f9bbb;
+    --navy-rgb: 159, 190, 224;
+    --green-rgb: 111, 207, 151;
+    --fill-navy: #2a5a88;
+    --on-accent: #FFFFFF;
+    --green-ink: #74d39d;
+    --danger: #ff8a80;
+    --danger-fill: #c0352b;
+    --danger-fill-hover: #a52a22;
+    --danger-bg: #3a1c1a;
+    --warn-ink: #f0b866;
+    --purple-ink: #c7a6ee;
+    --purple-fill: #6a3a96;
+    --good-bg: #183a28;
+    --pending-bg: #3b2a16;
+    --yellow-bg: #35300f;
+    --mark-bg: #7a6500;
+}
+
+/* Signatures stay ink on white, like paper, in both modes */
+:root[data-theme="dark"] .signature-pad {
+    background-color: #FFFFFF;
+}
+
+/* The navy logo artwork would vanish on dark: the PIN card shows it on a white plate, and the
+   start-screen watermark is drawn in white instead */
+:root[data-theme="dark"] .pin-lock-logo {
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background-color: #FFFFFF;
+}
+
+:root[data-theme="dark"] .tab-empty::before {
+    filter: brightness(0) invert(1);
+    opacity: 0.06;
+}
+
+
 /* Mobile first: base styles target small screens.
    Larger screens are layered on with min-width media queries. */
 
@@ -21,13 +106,13 @@ body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     line-height: 1.5;
-    color: var(--drk-gray);
-    background-color: var(--white);
+    color: var(--ink);
+    background-color: var(--page);
 }
 
 /* ---------- App header ---------- */
 /* Hamburger button + title, sticky at every breakpoint. Using the same
-   off-canvas drawer at every width avoids the old top-nav's link-wrapping
+    off-canvas drawer at every width avoids the old top-nav's link-wrapping
    congestion when the window is resized between phone and desktop widths. */
 .app-header {
     display: flex;
@@ -37,7 +122,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    background-color: var(--white);
+    background-color: var(--surface);
     border-bottom: 4px solid var(--forest-green);
 }
 
@@ -81,7 +166,8 @@ body {
     width: 22px;
     height: 2px;
     border-radius: 2px;
-    background-color: var(--deep-navy);
+    /* Drawn like text (heading color), so the icon stays visible in dark mode */
+    background-color: var(--heading);
     transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
@@ -122,17 +208,20 @@ body {
 .nav-close {
     font-size: 1.75rem;
     line-height: 1;
-    color: var(--deep-navy);
+    color: var(--heading);
 }
 
 /* ---------- Off-canvas nav drawer ---------- */
+/* Column flex so the Saved PDFs footer sits at the bottom even when the menu is short */
 .site-nav {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 200;
     width: min(85vw, 320px);
     overflow-y: auto;
-    background-color: var(--white);
+    background-color: var(--surface);
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
     transform: translateX(-100%);
     transition: transform 0.25s ease;
@@ -147,21 +236,20 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.5rem 0.5rem 1rem;
-    border-bottom: 1px solid rgba(4, 57, 96, 0.15);
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .site-nav-heading {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
 }
 
 .nav-section {
-    padding: 0.125rem 1rem;
+    padding: 0.75rem 1rem 0;
 }
 
-/* Section/subsection headings are buttons that expand/collapse the content
-   below them (see nav.js). A shared caret rotates via [aria-expanded]. */
-.nav-section-title,
+/* Subsection headings (Residential, Commercial) are buttons that expand/collapse the
+   links below them (see nav.js). The caret rotates via [aria-expanded]. */
 .nav-subsection-title {
     display: flex;
     align-items: center;
@@ -176,32 +264,13 @@ body {
     transition: background-color 0.15s ease;
 }
 
-.nav-section-title:hover,
 .nav-subsection-title:hover {
     background-color: rgba(86, 157, 214, 0.12);
 }
 
-.nav-section-title:focus-visible,
 .nav-subsection-title:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
-}
-
-/* Margin under the heading only while its panel is open, so collapsed headings sit close together */
-.nav-section-title[aria-expanded="true"] {
-    margin-bottom: 0.25rem;
-}
-
-.nav-section-title {
-    margin: 0;
-    min-height: 40px;
-    padding: 0 0 0.125rem;
-    color: var(--deep-navy);
-    font-size: 1.125rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    border-bottom: 2px solid var(--forest-green);
 }
 
 .nav-caret {
@@ -222,28 +291,35 @@ body {
 
 /* Smooth height animation without measuring in JS: the grid row goes from
    0fr (collapsed) to 1fr (open), and the inner wrapper clips overflow. */
-.nav-section-body {
+.nav-subsection-body {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.25s ease;
 }
 
-.nav-section-body.is-open {
+.nav-subsection-body.is-open {
     grid-template-rows: 1fr;
 }
 
-.nav-section-body-inner {
+.nav-subsection-body-inner {
     overflow: hidden;
     min-height: 0;
 }
 
-/* Non-interactive divider within a link list, grouping related links
-   (e.g. "Residential" above the residential forms) without an extra
-   expand/collapse level. */
-.nav-group-label {
-    margin-top: 0.5rem;
+/* The subsection headings sit in <h3>s; drop the browser's default heading margins */
+.nav-subsection h3 {
+    margin: 0;
+}
+
+.nav-subsection + .nav-subsection {
+    margin-top: 0;
+}
+
+.nav-subsection-title {
+    margin: 0;
+    min-height: 36px;
     padding: 0 0.25rem;
-    color: var(--forest-green);
+    color: var(--green-ink);
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -262,15 +338,15 @@ body {
     list-style: none;
 }
 
-.nav-link-list li:not(.nav-group-label) + li:not(.nav-group-label) {
-    border-top: 1px solid rgba(4, 57, 96, 0.1);
+.nav-link-list li + li {
+    border-top: 1px solid rgba(var(--navy-rgb), 0.1);
 }
 
 .nav-link-list a {
     display: block;
     padding: 0.5rem;
     min-height: 40px;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 600;
     text-decoration: none;
     border-radius: 4px;
@@ -289,28 +365,14 @@ body {
 /* Current page: add aria-current="page" to that page's link */
 .nav-link-list a[aria-current="page"] {
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
-/* Drawer footer: app-level actions (Saved Files, Account) rather than navigation, so it's
-   set apart from the nav sections above with its own background and a stronger divider -
-   otherwise it reads as just another section and gets lost among the real nav links. */
-.site-nav-footer {
-    margin-top: 0.5rem;
-    padding: 0.75rem 0;
-    background-color: rgba(4, 57, 96, 0.04);
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
-}
-
-.site-nav-footer .nav-section + .nav-section {
-    margin-top: 1rem;
-}
-
-/* A plain (non-collapsible) section within the footer, holding one action button */
+/* Top-level section heading: always open, not a button */
 .nav-section-plain {
-    margin: 0 0 0.75rem;
-    padding: 0 0 0.5rem;
-    color: var(--deep-navy);
+    margin: 0 0 0.25rem;
+    padding: 0 0 0.25rem;
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -318,35 +380,77 @@ body {
     border-bottom: 2px solid var(--forest-green);
 }
 
-.nav-action {
-    display: block;
-    width: 100%;
-    min-height: 44px;
-    padding: 0.75rem 0.5rem;
+/* Saved PDFs icon, pinned to the bottom right of the drawer */
+.site-nav-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
+}
+
+/* Signed-in account, left of the Saved PDFs icon */
+.nav-account {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    margin-right: auto;
+}
+
+.nav-account-email {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 0.8125rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-account-signout {
+    min-height: 36px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--heading);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.nav-account-signout[hidden] {
+    display: none;
+}
+
+.nav-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
     border: none;
     border-radius: 4px;
     background-color: transparent;
-    color: var(--drk-gray);
-    font: inherit;
-    font-weight: 600;
-    text-align: left;
+    color: var(--heading);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
 
-.nav-action:hover {
+.nav-icon-btn:hover {
     background-color: rgba(86, 157, 214, 0.15);
 }
 
-.nav-action:focus-visible {
+.nav-icon-btn:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
-}
-
-.nav-action-hint {
-    margin: 0.25rem 0.5rem 0;
-    color: var(--drk-gray);
-    font-size: 0.8rem;
 }
 
 /* Dims and blocks interaction with the page behind the open drawer */
@@ -393,14 +497,14 @@ body.nav-open {
     margin: 0;
     padding: 1rem;
     min-width: 0;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .emp-info legend {
     padding: 0 0.5rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
 }
@@ -412,7 +516,7 @@ body.nav-open {
 .emp-info .field label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -424,10 +528,10 @@ body.nav-open {
     min-width: 0;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
     transition: border-color 0.15s ease;
@@ -469,13 +573,13 @@ body.nav-open {
 
 /* Auto-filled name reads as fixed text, not an editable field */
 .emp-info .field input[readonly] {
-    background-color: rgba(4, 57, 96, 0.06);
+    background-color: rgba(var(--navy-rgb), 0.06);
 }
 
 .signature-field label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -484,9 +588,9 @@ body.nav-open {
     display: block;
     width: 100%;
     height: 10rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     touch-action: none;
     cursor: crosshair;
 }
@@ -495,10 +599,10 @@ body.nav-open {
     min-height: 44px;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -527,7 +631,7 @@ body.nav-open {
     border: 0;
     border-radius: 4px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1.125rem;
     font-weight: 700;
@@ -535,11 +639,11 @@ body.nav-open {
 }
 
 .send-email {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .generate-pdf:hover {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .send-email:hover {
@@ -566,33 +670,53 @@ body.nav-open {
     border: 0;
     border-top: 4px solid var(--forest-green);
     border-radius: 6px;
-    color: var(--drk-gray);
+    /* Set outright: left to the browser, a dialog is white in light mode but near-black in dark */
+    background-color: var(--surface);
+    color: var(--ink);
 }
 
 .send-dialog::backdrop {
-    background-color: rgba(4, 57, 96, 0.55);
+    background-color: rgba(var(--navy-rgb), 0.55);
+}
+
+/* In dark mode the navy tint turns pale, which would wash the page out; dim it instead */
+:root[data-theme="dark"] .send-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.65);
 }
 
 .send-form h2 {
     margin: 0 0 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
 }
 
 .send-help {
     margin: 0 0 1rem;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 
 .send-field + .send-field {
     margin-top: 1rem;
 }
 
-.send-field label {
+.send-field label,
+.send-field .send-label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
+}
+
+/* The PDF Send attaches for you, shown in place of a file picker */
+.send-attachment {
+    margin: 0;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.25);
+    border-radius: 4px;
+    background-color: rgba(var(--green-rgb), 0.06);
+    color: var(--ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 /* 16px font stops iOS Safari from zooming in when a field is focused */
@@ -602,10 +726,10 @@ body.nav-open {
     min-width: 0;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -618,7 +742,7 @@ body.nav-open {
 
 .send-error {
     margin: 1rem 0 0;
-    color: #b22222;
+    color: var(--danger);
     font-weight: 600;
 }
 
@@ -641,15 +765,15 @@ body.nav-open {
 }
 
 .send-cancel {
-    border: 1px solid var(--deep-navy);
-    background-color: var(--white);
-    color: var(--deep-navy);
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--heading);
 }
 
 .send-submit {
     border: 0;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 .send-cancel:focus-visible,
@@ -699,14 +823,14 @@ body.nav-open {
 
 .obs-key {
     padding: 1rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .obs-key h2 {
     margin: 0 0 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
     font-weight: 700;
 }
@@ -727,9 +851,9 @@ body.nav-open {
 .obs-key dt {
     min-width: 2.75rem;
     padding: 0.25rem 0.5rem;
-    border: 2px solid var(--deep-navy);
+    border: 2px solid var(--line);
     border-radius: 4px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     text-align: center;
 }
@@ -761,11 +885,11 @@ body.nav-open {
 }
 
 .practice + .practice {
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .practice-head span {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     text-align: center;
 }
@@ -798,7 +922,7 @@ body.nav-open {
 
 .practice-text {
     padding: 0.5rem 0 0.5rem 0.5rem;
-    color: var(--drk-gray);
+    color: var(--ink);
 }
 /* Stays inline with the practice text it belongs to, at 75% size */
 #note {
@@ -821,7 +945,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .pin-lock-card {
@@ -830,7 +954,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     padding: 2rem 1.5rem;
     border-bottom: 4px solid var(--forest-green);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     text-align: center;
 }
 
@@ -842,14 +966,14 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 
 .pin-lock-card h2 {
     margin: 0 0 0.5rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
     font-weight: 700;
 }
 
 .pin-lock-hint {
     margin: 0 0 1.25rem;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.9rem;
 }
 
@@ -858,10 +982,10 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     width: 100%;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1.5rem;
     letter-spacing: 0.5rem;
@@ -877,7 +1001,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 .pin-lock-error {
     min-height: 1.25rem;
     margin: 0.5rem 0 0;
-    color: #B3261E;
+    color: var(--danger);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -890,7 +1014,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     border: none;
     border-radius: 4px;
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
     font: inherit;
     font-size: 1rem;
     font-weight: 700;
@@ -899,7 +1023,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
 }
 
 .pin-lock-submit:hover {
-    background-color: var(--deep-navy);
+    background-color: var(--fill-navy);
 }
 
 .pin-lock-submit:focus-visible {
@@ -973,8 +1097,8 @@ body.shell {
     gap: 0.25rem;
     padding: 0.5rem 0.5rem 0;
     overflow-x: auto;
-    border-bottom: 1px solid var(--deep-navy);
-    background-color: #eef3f7;
+    border-bottom: 1px solid var(--line);
+    background-color: var(--chrome);
     scrollbar-width: thin;
 }
 
@@ -987,16 +1111,16 @@ body.shell {
     flex: 0 0 auto;
     align-items: stretch;
     max-width: 14rem;
-    border: 1px solid rgba(4, 57, 96, 0.3);
+    border: 1px solid rgba(var(--navy-rgb), 0.3);
     border-bottom: 0;
     border-radius: 6px 6px 0 0;
-    background-color: #dbe5ee;
+    background-color: var(--tab-idle);
 }
 
 .tab.is-active {
-    border-color: var(--deep-navy);
+    border-color: var(--line);
     border-top: 3px solid var(--forest-green);
-    background-color: var(--white);
+    background-color: var(--surface);
     /* Covers the bar's bottom rule so the active tab joins its panel */
     margin-bottom: -1px;
 }
@@ -1007,7 +1131,7 @@ body.shell {
     padding: 0 0.5rem 0 0.75rem;
     border: 0;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     text-align: left;
@@ -1022,17 +1146,45 @@ body.shell {
     width: 36px;
     border: 0;
     background: none;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.25rem;
     line-height: 1;
     cursor: pointer;
 }
 
 .tab-close:hover {
-    background-color: rgba(4, 57, 96, 0.12);
+    background-color: rgba(var(--navy-rgb), 0.12);
+}
+
+/* Pin: muted until pinned, then forest green (and the close button is hidden) */
+.tab-pin {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: rgba(var(--navy-rgb), 0.45);
+    cursor: pointer;
+}
+
+.tab-pin:hover {
+    background-color: rgba(var(--navy-rgb), 0.12);
+    color: var(--heading);
+}
+
+.tab.is-pinned .tab-pin {
+    color: var(--green-ink);
+}
+
+.tab-close[hidden] {
+    display: none;
 }
 
 .tab-select:focus-visible,
+.tab-pin:focus-visible,
 .tab-close:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: -3px;
@@ -1042,6 +1194,7 @@ body.shell {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
+    isolation: isolate; /* keeps the empty-state watermark (z-index -1) above the page background */
 }
 
 .tab-frame {
@@ -1049,7 +1202,7 @@ body.shell {
     width: 100%;
     height: 100%;
     border: 0;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 .tab-frame[hidden] {
@@ -1060,7 +1213,7 @@ body.shell {
     max-width: 30rem;
     margin: 0;
     padding: 2rem 1rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.125rem;
 }
 
@@ -1068,12 +1221,24 @@ body.shell {
     display: none;
 }
 
+/* Faint Earthwise logo filling the empty area before any form is open. It hangs off
+   .tab-empty, so it goes away with it as soon as the first tab opens. */
+.tab-empty::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url("assets/ew-logo.svg") center / min(75%, 560px) auto no-repeat;
+    opacity: 0.08;
+    pointer-events: none;
+}
+
 
 /* ---------- Trainee form: Driver / Helper choice ---------- */
 .emp-info .field-label,
 .emp-info .field select {
     display: block;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -1093,9 +1258,9 @@ body.shell {
     gap: 0.5rem;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    color: var(--drk-gray);
+    color: var(--ink);
     font-weight: 600;
     cursor: pointer;
 }
@@ -1120,9 +1285,9 @@ body.shell {
     width: 100%;
     min-height: 44px;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
     font: inherit;
     font-size: 1rem;
     font-weight: 400;
@@ -1137,8 +1302,8 @@ body.shell {
 /* Sections for the role that was not picked */
 .emp-info fieldset.role-locked {
     opacity: 0.45;
-    background-color: rgba(4, 57, 96, 0.06);
-    border-bottom-color: rgba(4, 57, 96, 0.3);
+    background-color: rgba(var(--navy-rgb), 0.06);
+    border-bottom-color: rgba(var(--navy-rgb), 0.3);
 }
 
 .emp-info fieldset.role-locked .check,
@@ -1218,7 +1383,7 @@ body.shell {
 }
 
 .mt-stat-yellow .mt-stat-num {
-    color: #8A4B00;
+    color: var(--warn-ink);
 }
 
 .mt-stat {
@@ -1226,33 +1391,33 @@ body.shell {
     flex-direction: column;
     align-items: center;
     padding: 0.75rem 0.25rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-bottom: 4px solid var(--forest-green);
     text-align: center;
 }
 
 .mt-stat-num {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.1;
 }
 
 .mt-stat-label {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
     font-weight: 600;
 }
 
 .mt-warning {
     margin: 0.75rem 0 0;
-    color: #B3261E;
+    color: var(--danger);
     font-weight: 600;
 }
 
 .mt-hint {
     margin: 0.25rem 0 0;
-    color: #8A4B00;
+    color: var(--warn-ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -1267,10 +1432,10 @@ body.shell {
     width: 100%;
     min-width: 0;
     padding: 0.25rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -1281,7 +1446,7 @@ body.shell {
 
 #mt-reasons option:checked {
     background-color: var(--forest-green);
-    color: var(--white);
+    color: var(--on-accent);
 }
 
 #mt-reasons:focus {
@@ -1293,7 +1458,7 @@ body.shell {
 .mt-message {
     min-height: 1.5rem;
     margin: 0.75rem 0 0;
-    color: var(--forest-green);
+    color: var(--green-ink);
     font-weight: 600;
 }
 
@@ -1301,9 +1466,21 @@ body.shell {
     margin-top: 1rem;
 }
 
+/* Yellow tags only / No route entered only: side by side, wrapping on narrow screens */
+.mt-filter-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.5rem;
+    margin-top: 1rem;
+}
+
+.mt-filters .mt-filter-checks .field {
+    margin-top: 0;
+}
+
 .mt-count {
     margin: 1rem 0 0.75rem;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
 }
 
@@ -1315,16 +1492,16 @@ body.shell {
 
 .mt-entry {
     padding: 0.75rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
-    border-left: 6px solid #B3261E;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--danger);
     border-radius: 4px;
-    background-color: var(--white);
+    background-color: var(--surface);
 }
 
 /* Yellow tag entries get a soft wash across the whole card, on top of the status border,
    so they're easy to spot while scanning a long list */
 .mt-entry.mt-yellow-tag {
-    background-color: #FFFBEB;
+    background-color: var(--yellow-bg);
 }
 
 .mt-entry.mt-status-notified {
@@ -1332,7 +1509,7 @@ body.shell {
 }
 
 .mt-entry.mt-status-district_notified {
-    border-left-color: var(--deep-navy);
+    border-left-color: var(--line);
 }
 
 .mt-entry.mt-status-resolved {
@@ -1349,13 +1526,13 @@ body.shell {
 
 .mt-entry-address {
     margin: 0;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 1.0625rem;
     overflow-wrap: anywhere;
 }
 
 .mt-entry-date {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.875rem;
     font-weight: 600;
 }
@@ -1370,22 +1547,22 @@ body.shell {
 .mt-chip {
     max-width: 100%;
     padding: 0.125rem 0.5rem;
-    border: 1px solid rgba(4, 57, 96, 0.35);
+    border: 1px solid rgba(var(--navy-rgb), 0.35);
     border-radius: 999px;
     overflow-wrap: break-word;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 600;
 }
 
 .mt-chip-reason {
-    background-color: var(--deep-navy);
-    color: var(--white);
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
 }
 
 .mt-chip-repeat {
-    border-color: #8A4B00;
-    color: #8A4B00;
+    border-color: var(--warn-ink);
+    color: var(--warn-ink);
 }
 
 /* Yellow tag: a filled badge (not just an outlined chip) so it stands out at a glance */
@@ -1395,6 +1572,13 @@ body.shell {
     color: #3D2B00;
 }
 
+/* Boro / Twp contacted: filled purple flag. Only the badge changes; the card's color still follows its status. */
+.mt-chip-boro {
+    border: none;
+    background-color: var(--purple-fill);
+    color: var(--on-accent);
+}
+
 .mt-entry-meta,
 .mt-entry-notes {
     margin: 0.5rem 0 0;
@@ -1402,12 +1586,117 @@ body.shell {
 }
 
 .mt-entry-meta {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.9rem;
 }
 
 .mt-entry-notes {
     white-space: pre-wrap;
+}
+
+/* Route Sheets match under the address field */
+.mt-route-match:empty {
+    display: none;
+}
+
+.mt-route-match {
+    margin-top: 0.375rem;
+}
+
+.mt-route-found,
+.mt-route-none {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.mt-route-found {
+    color: var(--green-ink);
+}
+
+.mt-route-none {
+    color: var(--ink);
+    font-weight: 400;
+}
+
+/* A house that puts its cans out in an alley (county house list) */
+.mt-route-alley {
+    margin: 0.25rem 0 0;
+    color: var(--heading);
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.mt-chip-alley {
+    border: none;
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
+}
+
+.mt-route-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+}
+
+.mt-route-pick {
+    flex: 0 1 auto;
+    margin-top: 0.375rem;
+}
+
+.mt-route-picks .mt-route-pick {
+    margin-top: 0;
+}
+
+.mt-route-pick.is-selected {
+    border-color: var(--forest-green);
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+/* "N misses are missing a route" + Fill from Route Sheets */
+.mt-backfill {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--sky-blue);
+    border-radius: 4px;
+    background-color: rgba(86, 157, 214, 0.08);
+}
+
+.mt-backfill[hidden] {
+    display: none;
+}
+
+.mt-backfill-text {
+    flex: 1 1 14rem;
+    margin: 0;
+    color: var(--heading);
+    font-weight: 600;
+}
+
+.mt-backfill .mt-btn {
+    flex: 0 0 auto;
+}
+
+.mt-backfill-done:empty {
+    display: none;
+}
+
+/* Added / Resolved times on a missed collection card */
+.mt-entry-stamps {
+    margin: 0.5rem 0 0;
+    color: var(--ink);
+    font-size: 0.8rem;
+}
+
+.mt-entry-stamps span {
+    display: block;
 }
 
 .mt-entry-actions {
@@ -1417,15 +1706,38 @@ body.shell {
     margin-top: 0.75rem;
 }
 
+.mt-entry-contacted {
+    display: flex;
+    flex: 1 1 100%;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.mt-entry-contacted input {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    accent-color: var(--purple-ink);
+    cursor: pointer;
+}
+
+.mt-entry-contacted label {
+    color: var(--heading);
+    font-weight: 600;
+    cursor: pointer;
+}
+
 .mt-entry-status {
     flex: 1 1 100%;
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 1rem;
 }
@@ -1434,18 +1746,18 @@ body.shell {
     flex: 1 1 0;
     min-height: 44px;
     padding: 0.5rem 1rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--deep-navy);
+    background-color: var(--surface);
+    color: var(--heading);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
 }
 
 .mt-btn-danger {
-    border-color: #B3261E;
-    color: #B3261E;
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .mt-btn:hover,
@@ -1457,6 +1769,107 @@ body.shell {
 .mt-entry-status:focus-visible {
     outline: 3px solid var(--sky-blue);
     outline-offset: 2px;
+}
+
+/* Log / edit entry dialog. Reuses .send-dialog's frame; the form inside keeps the .emp-info
+   field styles. Mobile first: nearly full screen, one column, Save/Close pinned to the bottom. */
+/* scroll-padding keeps a focused field clear of the pinned header and Save bar */
+.mt-dialog {
+    max-height: calc(100% - 2rem);
+    padding: 0;
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 6rem;
+}
+
+.mt-dialog-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
+}
+
+.mt-dialog-head h2 {
+    margin: 0;
+    color: var(--heading);
+    font-size: 1.25rem;
+}
+
+.mt-dialog-close {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--heading);
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mt-dialog-close:hover {
+    background-color: rgba(var(--navy-rgb), 0.08);
+}
+
+.mt-dialog-close:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.mt-dialog .emp-info fieldset,
+.mt-dialog fieldset.emp-fields {
+    padding: 1rem;
+    border: 0;
+}
+
+.mt-dialog .emp-fields > legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.mt-dialog .mt-message {
+    margin: 0;
+    padding: 0 1rem;
+}
+
+.mt-dialog .mt-message:empty {
+    display: none;
+}
+
+.mt-dialog-actions {
+    position: sticky;
+    bottom: 0;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
+    background-color: var(--surface);
+}
+
+@media (min-width: 48em) {
+    .mt-dialog {
+        max-width: 44rem;
+    }
+
+    .mt-dialog-head,
+    .mt-dialog fieldset.emp-fields,
+    .mt-dialog-actions {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .mt-dialog .mt-message {
+        padding: 0 1.5rem;
+    }
 }
 
 /* [hidden] loses to .send-email's display rules otherwise */
@@ -1486,15 +1899,15 @@ body.shell {
 
     .mt-filters {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-columns: 2fr 1fr;
         align-items: end;
         gap: 1rem 1.5rem;
     }
 
-    /* The Yellow tags only checkbox field has no label row above it like the others,
-       so nudge it down to line up with the Search/Status inputs */
-    .mt-filters .field:has(> input[type="checkbox"]) {
-        padding-bottom: 0.625rem;
+    /* The checkboxes take their own row under Search and Status */
+    .mt-filters .mt-filter-checks {
+        grid-column: 1 / -1;
+        margin-top: 0;
     }
 
     .mt-filters .field + .field {
@@ -1532,11 +1945,11 @@ body.shell {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
 }
 
 .nc-entry.nc-stage-pending {
-    background-color: #FFF3E6;
+    background-color: var(--pending-bg);
     border-left: 6px solid #E07A1F;
 }
 
@@ -1559,7 +1972,7 @@ body.shell {
     align-items: center;
     gap: 0.5rem;
     min-height: 40px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 600;
     cursor: pointer;
 }
@@ -1579,7 +1992,7 @@ body.shell {
 }
 
 .nc-notes-label {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1591,10 +2004,10 @@ body.shell {
     min-width: 0;
     height: 4.5rem;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 0.9rem;
     resize: none;
@@ -1609,14 +2022,14 @@ body.shell {
 .nc-established {
     margin-top: 1rem;
     padding-top: 0.75rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .nc-established summary {
     display: flex;
     align-items: center;
     min-height: 44px;
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1660,7 +2073,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(4, 57, 96, 0.15);
+    border-top: 1px solid rgba(var(--navy-rgb), 0.15);
 }
 
 .rca-evidence-list {
@@ -1671,9 +2084,9 @@ body.shell {
 
 .rca-evidence-item {
     padding: 0.5rem 0.625rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-radius: 4px;
-    background-color: rgba(4, 57, 96, 0.04);
+    background-color: rgba(var(--navy-rgb), 0.04);
 }
 
 .rca-evidence-head {
@@ -1684,20 +2097,20 @@ body.shell {
 }
 
 .rca-evidence-date {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-weight: 700;
     font-size: 0.875rem;
 }
 
 .rca-evidence-source {
-    color: var(--drk-gray);
+    color: var(--ink);
     font-size: 0.8rem;
     font-style: italic;
 }
 
 .rca-evidence-desc {
     margin: 0.375rem 0 0;
-    color: var(--drk-gray);
+    color: var(--ink);
     white-space: pre-wrap;
 }
 
@@ -1712,50 +2125,8 @@ body.shell {
     display: block;
     max-width: 100%;
     max-height: 8rem;
-    border: 1px solid rgba(4, 57, 96, 0.2);
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
     border-radius: 4px;
-}
-
-.rca-evidence-item-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.rca-evidence-edit-btn,
-.rca-evidence-remove {
-    min-height: 36px;
-    padding: 0 0.75rem;
-    border-radius: 4px;
-    background-color: var(--white);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.rca-evidence-edit-btn {
-    border: 1px solid var(--deep-navy);
-    color: var(--deep-navy);
-}
-
-.rca-evidence-edit-btn:hover,
-.rca-evidence-edit-btn:focus-visible {
-    background-color: rgba(4, 57, 96, 0.08);
-    outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
-}
-
-.rca-evidence-remove {
-    border: 1px solid #B3261E;
-    color: #B3261E;
-}
-
-.rca-evidence-remove:hover,
-.rca-evidence-remove:focus-visible {
-    background-color: rgba(179, 38, 30, 0.08);
-    outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
 }
 
 .rca-evidence-edit-actions {
@@ -1768,7 +2139,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.625rem;
-    border: 1px dashed rgba(4, 57, 96, 0.3);
+    border: 1px dashed rgba(var(--navy-rgb), 0.3);
     border-radius: 4px;
 }
 
@@ -1778,10 +2149,10 @@ body.shell {
     min-width: 0;
     min-height: 44px;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--deep-navy);
+    border: 1px solid var(--line);
     border-radius: 4px;
-    background-color: var(--white);
-    color: var(--drk-gray);
+    background-color: var(--surface);
+    color: var(--ink);
     font: inherit;
     font-size: 0.9rem;
 }
@@ -1797,7 +2168,7 @@ body.shell {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.625rem;
-    border: 1px solid rgba(4, 57, 96, 0.15);
+    border: 1px solid rgba(var(--navy-rgb), 0.15);
     border-radius: 4px;
 }
 
@@ -1808,7 +2179,7 @@ body.shell {
 }
 
 .rca-evidence-category-name {
-    color: var(--deep-navy);
+    color: var(--heading);
     font-size: 0.875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1819,8 +2190,8 @@ body.shell {
     min-width: 1.5rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background-color: rgba(4, 57, 96, 0.08);
-    color: var(--deep-navy);
+    background-color: rgba(var(--navy-rgb), 0.08);
+    color: var(--heading);
     font-size: 0.8rem;
     font-weight: 700;
     text-align: center;
@@ -1833,5 +2204,1809 @@ body.shell {
    "unresolved" on Missed Collections and would be a misleading alarm color here) split between
    the main list (upcoming) and the Completed Pickups disclosure once the date has passed. */
 .bp-entry {
-    border-left: 1px solid rgba(4, 57, 96, 0.2);
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
+}
+
+
+/* ---------- Service: handicap & elderly customers ---------- */
+/* Reuses the tracker card, chip and dialog classes. Each weekday is a collapsible section;
+   a checked-off customer gets a green flag chip and a light green card until the end-of-day
+   rollover moves the check into the Service Log below. */
+.sv-days {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sv-day {
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-radius: 4px;
+    background-color: var(--surface);
+}
+
+.sv-day.sv-today {
+    border-color: var(--forest-green);
+}
+
+.sv-day summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+.sv-day-name {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-chip-today {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.sv-day-date {
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-chip-moved {
+    border: none;
+    background-color: var(--purple-fill);
+    color: var(--on-accent);
+}
+
+.sv-day-count {
+    margin-left: auto;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-day-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0 0.75rem 0.75rem;
+}
+
+.sv-entry {
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
+}
+
+.sv-entry.sv-done {
+    border-left: 6px solid var(--forest-green);
+    background-color: var(--good-bg);
+}
+
+.mt-chip-done {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.sv-check input {
+    accent-color: var(--forest-green);
+}
+
+.sv-check {
+    margin-top: 0.5rem;
+}
+
+.sv-add-day {
+    flex: none;
+    width: 100%;
+}
+
+.sv-log {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.sv-log-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sv-log-date {
+    margin: 0;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.15);
+    color: var(--heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-log-row {
+    padding: 0.5rem 0.75rem;
+    border-left: 4px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: rgba(var(--green-rgb), 0.05);
+}
+
+.sv-log-address {
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+/* This Week's Schedule: closed by default; the summary says whether any route was moved */
+.sv-schedule {
+    margin-bottom: 1rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-radius: 4px;
+    background-color: rgba(var(--navy-rgb), 0.03);
+}
+
+.sv-schedule summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+.sv-schedule-title {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sv-schedule-status {
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.sv-schedule-status.sv-schedule-changed {
+    color: var(--purple-ink);
+}
+
+.sv-schedule-body {
+    padding: 0 0.75rem 0.75rem;
+}
+
+.sv-schedule-help {
+    margin: 0 0 0.75rem;
+    color: var(--ink);
+}
+
+.sv-schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+/* Grid gap does the spacing, so drop the stacked-form margin */
+.emp-info .sv-schedule-grid .field + .field {
+    margin-top: 0;
+}
+
+.emp-info .sv-schedule-field.sv-moved select {
+    border: 2px solid var(--purple-ink);
+}
+
+.sv-schedule-actions {
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}
+
+@media (min-width: 30em) {
+    .sv-schedule-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 48em) {
+    .sv-schedule-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Delete confirmation (TrackerDialog.confirmDelete): the confirm button is red, not green */
+.mt-confirm h2 {
+    margin: 0 0 0.5rem;
+    color: var(--heading);
+    font-size: 1.25rem;
+}
+
+.mt-confirm .mt-confirm-delete {
+    background-color: var(--danger-fill);
+}
+
+.mt-confirm .mt-confirm-delete:hover {
+    background-color: var(--danger-fill-hover);
+}
+
+.mt-confirm .mt-confirm-delete:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.mt-confirm .mt-confirm-delete:disabled:hover {
+    background-color: var(--danger-fill);
+}
+
+/* Extra tick-to-confirm step (requireCheck), for lists where a mistaken delete is costly */
+.mt-confirm-check {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 44px;
+    margin-bottom: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--danger);
+    border-radius: 4px;
+    background-color: var(--danger-bg);
+    color: var(--heading);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mt-confirm-check[hidden] {
+    display: none;
+}
+
+.mt-confirm-check input {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0;
+    accent-color: var(--danger);
+    cursor: pointer;
+}
+
+
+/* ---------- Recycle calendar (header button + dialog) ---------- */
+/* Mobile first: the dialog uses the shared .mt-dialog frame; the month grid fills its width.
+   Recycle days are green; a run of consecutive days gets rounded ends and a recycle mark on
+   its first day. */
+.rc-open {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+.rc-open:hover {
+    background-color: rgba(var(--navy-rgb), 0.08);
+}
+
+.rc-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rc-badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--surface);
+    border-radius: 50%;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.rc-badge[hidden] {
+    display: none;
+}
+
+.rc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+/* Area: a dropdown that switches as soon as a name is picked, with + to add one */
+.rc-area-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--heading);
+    font-weight: 600;
+}
+
+.rc-area-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* 16px font stops iOS Safari from zooming in on focus */
+.rc-area-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background-color: var(--surface);
+    color: var(--heading);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.rc-area-add {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid var(--forest-green);
+    border-radius: 6px;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.rc-area-select:focus-visible,
+.rc-area-add:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.rc-add-area label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--heading);
+    font-weight: 600;
+}
+
+.rc-add-area[hidden] {
+    display: none;
+}
+
+.rc-add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* 16px font stops iOS Safari from zooming in on focus */
+.rc-add-row input {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 1rem;
+}
+
+.rc-add-row input:focus {
+    border-color: var(--sky-blue);
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 0;
+}
+
+.rc-add-error {
+    margin-top: 0.5rem;
+}
+
+.rc-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.75rem;
+    border-left: 6px solid rgba(var(--navy-rgb), 0.35);
+    border-radius: 4px;
+    background-color: rgba(var(--navy-rgb), 0.05);
+    color: var(--heading);
+}
+
+.rc-status.is-recycle {
+    border-left-color: var(--forest-green);
+    background-color: var(--good-bg);
+}
+
+.rc-status strong {
+    font-size: 1.0625rem;
+}
+
+.rc-status span {
+    color: var(--ink);
+    font-size: 0.875rem;
+}
+
+.rc-month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rc-month-nav .mt-btn {
+    flex: none;
+    width: 48px;
+    padding: 0;
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.rc-month {
+    flex: 1 1 auto;
+    margin: 0;
+    color: var(--heading);
+    font-size: 1.125rem;
+    text-align: center;
+}
+
+.rc-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+    table-layout: fixed;
+}
+
+.rc-grid th {
+    padding-bottom: 0.25rem;
+    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.rc-day {
+    position: relative;
+    height: 44px;
+    text-align: center;
+    color: var(--ink);
+}
+
+.rc-day.is-other-month {
+    color: rgba(var(--ink-rgb), 0.4);
+}
+
+.rc-day-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.rc-day.is-today .rc-day-num {
+    border: 2px solid var(--line);
+    font-weight: 700;
+}
+
+.rc-day.is-recycle {
+    background-color: var(--good-bg);
+    color: var(--green-ink);
+    font-weight: 700;
+}
+
+.rc-day.is-recycle.is-other-month {
+    color: rgba(var(--green-rgb), 0.55);
+}
+
+.rc-day.run-start {
+    border-radius: 6px 0 0 6px;
+    box-shadow: inset 4px 0 0 var(--forest-green);
+}
+
+.rc-day.run-end {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* First tap of a range, waiting for the last day */
+.rc-day.is-range-start .rc-day-num {
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.rc-week-icon {
+    position: absolute;
+    top: 0;
+    left: 6px;
+    font-size: 0.7rem;
+}
+
+/* Edit mode: each day is a tap target */
+.rc-dialog.is-editing .rc-day {
+    cursor: pointer;
+}
+
+.rc-dialog.is-editing .rc-day:hover {
+    outline: 1px dashed var(--forest-green);
+    outline-offset: -2px;
+}
+
+.rc-dialog.is-editing .rc-day:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -2px;
+}
+
+.rc-dialog.is-editing .rc-grid {
+    border: 2px dashed var(--forest-green);
+    border-radius: 6px;
+}
+
+.rc-hint {
+    margin: 0;
+    color: var(--ink);
+}
+
+.rc-remove-area {
+    align-self: flex-start;
+}
+
+@media (min-width: 30em) {
+    .rc-add-row input {
+        flex: 1 1 auto;
+    }
+
+    .rc-add-row .mt-btn {
+        flex: none;
+    }
+}
+
+@media (min-width: 48em) {
+    .rc-dialog {
+        max-width: 34rem;
+    }
+
+    .rc-body {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .rc-day {
+        height: 52px;
+    }
+}
+
+
+/* ---------- In-app PDF viewer (pdf-viewer.js) ---------- */
+/* Full screen on every size: a bar with the file name, zoom and a large Close button, then the
+   pages stacked in a scrolling area. */
+.pdf-viewer {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: var(--viewer-bg);
+}
+
+.pdf-viewer[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-viewer::backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.pdf-viewer-bar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 4px solid var(--forest-green);
+    background-color: var(--surface);
+}
+
+.pdf-viewer-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--heading);
+    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Zoom buttons only from tablet width up, leaving room for Print / Share and Close on phones */
+.pdf-viewer-zoom {
+    display: none;
+    flex: none;
+    gap: 0.25rem;
+}
+
+.pdf-viewer-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background-color: var(--surface);
+    color: var(--heading);
+    font: inherit;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.pdf-viewer-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pdf-viewer-close {
+    flex: none;
+    min-width: 88px;
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    border: 0;
+    border-radius: 4px;
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Print / Share: hands the PDF to the share sheet (a printing app, email...) */
+.pdf-viewer-share {
+    flex: none;
+    min-height: 44px;
+    padding: 0.5rem 0.875rem;
+    border: 0;
+    border-radius: 4px;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pdf-viewer-btn:focus-visible,
+.pdf-viewer-share:focus-visible,
+.pdf-viewer-close:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.pdf-viewer-pages {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Auto side margins center a page that fits, and fall back to 0 when it's zoomed wider than
+   the screen, so it can still be scrolled all the way left (align-items: center would clip it) */
+.pdf-viewer-page {
+    flex: none;
+    margin: 0 auto;
+    max-width: none;
+    background-color: var(--surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.pdf-viewer-status {
+    align-self: stretch;
+    margin: 2rem 1rem;
+    color: var(--heading);
+    font-weight: 600;
+    text-align: center;
+}
+
+.pdf-viewer-status[hidden] {
+    display: none;
+}
+
+@media (min-width: 30em) {
+    .pdf-viewer-zoom {
+        display: flex;
+    }
+}
+
+
+/* ---------- Saved PDFs list (saved-pdfs.js) ---------- */
+.sp-body {
+    padding: 1rem;
+}
+
+.sp-status {
+    margin-top: 0;
+}
+
+.sp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.sp-item {
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--surface);
+}
+
+/* The whole top of the card opens the PDF */
+.sp-open {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    width: 100%;
+    min-height: 56px;
+    padding: 0.75rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sp-open:hover {
+    background-color: rgba(86, 157, 214, 0.1);
+}
+
+.sp-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: -3px;
+}
+
+.sp-name {
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.sp-meta {
+    color: var(--ink);
+    font-size: 0.875rem;
+}
+
+.sp-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 0.75rem 0.75rem;
+}
+
+@media (min-width: 48em) {
+    .sp-dialog {
+        max-width: 40rem;
+    }
+
+    .sp-body {
+        padding: 1.25rem 1.5rem;
+    }
+}
+
+
+/* ---------- Routing: route streets directory ---------- */
+/* Reuses the tracker card and dialog classes. Plain cards (no status color); the street list
+   is one column on phones and flows into columns on wider screens. */
+.rs-entry {
+    border-left: 1px solid rgba(var(--navy-rgb), 0.2);
+}
+
+.rs-streets {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rs-streets li {
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
+    break-inside: avoid;
+    overflow-wrap: anywhere;
+}
+
+/* Streets matching the search, shown first on the card */
+.rs-matches li {
+    border-bottom: 0;
+    border-left: 4px solid var(--forest-green);
+    background-color: var(--good-bg);
+    font-weight: 700;
+}
+
+.rs-matches li + li {
+    margin-top: 0.25rem;
+}
+
+.rs-entry mark {
+    padding: 0 0.125rem;
+    border-radius: 2px;
+    background-color: var(--mark-bg);
+    color: inherit;
+}
+
+.rs-all-streets {
+    margin-top: 0.5rem;
+}
+
+.rs-all-streets summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--heading);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mt-dialog .mt-dialog-error {
+    margin: 0;
+    padding: 0 1rem 0.75rem;
+}
+
+.mt-dialog .mt-dialog-error[hidden] {
+    display: none;
+}
+
+@media (min-width: 30em) {
+    .rs-all-streets .rs-streets {
+        columns: 2;
+        column-gap: 1rem;
+    }
+}
+
+@media (min-width: 48em) {
+    .rs-all-streets .rs-streets {
+        columns: 3;
+    }
+
+    .mt-dialog .mt-dialog-error {
+        padding: 0 1.5rem 0.75rem;
+    }
+}
+
+
+/* ---------- KPI dashboard ---------- */
+/* Mobile first: one column of cards, two tiles per row. Chart tokens are local to the dashboard:
+   one series in a validated blue (passes the palette checks on the white card surface), with
+   recessive hairline grid and axis. */
+.kpi-page {
+    --kpi-series: #2a78d6;
+    --kpi-surface: #ffffff;
+    --kpi-ink: #0b0b0b;
+    --kpi-ink-2: #52514e;
+    --kpi-muted: #6b6a65;
+    --kpi-grid: #e1e0d9;
+    --kpi-axis: #c3c2b7;
+    --kpi-good: #006300;
+    --kpi-bad: #b3261e;
+    background-color: var(--surface-2);
+}
+
+/* Dashboard chart tokens for dark (the series blue passes the palette checks on the dark card) */
+:root[data-theme="dark"] .kpi-page {
+    --kpi-series: #3987e5;
+    --kpi-surface: #18232f;
+    --kpi-ink: #e3e9ef;
+    --kpi-ink-2: #b8c3cf;
+    --kpi-muted: #94a1af;
+    --kpi-grid: #2a3846;
+    --kpi-axis: #3b4b5c;
+    --kpi-good: #5fd38d;
+    --kpi-bad: #ff8a80;
+}
+
+/* The tooltip is a dark chip in light mode; in dark mode it flips to a light chip */
+:root[data-theme="dark"] .kpi-tooltip {
+    background-color: #e3e9ef;
+    color: #0f1720;
+}
+
+.kpi-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.kpi-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kpi-range {
+    display: flex;
+    flex: 1 1 auto;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--surface);
+}
+
+.kpi-range-btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0 0.5rem;
+    border: 0;
+    background: none;
+    color: var(--heading);
+    font: inherit;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.kpi-range-btn + .kpi-range-btn {
+    border-left: 1px solid var(--line);
+}
+
+.kpi-range-btn.is-selected {
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
+}
+
+.kpi-range-btn:focus-visible,
+.kpi-customize-btn:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.kpi-customize-btn {
+    flex: none;
+}
+
+.kpi-range-note {
+    margin: -0.25rem 0 0;
+    color: var(--kpi-ink-2);
+    font-size: 0.875rem;
+}
+
+.kpi-customize {
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-radius: 6px;
+    background-color: var(--surface);
+}
+
+.kpi-customize[hidden] {
+    display: none;
+}
+
+.kpi-customize-title {
+    margin: 0 0 0.25rem;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.kpi-customize-row label {
+    font-weight: 600;
+}
+
+.kpi-cards {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+}
+
+.kpi-card {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.12);
+    border-radius: 8px;
+    background-color: var(--kpi-surface);
+}
+
+.kpi-card-head {
+    margin-bottom: 0.75rem;
+}
+
+.kpi-card-title {
+    margin: 0;
+    color: var(--heading);
+    font-size: 1.0625rem;
+}
+
+.kpi-card-sub {
+    margin: 0.125rem 0 0;
+    color: var(--kpi-ink-2);
+    font-size: 0.8125rem;
+}
+
+.kpi-empty {
+    margin: 0;
+    color: var(--kpi-ink-2);
+}
+
+/* Stat tiles */
+/* Tiles fill the row at whatever width the card has, two or more across */
+.kpi-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.5rem;
+}
+
+.kpi-tiles.kpi-tiles-4 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.kpi-tile {
+    min-width: 0;
+    padding: 0.625rem 0.75rem;
+    border-radius: 6px;
+    background-color: var(--surface-2);
+}
+
+.kpi-tile-label {
+    margin: 0;
+    color: var(--kpi-ink-2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.kpi-tile-value {
+    margin: 0.125rem 0 0;
+    color: var(--kpi-ink);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.kpi-tile-delta,
+.kpi-tile-note {
+    margin: 0.125rem 0 0;
+    font-size: 0.75rem;
+}
+
+.kpi-tile-delta {
+    font-weight: 700;
+}
+
+.kpi-tile-delta.is-good {
+    color: var(--kpi-good);
+}
+
+.kpi-tile-delta.is-bad {
+    color: var(--kpi-bad);
+}
+
+.kpi-tile-delta.is-flat,
+.kpi-tile-note {
+    color: var(--kpi-muted);
+}
+
+/* Column chart */
+.kpi-chart-wrap {
+    width: 100%;
+}
+
+.kpi-chart {
+    display: block;
+    max-width: 100%;
+    overflow: visible;
+}
+
+.kpi-grid {
+    stroke: var(--kpi-grid);
+    stroke-width: 1;
+}
+
+.kpi-axis {
+    stroke: var(--kpi-axis);
+    stroke-width: 1;
+}
+
+.kpi-tick {
+    fill: var(--kpi-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-col {
+    fill: var(--kpi-series);
+}
+
+.kpi-col-hit {
+    fill: transparent;
+    cursor: pointer;
+}
+
+.kpi-col-hit:hover,
+.kpi-col-hit:focus {
+    fill: rgba(42, 120, 214, 0.08);
+    outline: none;
+}
+
+/* Horizontal bars: value at the tip */
+.kpi-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.kpi-bar-name {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--kpi-ink);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.kpi-bar-track {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kpi-bar {
+    flex: none;
+    height: 14px;
+    border-radius: 0 4px 4px 0;
+    background-color: var(--kpi-series);
+}
+
+.kpi-bar-value {
+    flex: none;
+    color: var(--kpi-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Tables (table view + repeat addresses) */
+.kpi-table-view {
+    margin-top: 0.5rem;
+}
+
+.kpi-table-view summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--heading);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.kpi-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.kpi-table th,
+.kpi-table td {
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid var(--kpi-grid);
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.kpi-table th {
+    color: var(--kpi-ink-2);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.kpi-table td:not(:first-child),
+.kpi-table th:not(:first-child) {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Shared tooltip: value first and strong, label after */
+.kpi-tooltip {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    padding: 0.375rem 0.625rem;
+    border-radius: 6px;
+    background-color: var(--kpi-ink);
+    color: var(--on-accent);
+    font-size: 0.8125rem;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.kpi-tooltip[hidden] {
+    display: none;
+}
+
+.kpi-tooltip strong {
+    font-size: 0.9375rem;
+}
+
+@media (min-width: 48em) {
+    .kpi-wrap {
+        max-width: 64rem;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .kpi-range {
+        flex: 0 1 28rem;
+    }
+
+    .kpi-customize-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        column-gap: 1rem;
+    }
+
+    /* The two Missed Collections headline cards span the full width; the rest pair up */
+    .kpi-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .kpi-card-missed-summary,
+    .kpi-card-missed-trend {
+        grid-column: 1 / -1;
+    }
+}
+
+
+/* ---------- Route Sheets: import from Excel ---------- */
+.rs-group-title {
+    margin: 0.75rem 0 0;
+    color: var(--heading);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+#rs-import-done:empty {
+    display: none;
+}
+
+.rs-import-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.rs-import-help {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 400;
+}
+
+.rs-import-status {
+    margin: 0;
+}
+
+.rs-import-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rs-import-item {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--surface);
+}
+
+.rs-import-item.is-error {
+    border-left-color: var(--danger);
+    background-color: var(--danger-bg);
+}
+
+.rs-import-route {
+    margin: 0;
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.rs-import-file,
+.rs-import-note {
+    margin: 0.125rem 0 0;
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.rs-import-file {
+    color: var(--ink);
+}
+
+.rs-import-note {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.rs-import-note.is-error {
+    color: var(--danger);
+}
+
+.rs-import-note.is-warn {
+    color: var(--warn-ink);
+}
+
+.rs-import-chip {
+    display: inline-block;
+    margin-top: 0.375rem;
+}
+
+.rs-import-chip.is-new {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.rs-import-chip.is-replace {
+    border-color: var(--warn-ink);
+    color: var(--warn-ink);
+}
+
+@media (min-width: 48em) {
+    .rs-import-dialog {
+        max-width: 40rem;
+    }
+
+    .rs-import-body {
+        padding: 1.25rem 1.5rem;
+    }
+}
+
+/* ---------- Route map icon beside the route's name ---------- */
+
+.rs-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.rs-title-row .mt-entry-address {
+    min-width: 0;
+}
+
+.rs-map-btn {
+    flex: none;
+    color: var(--green-ink);
+}
+
+/* No map yet: dimmed, tap to add the link */
+.rs-map-btn.is-empty {
+    color: rgba(var(--ink-rgb), 0.45);
+}
+
+/* ---------- County Houses (Pull from County, county-pull.js) ---------- */
+
+.rs-entry .mt-chips:empty {
+    display: none;
+}
+
+.mt-chip-houses {
+    border: none;
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.cp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.cp-status,
+.cp-sheet-note,
+.cp-source {
+    margin: 0;
+}
+
+.cp-sheet-note {
+    color: var(--warn-ink);
+}
+
+.cp-source {
+    font-size: 0.75rem;
+}
+
+.cp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cp-line {
+    border: 1px solid rgba(var(--navy-rgb), 0.2);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 4px;
+    background-color: var(--surface);
+}
+
+.cp-line.is-error {
+    border-left-color: var(--danger);
+}
+
+.cp-line summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    min-height: 44px;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+}
+
+.cp-line-name {
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.cp-line-meta {
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.cp-line-note {
+    margin: 0;
+    padding: 0 0.75rem 0.5rem;
+    color: var(--ink);
+    font-size: 0.8125rem;
+}
+
+.cp-line-note.is-error {
+    color: var(--danger);
+}
+
+.cp-houses {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid rgba(var(--navy-rgb), 0.12);
+}
+
+.cp-house {
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.08);
+}
+
+.cp-house-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+}
+
+label.cp-house-row {
+    cursor: pointer;
+}
+
+/* Counted on its own street's list: no tick here, so it lines up past the checkbox column */
+.cp-house.is-ref .cp-house-row {
+    padding-left: 2.625rem;
+}
+
+.cp-alley-btn {
+    min-height: 36px;
+    margin: 0 0.75rem 0.5rem 2.625rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px dashed rgba(var(--navy-rgb), 0.5);
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--heading);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cp-alley-btn.is-yes {
+    border: 1px solid var(--forest-green);
+    background-color: var(--forest-green);
+    color: var(--on-accent);
+}
+
+.cp-alley-btn.is-no {
+    border-style: solid;
+}
+
+.cp-house input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+}
+
+.cp-house-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.cp-house-addr {
+    color: var(--ink);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.cp-house-where {
+    color: var(--ink);
+    font-size: 0.8125rem;
+}
+
+.cp-house-alley {
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.cp-house-why {
+    color: var(--warn-ink);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
+
+.cp-house.is-off .cp-house-addr {
+    color: rgba(var(--ink-rgb), 0.6);
+    text-decoration: line-through;
+}
+
+.cp-flip {
+    margin: 0.5rem 0.75rem 0.75rem;
+}
+
+@media (min-width: 48em) {
+    .cp-dialog {
+        max-width: 44rem;
+    }
+
+    .cp-body {
+        padding: 1.25rem 1.5rem;
+    }
+}
+
+
+/* ---------- Settings (header gear + dialog, settings.js) ---------- */
+.settings-open {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+/* The gear takes the push to the right; the calendar sits beside it */
+.settings-open + .rc-open {
+    margin-left: 0;
+}
+
+.settings-open:hover {
+    background-color: rgba(var(--navy-rgb), 0.08);
+}
+
+.settings-open:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 2px;
+}
+
+.settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.settings-group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.settings-group legend {
+    padding: 0;
+    margin-bottom: 0.5rem;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.settings-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Each choice is a whole tappable row */
+.settings-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0.75rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.25);
+    border-radius: 6px;
+    background-color: var(--surface);
+    cursor: pointer;
+}
+
+.settings-option:has(input:checked) {
+    border: 2px solid var(--forest-green);
+    background-color: var(--good-bg);
+}
+
+.settings-option input {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+    accent-color: var(--forest-green);
+}
+
+.settings-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.settings-option-title {
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.settings-option-hint {
+    color: var(--ink);
+    font-size: 0.875rem;
+}
+
+.settings-now {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+@media (min-width: 48em) {
+    .settings-dialog {
+        max-width: 30rem;
+    }
+}
+
+/* The Service Log sits closed under its heading; the summary shows the entry count */
+.sv-log-toggle {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* Cards with Edit / Delete as icons in the top-right corner (TrackerDialog.entryTools):
+   the address takes the room it needs and wraps beside them */
+.entry-head {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+}
+
+.entry-head > .mt-entry-address,
+.entry-head > .entry-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 0.5rem;
+}
+
+.entry-title .mt-entry-date {
+    display: block;
+    margin-top: 0.125rem;
+}
+
+.entry-tools {
+    display: flex;
+    flex: none;
+    gap: 0.25rem;
+    margin: -0.25rem -0.25rem 0 0;
+}
+
+.entry-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--heading);
+    cursor: pointer;
+}
+
+.entry-icon-btn:hover {
+    border-color: rgba(var(--navy-rgb), 0.3);
+    background-color: rgba(var(--navy-rgb), 0.06);
+}
+
+.entry-icon-btn.entry-icon-danger {
+    color: var(--danger);
+}
+
+.entry-icon-btn.entry-icon-danger:hover {
+    border-color: var(--danger);
+    background-color: var(--danger-bg);
+}
+
+.entry-icon-btn:focus-visible {
+    outline: 3px solid var(--sky-blue);
+    outline-offset: 1px;
+}
+
+/* Tablet: Contacted Boro / Twp and the status dropdown share one row */
+@media (min-width: 48em) {
+    .mt-entry-actions .mt-entry-contacted {
+        flex: 1 1 auto;
+    }
+
+    .mt-entry-actions .mt-entry-status {
+        flex: 0 1 18rem;
+    }
+}
+
+/* RCA evidence entries: date and source on the left, Edit / Remove icons on the right */
+.rca-evidence-when {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    padding-top: 0.625rem;
+    text-align: left;
+}
+
+/* Saved PDFs: the file opens from the left; the trash icon sits on the right */
+.sp-top {
+    display: flex;
+    align-items: flex-start;
+}
+
+.sp-top .sp-open {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sp-top .entry-tools {
+    margin: 0.375rem 0.375rem 0 0;
 }

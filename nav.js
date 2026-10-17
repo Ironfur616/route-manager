@@ -8,18 +8,19 @@
         return '<li><a href="' + href + '">' + label + "</a></li>";
     }
 
-    // A plain divider within a link list (e.g. "Residential" above the residential forms) -
-    // not a button, nothing to expand, just groups related links visually.
-    function groupLabel(text) {
-        return '<li class="nav-group-label" role="presentation">' + text + "</li>";
+    function subsection(id, title, links) {
+        return '<div class="nav-subsection">' +
+            '<h3><button type="button" class="nav-subsection-title" aria-expanded="false" aria-controls="' + id + '">' +
+            title + '<span class="nav-caret" aria-hidden="true"></span></button></h3>' +
+            '<div class="nav-subsection-body" id="' + id + '"><div class="nav-subsection-body-inner">' +
+            '<ul class="nav-link-list">' + links.join("") + "</ul></div></div></div>";
     }
 
-    function section(id, title, content) {
+    // Top-level sections are always open; only subsections (Residential, Commercial) collapse
+    function section(title, content) {
         return '<div class="nav-section">' +
-            '<h2><button type="button" class="nav-section-title" aria-expanded="false" aria-controls="' + id + '">' +
-            title + '<span class="nav-caret" aria-hidden="true"></span></button></h2>' +
-            '<div class="nav-section-body" id="' + id + '"><div class="nav-section-body-inner">' +
-            content + "</div></div></div>";
+            '<h2 class="nav-section-plain">' + title + "</h2>" +
+            content + "</div>";
     }
 
     var html =
@@ -34,26 +35,31 @@
                 '<span class="site-nav-heading">Menu</span>' +
                 '<button type="button" class="nav-close" id="nav-close" aria-label="Close menu">&times;</button>' +
             "</div>" +
-            section("panel-observations", "Observations",
-                '<ul class="nav-link-list">' +
-                    groupLabel("Residential") +
-                    link("resi-driver.html", "Residential Driver") +
-                    link("resi-helper.html", "Residential Helper") +
-                    link("resi-trainee.html", "Residential Trainee") +
-                    groupLabel("Commercial") +
-                    link("com-driver.html", "Commercial Driver") +
-                    link("com-trainee.html", "Commercial Trainee") +
-                "</ul>") +
-            section("panel-safety", "Safety",
+            section("KPI",
+                '<ul class="nav-link-list">' + link("kpi-dashboard.html", "Dashboard") + "</ul>") +
+            section("Observations",
+                subsection("panel-residential", "Residential", [
+                    link("resi-driver.html", "Residential Driver"),
+                    link("resi-helper.html", "Residential Helper"),
+                    link("resi-trainee.html", "Residential Trainee")
+                ]) +
+                subsection("panel-commercial", "Commercial", [
+                    link("com-driver.html", "Commercial Driver"),
+                    link("com-trainee.html", "Commercial Trainee")
+                ])) +
+            section("Safety",
                 '<ul class="nav-link-list">' + link("safety-lane-ck.html", "Safety Lane") + "</ul>") +
-            section("panel-route-management", "Route Management",
+            section("Route Management",
                 '<ul class="nav-link-list">' +
                     link("missed-tracker.html", "Missed Collections") +
                     link("new-customers.html", "New Customers") +
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
                 "</ul>") +
-            '<div class="site-nav-footer" id="site-nav-footer"></div>' +
+            section("Service",
+                '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +
+            section("Routing",
+                '<ul class="nav-link-list">' + link("route-streets.html", "Route Sheets") + "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 
@@ -122,75 +128,63 @@
     }
 })();
 
-// "Saved PDFs" menu item. A web page can't open a folder in the file manager, so this
-// opens the device's file picker (starting in Downloads where the browser supports it)
-// and shows the chosen PDF in a new browser tab. Injected here so every page's menu gets it.
+// Menu footer: the signed-in account (with Sign Out) on the left, and the Saved PDFs icon
+// on the right. What the icon opens (the in-app list of PDFs the app has created) lives in
+// saved-pdfs.js. Real per-user login (auth-gate.js) replaced the old shared PIN, which had no
+// concept of a signed-in user and so never needed the account part.
 (function () {
     "use strict";
 
-    var footer = document.getElementById("site-nav-footer");
-    if (!footer) {
+    var nav = document.getElementById("site-nav");
+    if (!nav) {
         return;
     }
 
-    var section = document.createElement("div");
-    section.className = "nav-section";
-    section.innerHTML =
-        '<h2 class="nav-section-plain">Saved Files</h2>' +
-        '<button type="button" class="nav-action" id="open-saved-pdfs">Open Saved PDFs</button>' +
-        '<p class="nav-action-hint">Browse to the folder your PDFs were saved to (usually Downloads) and pick one to view it.</p>';
-    footer.appendChild(section);
+    var footer = document.createElement("div");
+    footer.className = "site-nav-footer";
+    footer.innerHTML =
+        '<div class="nav-account">' +
+            '<span class="nav-account-email" id="account-email"></span>' +
+            '<button type="button" class="nav-account-signout" id="sign-out" hidden>Sign Out</button>' +
+        "</div>" +
+        '<button type="button" class="nav-icon-btn" id="open-saved-pdfs" ' +
+            'aria-label="Saved PDFs" title="Saved PDFs">' +
+            '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">' +
+                '<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" ' +
+                    'fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+                '<path d="M8 13h8M8 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+            "</svg>" +
+        "</button>";
+    nav.appendChild(footer);
 
-    var input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/pdf,.pdf";
-    input.hidden = true;
-    document.body.appendChild(input);
+    var emailEl = document.getElementById("account-email");
+    var signOutBtn = document.getElementById("sign-out");
 
-    function show(file) {
-        var url = URL.createObjectURL(file);
-        var win = window.open(url, "_blank");
-        if (!win) {
-            alert("Your browser blocked the PDF from opening. Allow pop-ups for this site and try again.");
-        }
-        // Give the new tab time to load the file before releasing it
-        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    function onFirebaseReady() {
+        var fb = window.RouteIQFirebase;
+        fb.onAuthStateChanged(fb.auth, function (user) {
+            emailEl.textContent = user ? user.email : "";
+            signOutBtn.hidden = !user;
+        });
+        signOutBtn.addEventListener("click", function () {
+            fb.signOut(fb.auth);
+        });
     }
 
-    input.addEventListener("change", function () {
-        if (input.files && input.files[0]) {
-            show(input.files[0]);
-        }
-        input.value = "";
-    });
-
-    document.getElementById("open-saved-pdfs").addEventListener("click", function () {
-        if (window.showOpenFilePicker) {
-            window.showOpenFilePicker({
-                startIn: "downloads",
-                types: [{ description: "PDF files", accept: { "application/pdf": [".pdf"] } }]
-            })
-                .then(function (handles) { return handles[0].getFile(); })
-                .then(show)
-                .catch(function (err) {
-                    // Backing out of the picker is not an error
-                    if (err && err.name !== "AbortError") {
-                        input.click();
-                    }
-                });
-        } else {
-            input.click();
-        }
-    });
+    if (window.RouteIQFirebase) {
+        onFirebaseReady();
+    } else {
+        document.addEventListener("firebase-ready", onFirebaseReady, { once: true });
+    }
 })();
 
-// Collapsible nav sections (Observations, Safety, Route Management). Each heading is a
-// button (aria-expanded/aria-controls) toggling the .is-open class on its panel;
-// styles.css animates the height.
+// Collapsible Residential/Commercial subsections under Observations.
+// Each heading is a button (aria-expanded/aria-controls) toggling the
+// .is-open class on its panel; styles.css animates the height.
 (function () {
     "use strict";
 
-    var toggles = document.querySelectorAll(".nav-section-title");
+    var toggles = document.querySelectorAll(".nav-subsection-title");
 
     toggles.forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -203,43 +197,4 @@
             }
         });
     });
-})();
-
-// "Account" menu item: shows who's signed in and a way to sign out. Real per-user login
-// (auth-gate.js) replaced the old shared PIN, which had no concept of a logged-in user and
-// so never needed this.
-(function () {
-    "use strict";
-
-    var footer = document.getElementById("site-nav-footer");
-    if (!footer) {
-        return;
-    }
-
-    var section = document.createElement("div");
-    section.className = "nav-section";
-    section.innerHTML =
-        '<h2 class="nav-section-plain">Account</h2>' +
-        '<p class="nav-action-hint" id="account-email"></p>' +
-        '<button type="button" class="nav-action" id="sign-out">Sign Out</button>';
-    footer.appendChild(section);
-
-    var emailEl = document.getElementById("account-email");
-    var signOutBtn = document.getElementById("sign-out");
-
-    function onFirebaseReady() {
-        var fb = window.RouteIQFirebase;
-        fb.onAuthStateChanged(fb.auth, function (user) {
-            emailEl.textContent = user ? user.email : "";
-        });
-        signOutBtn.addEventListener("click", function () {
-            fb.signOut(fb.auth);
-        });
-    }
-
-    if (window.RouteIQFirebase) {
-        onFirebaseReady();
-    } else {
-        document.addEventListener("firebase-ready", onFirebaseReady, { once: true });
-    }
 })();
