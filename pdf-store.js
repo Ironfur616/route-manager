@@ -10,6 +10,9 @@
      PdfStore.list()           -> Promise of [{ id, name, created, size }], newest first
      PdfStore.get(id)          -> Promise of { id, name, created, size, blob }
      PdfStore.remove(id)       -> Promise
+     PdfStore.all()            -> Promise of every record, blobs included (for backups)
+     PdfStore.putRecord(rec)   -> Promise; stores a record as is (restoring a backup)
+     PdfStore.clear()          -> Promise
 */
 (function () {
     "use strict";
@@ -89,6 +92,15 @@
         },
         remove: function (id) {
             return run("readwrite", function (store) { store.delete(id); });
+        },
+        all: function () {
+            return run("readonly", function (store) { return store.getAll(); });
+        },
+        putRecord: function (record) {
+            return run("readwrite", function (store) { store.put(record); });
+        },
+        clear: function () {
+            return run("readwrite", function (store) { store.clear(); });
         }
     };
 })();

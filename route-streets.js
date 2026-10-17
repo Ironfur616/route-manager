@@ -912,14 +912,18 @@
                 if (!requests.length) return;
                 return Promise.all(requests.map(function (req) {
                     return cache.match(req).then(function (res) {
+                        var name = decodeURIComponent(res.headers.get("X-File-Name") || "shared.xlsx");
+                        // A shared Route IQ backup is the restore's (backup.js), not an import
+                        if (/\.json$/i.test(name)) return null;
                         return res.blob().then(function (blob) {
-                            var name = decodeURIComponent(res.headers.get("X-File-Name") || "shared.xlsx");
-                            return new File([blob], name, { type: blob.type });
+                            return { req: req, file: new File([blob], name, { type: blob.type }) };
                         });
                     });
-                })).then(function (files) {
-                    return Promise.all(requests.map(function (req) { return cache.delete(req); })).then(function () {
-                        handleFiles(files);
+                })).then(function (items) {
+                    items = items.filter(Boolean);
+                    if (!items.length) return;
+                    return Promise.all(items.map(function (i) { return cache.delete(i.req); })).then(function () {
+                        handleFiles(items.map(function (i) { return i.file; }));
                     });
                 });
             });

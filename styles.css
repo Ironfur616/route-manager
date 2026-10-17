@@ -3510,6 +3510,167 @@ body.shell {
     }
 }
 
+/* ---------- Backup & Restore (Settings, backup.js) ---------- */
+
+.backup-last {
+    margin: 0;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.backup-help {
+    margin: 0.25rem 0 0;
+}
+
+.backup-pdfs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    color: var(--ink);
+}
+
+.backup-pdfs input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+.backup-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.backup-undo {
+    margin-top: 0.5rem;
+    white-space: normal;
+    text-align: left;
+}
+
+.backup-undo[hidden] {
+    display: none;
+}
+
+.backup-status {
+    margin: 0.5rem 0 0;
+    color: var(--ink);
+    font-size: 0.875rem;
+}
+
+.backup-status:empty {
+    display: none;
+}
+
+.backup-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+}
+
+.backup-from {
+    margin: 0;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.backup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.backup-table th,
+.backup-table td {
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid rgba(var(--navy-rgb), 0.12);
+    text-align: left;
+}
+
+.backup-table thead th {
+    color: var(--heading);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.backup-table td {
+    font-variant-numeric: tabular-nums;
+}
+
+.backup-table tbody th {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.backup-confirm[hidden] {
+    display: none;
+}
+
+/* Reminder bar along the bottom of the app */
+.backup-reminder {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+    border-top: 3px solid var(--warn-ink);
+    background-color: var(--surface);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.backup-reminder[hidden] {
+    display: none;
+}
+
+.backup-reminder-text {
+    margin: 0;
+    color: var(--heading);
+    font-weight: 700;
+}
+
+.backup-reminder-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.backup-reminder-actions button {
+    flex: 1;
+}
+
+@media (min-width: 30em) {
+    .backup-actions {
+        flex-direction: row;
+    }
+
+    .backup-actions button {
+        flex: 1;
+    }
+}
+
+@media (min-width: 48em) {
+    .backup-body {
+        padding: 1.25rem 1.5rem;
+    }
+
+    .backup-reminder {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding-right: 1.5rem;
+        padding-left: 1.5rem;
+    }
+
+    .backup-reminder-actions button {
+        flex: none;
+    }
+}
+
 /* ---------- Route map icon beside the route's name ---------- */
 
 .rs-title-row {

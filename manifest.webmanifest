@@ -45,7 +45,9 @@
           "name": "files",
           "accept": [
             ".xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".json",
+            "application/json"
           ]
         }
       ]

@@ -11,6 +11,7 @@
      HouseStore.get(store, key) -> Promise of the record or undefined
      HouseStore.put(store, record) -> Promise
      HouseStore.all(store) -> Promise of every record
+     HouseStore.clear(store) -> Promise
 */
 (function () {
     "use strict";
@@ -69,6 +70,10 @@
         },
         all: function (storeName) {
             return run(storeName, "readonly", function (s) { return s.getAll(); });
+        },
+        STORES: STORES.slice(),
+        clear: function (storeName) {
+            return run(storeName, "readwrite", function (s) { s.clear(); });
         }
     };
 })();

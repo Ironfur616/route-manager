@@ -1,7 +1,7 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v103";
+var CACHE_NAME = "fleet-mgr-v104";
 // Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
 var SHARE_INBOX = "routeiq-share-inbox";
 
@@ -32,6 +32,7 @@ var PRECACHE_URLS = [
     "./route-streets.js",
     "./house-store.js",
     "./route-lookup.js",
+    "./backup.js",
     "./county-pull.js",
     "./styles.css",
     "./nav.js",
@@ -162,10 +163,14 @@ self.addEventListener("fetch", function (event) {
 });
 
 function receiveShare(request) {
+    // Spreadsheets go to Route Sheets' import; a Route IQ backup (.json) to the restore preview
     var landing = new URL("./index.html?import-shared=1", self.registration.scope).href;
     return request.formData()
         .then(function (data) {
             var files = data.getAll("files").filter(function (f) { return f && f.name; });
+            if (files.some(function (f) { return /\.json$/i.test(f.name); })) {
+                landing = new URL("./index.html?restore-shared=1", self.registration.scope).href;
+            }
             return caches.open(SHARE_INBOX).then(function (cache) {
                 return Promise.all(files.map(function (file, i) {
                     var key = new URL("./share-inbox/" + Date.now() + "-" + i, self.registration.scope).href;
