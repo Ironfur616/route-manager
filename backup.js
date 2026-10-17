@@ -1,11 +1,11 @@
 /* Backup & Restore, in Settings (the gear in the app header). Everything Route IQ keeps lives
    only in this browser on this device until Firestore is set up, so this is the safety net.
 
-   Back Up Now writes one .json file holding all of it: every localStorage entry (the trackers,
+   Back Up Now builds one .json file holding all of it: every localStorage entry (the trackers,
    Route Sheets, Service, recycle calendar, settings), the county house lists (house-store.js)
-   and, if ticked, the saved PDFs (pdf-store.js). It downloads to the tablet and then opens the
-   share sheet, so a copy can go to Google Drive or email: only a copy off the tablet protects
-   against the tablet's storage being cleared.
+   and, if ticked, the saved PDFs (pdf-store.js), then asks where it goes: Google Drive (the
+   share sheet, where Drive's upload screen lets you pick the folder, or email) or this
+   tablet's Downloads. Only a copy off the tablet protects against its storage being cleared.
 
    Restore reads a backup file, picked here or shared to Route IQ from Drive/Files (sw.js sends
    shared .json files to index.html?restore-shared=1), and shows what's in it before changing
@@ -328,7 +328,8 @@
     function describeLast() {
         var info = readInfo();
         lastEl.textContent = info.last
-            ? "Last backup: " + prettyStamp(info.last) + " (" + ago(info.last) + ")."
+            ? "Last backup: " + prettyStamp(info.last) + " (" + ago(info.last) + ")" +
+                (info.where === "device" ? ", saved on this tablet only." : info.where === "shared" ? ", sent to Drive or another app." : ".")
             : "This tablet hasn't been backed up yet.";
         pdfTotal().then(function (t) {
             pdfText.textContent = "Include saved PDFs" + (t.count ? " (" + t.count + ", " + prettySize(t.bytes) + ")" : " (none yet)");
@@ -345,35 +346,94 @@
             "-" + pad(d.getHours()) + pad(d.getMinutes()) + ".json";
     }
 
+    /* Back Up Now builds the file first, then asks where it goes. Building can take a few
+       seconds with PDFs, and Android only opens the share sheet straight after a tap, so the
+       tap on a destination is what opens it. A backup counts (and the reminder clears) only
+       once it's actually been sent or saved. */
+    var saveDialog = el("dialog", "send-dialog mt-dialog backup-save-dialog");
+    saveDialog.setAttribute("aria-labelledby", "backup-save-title");
+    saveDialog.innerHTML =
+        '<div class="mt-dialog-head">' +
+            '<h2 id="backup-save-title">Save Backup</h2>' +
+            '<button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>' +
+        "</div>" +
+        '<div class="backup-body">' +
+            '<p class="backup-ready"></p>' +
+            '<button type="button" class="backup-dest backup-dest-share">' +
+                '<span class="backup-dest-title">Google Drive</span>' +
+                '<span class="backup-dest-hint">Opens the share screen. Tap <strong>Drive</strong>, then under <strong>Folder</strong> pick <strong>RouteIQ Backups</strong> and tap <strong>Save</strong>. Email works from there too.</span>' +
+            "</button>" +
+            '<button type="button" class="backup-dest backup-dest-device">' +
+                '<span class="backup-dest-title">This tablet (Downloads)</span>' +
+                '<span class="backup-dest-hint">Only on this tablet, so it won\u2019t help if the tablet\u2019s storage is cleared.</span>' +
+            "</button>" +
+            '<p class="backup-status backup-save-status" role="status" aria-live="polite"></p>' +
+        "</div>" +
+        '<div class="form-actions mt-dialog-actions">' +
+            '<button type="button" class="send-email" data-dialog-close>Close</button>' +
+        "</div>";
+    document.body.appendChild(saveDialog);
+
+    var readyEl = saveDialog.querySelector(".backup-ready");
+    var shareDest = saveDialog.querySelector(".backup-dest-share");
+    var deviceDest = saveDialog.querySelector(".backup-dest-device");
+    var saveStatus = saveDialog.querySelector(".backup-save-status");
+    var saveModal = TrackerDialog(saveDialog, { onClose: function () { ready = null; } });
+    var ready = null; // { file, created }
+
+    function canShareFile(file) {
+        try { return !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+    }
+
+    function recorded(where) {
+        writeInfo({ last: ready.created, size: ready.file.size, where: where, snoozeUntil: 0 });
+        hideReminder();
+        describeLast();
+    }
+
+    shareDest.addEventListener("click", function () {
+        if (!ready) return;
+        var r = ready;
+        saveStatus.textContent = "";
+        navigator.share({ files: [r.file], title: r.file.name }).then(function () {
+            if (ready !== r) return;
+            recorded("shared");
+            saveStatus.textContent = "Sent. If you picked Drive, it\u2019s in the folder you chose once the upload finishes.";
+        }).catch(function (err) {
+            saveStatus.textContent = err && err.name === "AbortError"
+                ? "Not sent. Tap Google Drive to try again."
+                : "The share screen couldn\u2019t open. Save it to this tablet instead, then upload it from the Drive app.";
+        });
+    });
+
+    deviceDest.addEventListener("click", function () {
+        if (!ready) return;
+        var url = URL.createObjectURL(ready.file);
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = ready.file.name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        recorded("device");
+        saveStatus.textContent = "Saved to the tablet\u2019s Downloads.";
+    });
+
     function backUpNow(button, statusTarget) {
         var original = button.textContent;
         button.disabled = true;
-        button.textContent = "Backing up…";
-        var withPdfs = pdfBox.checked;
-        return collect(withPdfs).then(function (backup) {
+        button.textContent = "Getting the backup ready\u2026";
+        return collect(pdfBox.checked).then(function (backup) {
             var name = fileName(backup.created);
             var file = new File([JSON.stringify(backup)], name, { type: "application/json" });
-
-            var url = URL.createObjectURL(file);
-            var link = document.createElement("a");
-            link.href = url;
-            link.download = name;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
-
-            writeInfo({ last: backup.created, size: file.size, snoozeUntil: 0 });
-            hideReminder();
-            statusTarget.textContent = "Saved " + name + " (" + prettySize(file.size) + ") to the tablet's Downloads. " +
-                "Send it to Google Drive or email from the share screen to keep a copy off the tablet.";
-            describeLast();
-            // The share sheet is its own app, so Back always comes back here
-            try {
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({ files: [file], title: name }).catch(function () { /* closed the share sheet */ });
-                }
-            } catch (e) { /* no sharing here; the download is enough */ }
+            ready = { file: file, created: backup.created };
+            readyEl.textContent = name + " (" + prettySize(file.size) + ") is ready. Where should it go?";
+            shareDest.hidden = !canShareFile(file);
+            saveStatus.textContent = shareDest.hidden ? "This browser can\u2019t share files, so it can only be saved to this tablet." : "";
+            statusTarget.textContent = "";
+            settingsDialogClose();
+            saveModal.open();
         }).catch(function () {
             statusTarget.textContent = "The backup couldn't be made. Try again; if it keeps failing, untick Include saved PDFs.";
         }).then(function () {
@@ -592,11 +652,7 @@
         bar.hidden = false;
     }
 
-    barNow.addEventListener("click", function () {
-        backUpNow(barNow, barText).then(function () {
-            setTimeout(hideReminder, 6000);
-        });
-    });
+    barNow.addEventListener("click", function () { backUpNow(barNow, barText); });
     barLater.addEventListener("click", function () {
         writeInfo({ snoozeUntil: Date.now() + DAY });
         hideReminder();

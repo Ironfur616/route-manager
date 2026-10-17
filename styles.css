@@ -3608,6 +3608,53 @@ body.shell {
     display: none;
 }
 
+.backup-ready {
+    margin: 0;
+    color: var(--heading);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+/* Each destination is one big tappable card */
+.backup-dest {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(var(--navy-rgb), 0.3);
+    border-left: 6px solid var(--forest-green);
+    border-radius: 6px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.backup-dest:hover {
+    background-color: rgba(var(--navy-rgb), 0.05);
+}
+
+.backup-dest-device {
+    border-left-color: rgba(var(--navy-rgb), 0.4);
+}
+
+.backup-dest[hidden] {
+    display: none;
+}
+
+.backup-dest-title {
+    color: var(--heading);
+    font-size: 1.0625rem;
+    font-weight: 700;
+}
+
+.backup-dest-hint {
+    font-size: 0.875rem;
+}
+
 /* Reminder bar along the bottom of the app */
 .backup-reminder {
     position: fixed;
