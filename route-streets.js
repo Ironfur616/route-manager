@@ -281,7 +281,9 @@
                     ["Commercial rear load", groups.commercial]].forEach(function (g) {
                     if (!g[1].length) return;
                     if (mixed) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
-                    var ul = el("ul", "rs-streets" + (g[1] === groups.commercial ? " rs-commercial" : ""));
+                    // Streets flow into columns; addresses (with a name and a button) read better one per row
+                    var ul = el("ul", "rs-streets" + (g[1] === groups.streets ? "" : " rs-address-list") +
+                        (g[1] === groups.commercial ? " rs-commercial" : ""));
                     g[1].forEach(function (s) {
                         var li = el("li", isAddress(s) ? "rs-address" : null);
                         var text = el("span", "rs-line-text", withTown(r, s, several));

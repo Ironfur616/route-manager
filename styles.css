@@ -3416,6 +3416,11 @@ body.shell {
     border-left: 3px solid var(--fill-navy);
 }
 
+/* Addresses and commercial stops stay one per row at every width (streets use columns) */
+.rs-all-streets .rs-streets.rs-address-list {
+    columns: auto;
+}
+
 /* An address line: its text, then the Commercial tag button */
 .rs-streets li.rs-address {
     display: flex;
