@@ -24,8 +24,8 @@
     "use strict";
 
     var CONFIG = {
-        clientId: "",                // OAuth client ID, ends in .apps.googleusercontent.com
-        apiKey: "",                  // API key with the Google Picker API allowed
+        clientId: "59647765517-cgf0gon2aej87mtb7coiucne3ttq267f.apps.googleusercontent.com", // OAuth client ID, ends in .apps.googleusercontent.com
+        apiKey: "AIzaSyCLfrN3czwwCXsbFJvjdvWdbLpLo4PRIzg", // API key, Google Picker API only, ironfur616.github.io only
         appId: "59647765517"         // the ewrouteiq project number
     };
     var SCOPE = "https://www.googleapis.com/auth/drive.file";
