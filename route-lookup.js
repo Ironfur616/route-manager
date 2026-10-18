@@ -36,9 +36,19 @@
             .map(function (w) { return WORDS[w] || w; }).join(" ");
     }
 
-    // "123 Main St", "123-125 Main St", "12A Main St" -> "main st"
+    // A house number is digits with at most one letter ("450", "12a"); "2nd", "3rd", "4th"
+    // and "1st" start street names, not addresses
+    var HOUSE_NUMBER = /^\d+[a-z]?$/;
+
+    function startsWithHouseNumber(normalized) {
+        return HOUSE_NUMBER.test(firstWord(normalized));
+    }
+
+    // "123 Main St", "123-125 Main St", "12A Main St" -> "main st"; "450 2nd St" -> "2nd st"
     function streetPart(address) {
-        return normalize(address).replace(/^(\d+[a-z]?\s*)+/, "").trim();
+        var words = normalize(address).split(" ");
+        while (words.length && HOUSE_NUMBER.test(words[0])) words.shift();
+        return words.join(" ");
     }
 
     function readRoutes() {
@@ -93,7 +103,7 @@
                 var where = (r.cities && r.cities[key]) || "";
                 var i = lines.length;
                 var span = range(s);
-                var home = !span && /^\d/.test(key);
+                var home = !span && startsWithHouseNumber(key);
                 lines.push({ r: r, line: s, key: span ? normalize(span.street) : key, span: span,
                     home: home, where: where, whereKey: normalize(where),
                     commercial: !!(r.commercial && r.commercial[key]), site: (r.sites && r.sites[key]) || "" });
@@ -160,7 +170,7 @@
     function houseEntries(address) {
         if (!houses) return [];
         var full = normalize(address);
-        if (!/^\d/.test(full)) return [];
+        if (!startsWithHouseNumber(full)) return [];
         var words = full.split(" ");
         for (var n = words.length; n >= 2; n--) {
             var hit = houses[words.slice(0, n).join(" ")];
@@ -194,7 +204,7 @@
         if (off.length) return { status: "off", route: routeByKey(off[0].route).route, why: off[0].why };
         // Ticked but confirmed to use its own street: that street's route decides, no note needed
         if (entries.length) return null;
-        if (!houses || !/^\d/.test(normalize(address))) return null;
+        if (!houses || !startsWithHouseNumber(normalize(address))) return null;
         var pulledHit = streetFind(address, city).filter(function (m) {
             return m.kind === "street" && pulledRoutes[String(m.route).toLowerCase()];
         })[0];
@@ -225,7 +235,7 @@
     // An entry that starts with a house number is one home (a subscription stop), not a street,
     // unless it's a range of house numbers
     function isAddress(line) {
-        return /^\d/.test(normalize(line)) && !range(line);
+        return startsWithHouseNumber(normalize(line)) && !range(line);
     }
 
     // "1234 n main st" -> ["1234 n main st", "1234 main st"], so the N. is optional either way
@@ -250,7 +260,7 @@
     // Kept in Route Sheets order, so results come out in the order routes were entered.
     function candidates(ix, full, target) {
         var picked = {};
-        if (/^\d/.test(full)) (ix.byNumber[firstWord(full)] || []).forEach(function (i) { picked[i] = true; });
+        if (startsWithHouseNumber(full)) (ix.byNumber[firstWord(full)] || []).forEach(function (i) { picked[i] = true; });
         if (target) {
             variants(target).forEach(function (v) {
                 (ix.byWord[firstWord(v)] || []).forEach(function (i) { picked[i] = true; });
