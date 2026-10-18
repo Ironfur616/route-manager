@@ -55,12 +55,14 @@
                     link("new-customers.html", "New Customers") +
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
-                    link("map-lens.html", "Map Lens") +
                 "</ul>") +
             section("Service",
                 '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +
             section("Routing",
-                '<ul class="nav-link-list">' + link("route-streets.html", "Route Sheets") + "</ul>") +
+                '<ul class="nav-link-list">' +
+                    link("route-streets.html", "Route Sheets") +
+                    link("map-lens.html", "Map Lens") +
+                "</ul>") +
         "</nav>" +
         '<div class="nav-scrim" id="nav-scrim"></div>';
 

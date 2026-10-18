@@ -1,4 +1,4 @@
-/* Map Lens (map-lens.html), under Route Management in the menu: clean route maps for driver
+/* Map Lens (map-lens.html), under Routing in the menu: clean route maps for driver
    handouts, traced by hand from the GPS breadcrumbs.
 
    The routes and their map files come from the library (map-library.js, assets/Maps/). Each
