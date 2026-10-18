@@ -1,7 +1,8 @@
 /* Map Lens library: the route maps that ship with the app, in assets/Maps/.
    Each route is named exactly as on Route Sheets (no driver name) and has one sheet per blank map.
    A route that runs off one map is split into sheets ("M-2-4" → M-2-4-1 and M-2-4-2), printed as
-   one page each. For every sheet the folder holds:
+   one page each. A sheet's file name may carry a description after the sheet number
+   ("M-5-1-1_Canton Recycle"); list it here exactly as named. For every sheet the folder holds:
 
      <sheet>.pdf                the blank Google Maps print (11x17 landscape)
      <sheet>_breadcrumbs.png    the GPS tracking screenshot with the truck's trail
@@ -18,7 +19,8 @@
         { route: "M-2-1", sheets: ["M-2-1"] },
         { route: "M-2-2", sheets: ["M-2-2"] },
         { route: "M-2-3", sheets: ["M-2-3"] },
-        { route: "M-2-4", sheets: ["M-2-4-1", "M-2-4-2"] }
+        { route: "M-2-4", sheets: ["M-2-4-1", "M-2-4-2"] },
+        { route: "M-5-1", sheets: ["M-5-1-1_Canton Recycle", "M-5-1-2_Canton Recycle", "M-5-1-3_Canton Recycle"] }
     ];
 
     var DIR = "assets/Maps/";
@@ -31,8 +33,8 @@
     window.MapLibrary = {
         routes: ROUTES,
         find: find,
-        mapUrl: function (sheet) { return DIR + sheet + ".pdf"; },
-        crumbsUrl: function (sheet) { return DIR + sheet + "_breadcrumbs.png"; },
-        traceUrl: function (sheet) { return DIR + sheet + ".trace.json"; }
+        mapUrl: function (sheet) { return DIR + encodeURIComponent(sheet) + ".pdf"; },
+        crumbsUrl: function (sheet) { return DIR + encodeURIComponent(sheet) + "_breadcrumbs.png"; },
+        traceUrl: function (sheet) { return DIR + encodeURIComponent(sheet) + ".trace.json"; }
     };
 })();
