@@ -402,6 +402,24 @@
     if (latestDraft) activate(latestDraft, false);
     else if (tabs.length) activate(tabs[0], false);
 
+    // Lets a page open another one in a tab (Route Sheets' Route Map button opens Map Lens at a
+    // route). A tab already showing that page is reused: it gets a "routeiq-open" event with the
+    // full href (query included) instead of being reloaded.
+    window.RouteIQTabs = {
+        open: function (href) {
+            var page = href.split("?")[0];
+            var tab = tabs.filter(function (t) { return t.href.split("?")[0] === page; })[0];
+            if (!tab) {
+                openTab(href, titles[page] || page);
+                return;
+            }
+            activate(tab, false);
+            try {
+                tab.frame.contentWindow.dispatchEvent(new CustomEvent("routeiq-open", { detail: href }));
+            } catch (e) { /* still loading; it reads its own address when it does */ }
+        }
+    };
+
     // Opened by sharing spreadsheets to Route IQ: show Route Sheets, which imports them
     if (/[?&]import-shared=1/.test(location.search)) {
         try { history.replaceState(null, "", location.pathname); } catch (e) { /* cosmetic only */ }

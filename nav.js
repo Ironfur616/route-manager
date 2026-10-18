@@ -55,6 +55,7 @@
                     link("new-customers.html", "New Customers") +
                     link("bulk-pickup.html", "Bulk Pickup Requests") +
                     link("rca.html", "Root Cause Assessment (RCA)") +
+                    link("map-lens.html", "Map Lens") +
                 "</ul>") +
             section("Service",
                 '<ul class="nav-link-list">' + link("service-assist.html", "Handicap &amp; Elderly") + "</ul>") +

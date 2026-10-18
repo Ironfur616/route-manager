@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-no-draft>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
+    <script src="theme.js"></script>
+    <script>
+        (function () {
+            try {
+                if (sessionStorage.getItem("fleetMgrUnlocked") !== "yes") {
+                    document.documentElement.classList.add("pin-locked");
+                }
+            } catch (e) {
+                document.documentElement.classList.add("pin-locked");
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#046635">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Route IQ">
+    <title>Map Lens · Earthwise Route IQ</title>
+</head>
+
+<body>
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>MAP LENS</legend>
+
+                <div class="mt-filters nc-filters">
+                    <div class="field">
+                        <label for="ml-search">Find a route</label>
+                        <input type="search" id="ml-search" placeholder="Route or driver" autocomplete="off">
+                    </div>
+                </div>
+
+                <p class="mt-count" id="ml-count" aria-live="polite"></p>
+                <p class="mt-warning" id="ml-storage-warning" hidden>This browser is blocking storage, so traces in progress cannot be saved.</p>
+                <div class="mt-list" id="ml-list"></div>
+            </fieldset>
+        </div>
+    </section>
+
+    <dialog class="ml-editor" id="ml-editor" aria-labelledby="ml-title">
+        <div class="ml-bar">
+            <div class="ml-bar-text">
+                <h2 class="ml-title" id="ml-title"></h2>
+                <p class="ml-status" id="ml-status" aria-live="polite"></p>
+            </div>
+            <button type="button" class="pdf-viewer-close" id="ml-close">Close</button>
+        </div>
+
+        <!-- Viewing a sheet (the published trace, read-only) -->
+        <div class="ml-tools" id="ml-view-tools">
+            <div class="ml-group" role="group" aria-label="GPS trail">
+                <span class="ml-group-label">Trail</span>
+                <button type="button" class="ml-tool" data-trail="off" aria-pressed="true">Off</button>
+                <button type="button" class="ml-tool" data-trail="full" aria-pressed="false">On</button>
+            </div>
+            <button type="button" class="ml-tool" data-fit>Fit</button>
+            <button type="button" class="ml-tool ml-tool-accent" id="ml-edit">Edit Trace</button>
+        </div>
+
+        <!-- Tracing -->
+        <div class="ml-tools" id="ml-trace-tools" hidden>
+            <div class="ml-group" role="group" aria-label="Highlighter">
+                <button type="button" class="ml-tool ml-swatch ml-swatch-y" data-tool="y" aria-pressed="true" aria-label="Yellow highlighter"></button>
+                <button type="button" class="ml-tool ml-swatch ml-swatch-b" data-tool="b" aria-pressed="false" aria-label="Blue highlighter"></button>
+                <button type="button" class="ml-tool ml-swatch ml-swatch-g" data-tool="g" aria-pressed="false" aria-label="Green highlighter"></button>
+                <button type="button" class="ml-tool" data-tool="erase" aria-pressed="false">Eraser</button>
+                <button type="button" class="ml-tool" data-tool="move" aria-pressed="false">Move</button>
+            </div>
+            <div class="ml-group" role="group" aria-label="Highlighter width">
+                <button type="button" class="ml-tool" data-width="4" aria-pressed="false" aria-label="Thin">S</button>
+                <button type="button" class="ml-tool" data-width="7" aria-pressed="true" aria-label="Medium">M</button>
+                <button type="button" class="ml-tool" data-width="11" aria-pressed="false" aria-label="Thick">L</button>
+            </div>
+            <div class="ml-group">
+                <button type="button" class="ml-tool" id="ml-undo" aria-label="Undo">&#x21B6;</button>
+                <button type="button" class="ml-tool" id="ml-redo" aria-label="Redo">&#x21B7;</button>
+            </div>
+            <div class="ml-group" role="group" aria-label="GPS trail">
+                <span class="ml-group-label">Trail</span>
+                <button type="button" class="ml-tool" data-trail="off" aria-pressed="false">Off</button>
+                <button type="button" class="ml-tool" data-trail="full" aria-pressed="false">On</button>
+                <button type="button" class="ml-tool" data-trail="lens" aria-pressed="true">Lens</button>
+                <input type="range" class="ml-opacity" id="ml-opacity" min="15" max="100" value="70" aria-label="Trail strength">
+            </div>
+            <button type="button" class="ml-tool" data-fit>Fit</button>
+            <button type="button" class="ml-tool" id="ml-realign">Line Up</button>
+            <button type="button" class="ml-tool ml-tool-accent" id="ml-publish">Publish</button>
+        </div>
+        <div class="ml-legend-row" id="ml-legend-row" hidden>
+            <label for="ml-legend-input" id="ml-legend-label">Blue means</label>
+            <input type="text" id="ml-legend-input" autocomplete="off" maxlength="40" placeholder="e.g. Alley, Rear load (prints in the legend)">
+        </div>
+
+        <!-- Lining up the breadcrumbs with the blank map -->
+        <div class="ml-tools ml-align-tools" id="ml-align-tools" hidden>
+            <p class="ml-align-help" id="ml-align-help"></p>
+            <div class="ml-group">
+                <button type="button" class="ml-tool" id="ml-align-undo">Undo Point</button>
+                <button type="button" class="ml-tool" id="ml-align-clear">Clear</button>
+                <button type="button" class="ml-tool" id="ml-align-cancel" hidden>Cancel</button>
+                <button type="button" class="ml-tool ml-tool-accent" id="ml-align-done" disabled>Done</button>
+            </div>
+        </div>
+
+        <div class="ml-work" id="ml-work">
+            <div class="ml-pane ml-pane-crumbs" id="ml-crumbs-pane" hidden>
+                <p class="ml-pane-label">GPS breadcrumbs</p>
+                <div class="ml-viewport" id="ml-crumbs-vp"><div class="ml-stage" id="ml-crumbs-stage"></div></div>
+            </div>
+            <div class="ml-pane ml-pane-map">
+                <p class="ml-pane-label" id="ml-map-label" hidden>Blank map</p>
+                <div class="ml-viewport" id="ml-map-vp">
+                    <div class="ml-stage" id="ml-map-stage">
+                        <canvas class="ml-layer" id="ml-base"></canvas>
+                        <canvas class="ml-layer ml-trail" id="ml-trail"></canvas>
+                        <canvas class="ml-layer ml-ink" id="ml-ink"></canvas>
+                    </div>
+                    <div class="ml-lens-ring" id="ml-lens-ring" hidden></div>
+                </div>
+            </div>
+            <p class="ml-loading" id="ml-loading" role="status"></p>
+        </div>
+    </dialog>
+
+    <dialog class="send-dialog mt-dialog" id="ml-publish-dialog" aria-labelledby="ml-publish-title">
+        <div class="mt-dialog-head">
+            <h2 id="ml-publish-title">Publish Trace</h2>
+            <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+        </div>
+        <div class="ml-publish-body">
+            <p>This saves <strong id="ml-publish-file"></strong>. Send that file to be added to the app's map library. Once the app updates, every device gets this trace.</p>
+            <p class="mt-hint">Until then, the trace stays on this tablet as a draft, and Print Map already uses it.</p>
+        </div>
+        <div class="form-actions mt-dialog-actions">
+            <button type="button" class="send-email" data-dialog-close>Cancel</button>
+            <button type="button" class="generate-pdf" id="ml-publish-go">Save Trace File</button>
+        </div>
+    </dialog>
+
+    <script src="jspdf.umd.min.js" defer></script>
+    <script src="pdf-store.js" defer></script>
+    <script src="tracker-dialog.js" defer></script>
+    <script src="map-library.js" defer></script>
+    <script src="map-lens.js" defer></script>
+    <script src="sw-register.js" defer></script>
+</body>
+</html>

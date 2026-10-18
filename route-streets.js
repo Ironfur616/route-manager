@@ -29,7 +29,10 @@
    Route maps: each route can hold a map link (mapUrl, e.g. a Google My Maps share link), set in
    its edit dialog. The map icon beside the route's heading opens it; with no link yet, the icon
    opens the edit dialog at the Map link field. A map opens outside Route IQ (the browser or the
-   Maps app), so Back returns here. */
+   Maps app), so Back returns here.
+
+   Routes with a map in the Map Lens library (map-library.js) also get a Route Map button, which
+   opens the traced handout map in Map Lens. */
 (function () {
     "use strict";
 
@@ -305,6 +308,13 @@
         print.setAttribute("aria-label", "Print route " + r.route);
         print.addEventListener("click", function () { printRoutes([r], print); });
         actions.appendChild(print);
+        if (window.MapLibrary && MapLibrary.find(r.route)) {
+            var traced = el("button", "mt-btn", "Route Map");
+            traced.type = "button";
+            traced.setAttribute("aria-label", "Open the traced map for route " + r.route);
+            traced.addEventListener("click", function () { openRouteMap(MapLibrary.find(r.route).route); });
+            actions.appendChild(traced);
+        }
         if (window.CountyPull && (r.streets || []).length) {
             var county = el("button", "mt-btn", r.county ? "County Houses" : "Pull from County");
             county.type = "button";
@@ -335,6 +345,15 @@
         }
         chip.textContent = housesText(sum);
         button.textContent = "County Houses";
+    }
+
+    // The traced handout map lives in Map Lens; inside the app it opens in its own tab
+    function openRouteMap(route) {
+        var href = "map-lens.html?route=" + encodeURIComponent(route);
+        var tabs = null;
+        try { tabs = window.top.RouteIQTabs; } catch (e) { /* not inside the app */ }
+        if (tabs) tabs.open(href);
+        else location.href = href;
     }
 
     var MAP_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">' +
