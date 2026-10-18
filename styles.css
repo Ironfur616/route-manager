@@ -3404,6 +3404,50 @@ body.shell {
 
 
 /* ---------- Route Sheets: import from Excel ---------- */
+/* A commercial rear-load stop's customer name, under its address */
+.rs-site-name {
+    display: block;
+    color: var(--heading);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.rs-commercial li {
+    border-left: 3px solid var(--fill-navy);
+}
+
+/* An address line: its text, then the Commercial tag button */
+.rs-streets li.rs-address {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.rs-line-text {
+    min-width: 0;
+}
+
+.rs-comm-toggle {
+    flex: none;
+    min-height: 36px;
+    padding: 0.25rem 0.625rem;
+    border: 1px dashed rgba(var(--navy-rgb), 0.5);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--heading);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.rs-comm-toggle.is-on {
+    border: 1px solid var(--fill-navy);
+    background-color: var(--fill-navy);
+    color: var(--on-accent);
+}
+
 .rs-group-title {
     margin: 0.75rem 0 0;
     color: var(--heading);

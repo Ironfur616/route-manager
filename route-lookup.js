@@ -95,7 +95,8 @@
                 var span = range(s);
                 var home = !span && /^\d/.test(key);
                 lines.push({ r: r, line: s, key: span ? normalize(span.street) : key, span: span,
-                    home: home, where: where, whereKey: normalize(where) });
+                    home: home, where: where, whereKey: normalize(where),
+                    commercial: !!(r.commercial && r.commercial[key]), site: (r.sites && r.sites[key]) || "" });
                 if (span) key = normalize(span.street);
                 if (home) {
                     add(byNumber, firstWord(key), i);
@@ -305,7 +306,7 @@
                 var dup = hits.some(function (h) { return h.route === r.route && normalize(h.city) === entry.whereKey; });
                 if (score === best && !dup) {
                     hits.push({ route: r.route, driver: r.driver || "", area: r.area || "", day: r.day || "", street: s,
-                        city: where, kind: entry.home ? "address" : "street" });
+                        city: where, kind: entry.home ? (entry.commercial ? "commercial" : "address") : "street", site: entry.site });
                 }
             })(entry.r, entry.line, entry.key, entry.where);
         });
@@ -462,6 +463,12 @@
 
         // Where this house's cans go, or why it isn't on the route's house list
         function houseNotes() {
+            // An address tagged Commercial rear load in Route Sheets
+            var listed = streetFind(f.address.value, f.city ? f.city.value : "").filter(function (m) { return m.kind === "commercial"; })[0];
+            if (listed) {
+                f.note.appendChild(el("p", "mt-route-alley", "Commercial rear-load stop" + (listed.site ? ": " + listed.site : "") + "."));
+                return;
+            }
             var h = house(f.address.value, f.city ? f.city.value : "");
             if (!h) return;
             if (h.status === "on" && h.alley && h.use !== false) {

@@ -8,9 +8,14 @@
    it in the app's own viewer, with Print / Share there (see Printing below). Each route
    starts on its own page.
 
-   A route's list can mix whole streets ("Main Street") and individual homes for subscription
-   service ("1234 N. Main Street"); anything starting with a house number is a home. They're
-   counted, listed and printed separately.
+   A route's list can mix whole streets ("Main Street") and individual addresses ("1234 N. Main
+   Street"); anything starting with a house number is an address. The spreadsheets have nothing
+   that tells a commercial rear-load stop from a residential subscription, so addresses are
+   tagged Commercial by hand on the card (the route's commercial map), and the tag is kept
+   through edits and re-imports while the address stays on the route. Streets, residential
+   addresses and commercial stops are counted, listed and printed separately. Each address's
+   Site Name (column D) is kept too when it's an account name rather than "Current Resident"
+   (the route's sites map), and shown under it.
 
    Import from Excel (or sharing .xlsx files to Route IQ) builds routes from spreadsheets: the file
    name gives the route and driver ("MS-52-1 Bill Vaughn.xlsx"), column E the site addresses and
@@ -74,11 +79,30 @@
         return window.RouteLookup ? RouteLookup.isAddress(line) : /^\s*\d/.test(String(line));
     }
 
-    function splitStops(lines) {
-        return {
-            streets: (lines || []).filter(function (s) { return !isAddress(s); }),
-            addresses: (lines || []).filter(isAddress)
-        };
+    // The account name from the spreadsheet's Site Name ("City of Washington"), or ""
+    function siteNameOf(r, line) {
+        return (r && r.sites && r.sites[keyOf(line)]) || "";
+    }
+
+    // Tagged Commercial rear load on the card
+    function isCommercial(r, line) {
+        return !!(r && r.commercial && r.commercial[keyOf(line)]);
+    }
+
+    function splitStops(lines, r) {
+        var out = { streets: [], addresses: [], commercial: [] };
+        (lines || []).forEach(function (s) {
+            if (!isAddress(s)) out.streets.push(s);
+            else if (isCommercial(r, s)) out.commercial.push(s);
+            else out.addresses.push(s);
+        });
+        return out;
+    }
+
+    // Column D, Site Name: an account's name, or "" for "Current Resident"
+    function accountName(siteName) {
+        var name = String(siteName || "").replace(/\s+/g, " ").trim();
+        return name && !/^current\s+residents?$/i.test(name) ? name : "";
     }
 
     // Each line's town, saved by the import (column G), keyed like the route lookup matches
@@ -99,10 +123,11 @@
         return c ? line + " (" + c + ")" : line;
     }
 
-    function stopCount(lines) {
-        var p = splitStops(lines);
+    function stopCount(lines, r) {
+        var p = splitStops(lines, r);
         var parts = [p.streets.length + " street" + (p.streets.length === 1 ? "" : "s")];
         if (p.addresses.length) parts.push(p.addresses.length + " address" + (p.addresses.length === 1 ? "" : "es"));
+        if (p.commercial.length) parts.push(p.commercial.length + " commercial");
         return parts.join(" \u00B7 ");
     }
 
@@ -200,7 +225,7 @@
         titleRow.appendChild(title);
         titleRow.appendChild(mapButton(r));
         titleBlock.appendChild(titleRow);
-        titleBlock.appendChild(el("span", "mt-entry-date", stopCount(streets)));
+        titleBlock.appendChild(el("span", "mt-entry-date", stopCount(streets, r)));
         head.appendChild(titleBlock);
         head.appendChild(TrackerDialog.entryTools("route " + r.route, function () { startEdit(r.id); }, function () { remove(r.id); }));
         card.appendChild(head);
@@ -235,10 +260,16 @@
         }
 
         if (streets.length) {
-            var groups = splitStops(streets);
+            var groups = splitStops(streets, r);
             var all = el("details", "rs-all-streets");
+            // Reopened after tagging an address, so the list doesn't snap shut under your finger
+            if (reopen === r.id) {
+                all.open = true;
+                reopen = null;
+            }
+            var mixed = groups.addresses.length || groups.commercial.length;
             all.appendChild(el("summary", null, matchingStreets.length ? "Everything on this route"
-                : groups.addresses.length ? "Show streets and addresses" : "Show streets"));
+                : mixed ? "Show streets and addresses" : "Show streets"));
             // Built the first time it's opened: with every route's full list in the page at once,
             // a few dozen routes meant tens of thousands of elements and slow searching
             var built = false;
@@ -246,11 +277,20 @@
                 if (!all.open || built) return;
                 built = true;
                 var several = hasSeveralTowns(r);
-                [["Streets", groups.streets], ["Individual addresses", groups.addresses]].forEach(function (g) {
+                [["Streets", groups.streets], ["Individual addresses", groups.addresses],
+                    ["Commercial rear load", groups.commercial]].forEach(function (g) {
                     if (!g[1].length) return;
-                    if (groups.addresses.length) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
-                    var ul = el("ul", "rs-streets");
-                    g[1].forEach(function (s) { ul.appendChild(el("li", null, withTown(r, s, several))); });
+                    if (mixed) all.appendChild(el("p", "rs-group-title", g[0] + " (" + g[1].length + ")"));
+                    var ul = el("ul", "rs-streets" + (g[1] === groups.commercial ? " rs-commercial" : ""));
+                    g[1].forEach(function (s) {
+                        var li = el("li", isAddress(s) ? "rs-address" : null);
+                        var text = el("span", "rs-line-text", withTown(r, s, several));
+                        var name = siteNameOf(r, s);
+                        if (name) text.appendChild(el("span", "rs-site-name", name));
+                        li.appendChild(text);
+                        if (isAddress(s)) li.appendChild(commercialToggle(r, s));
+                        ul.appendChild(li);
+                    });
                     all.appendChild(ul);
                 });
             });
@@ -320,9 +360,33 @@
         return m ? m[0].replace(/[).,]+$/, "") : "";
     }
 
+    var reopen = null; // a route whose list stays open through the redraw after a tag change
+
+    // Tap to move an address between Individual addresses and Commercial rear load
+    function commercialToggle(r, line) {
+        var on = isCommercial(r, line);
+        var b = el("button", "rs-comm-toggle" + (on ? " is-on" : ""), on ? "Commercial \u2713" : "Commercial?");
+        b.type = "button";
+        b.setAttribute("aria-pressed", String(on));
+        b.setAttribute("aria-label", (on ? "Untag " : "Tag ") + line + " as a commercial rear-load stop");
+        b.addEventListener("click", function () {
+            var list = load();
+            var route = list.filter(function (e) { return e.id === r.id; })[0];
+            if (!route) return;
+            route.commercial = route.commercial || {};
+            if (on) delete route.commercial[keyOf(line)];
+            else route.commercial[keyOf(line)] = true;
+            if (!save(list)) return;
+            reopen = r.id;
+            render();
+        });
+        return b;
+    }
+
     function matches(r, term) {
         if (!term) return true;
-        return [r.route, "route " + r.route, r.area, r.day, r.driver, r.notes].concat(r.streets || [])
+        var names = Object.keys(r.sites || {}).map(function (k) { return r.sites[k]; });
+        return [r.route, "route " + r.route, r.area, r.day, r.driver, r.notes].concat(r.streets || [], names)
             .join("\n").toLowerCase().indexOf(term) !== -1;
     }
 
@@ -335,8 +399,13 @@
         listEl.textContent = "";
         shown.forEach(function (r) { listEl.appendChild(buildCard(r, term)); });
 
-        var streetTotal = list.reduce(function (n, r) { return n + splitStops(r.streets).streets.length; }, 0);
-        var addressTotal = list.reduce(function (n, r) { return n + splitStops(r.streets).addresses.length; }, 0);
+        var streetTotal = 0, addressTotal = 0, commercialTotal = 0;
+        list.forEach(function (r) {
+            var g = splitStops(r.streets, r);
+            streetTotal += g.streets.length;
+            addressTotal += g.addresses.length;
+            commercialTotal += g.commercial.length;
+        });
         if (!list.length) {
             countEl.textContent = "No routes yet. Tap Add Route to add the first one.";
         } else if (!shown.length) {
@@ -346,7 +415,8 @@
         } else {
             countEl.textContent = list.length + " route" + (list.length === 1 ? "" : "s") + ", " +
                 streetTotal + " street" + (streetTotal === 1 ? "" : "s") +
-                (addressTotal ? ", " + addressTotal + " individual address" + (addressTotal === 1 ? "" : "es") : "") + ".";
+                (addressTotal ? ", " + addressTotal + " individual address" + (addressTotal === 1 ? "" : "es") : "") +
+                (commercialTotal ? ", " + commercialTotal + " commercial rear-load stop" + (commercialTotal === 1 ? "" : "s") : "") + ".";
         }
         document.getElementById("rs-export").disabled = !list.length;
         document.getElementById("rs-print-all").disabled = !list.length;
@@ -375,6 +445,12 @@
 
     function prettyToday() {
         return new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function stopsInfo(g) {
+        return g.commercial.length
+            ? ["Streets / Addr. / Comm.", g.streets.length + " / " + g.addresses.length + " / " + g.commercial.length]
+            : ["Streets / Addr.", g.streets.length + " / " + g.addresses.length];
     }
 
     function buildSheetsPdf(routes, logo) {
@@ -430,7 +506,7 @@
 
             // Day, area, street count and print date across one shaded box
             var info = [["Service Day", r.day || "N/A"], ["Driver", r.driver || "N/A"], ["Area", r.area || "N/A"],
-                ["Streets / Addr.", splitStops(streets).streets.length + " / " + splitStops(streets).addresses.length],
+                stopsInfo(splitStops(streets, r)),
                 ["Printed", prettyToday()]];
             var colW = CONTENT_W / info.length;
             // A long value (an area covering several towns) wraps to a second, smaller line
@@ -504,7 +580,9 @@
                         doc.text((n + 1) + ".", x + 20, y + 12, { align: "right" });
                         doc.setFontSize(10);
                         color("setTextColor", INK);
-                        doc.text(doc.splitTextToSize(withTown(r, items[n], severalTowns), half - 40)[0], x + 26, y + 12);
+                        var name = siteNameOf(r, items[n]);
+                        var text = withTown(r, items[n], severalTowns) + (name ? " \u2013 " + name : "");
+                        doc.text(doc.splitTextToSize(text, half - 40)[0], x + 26, y + 12);
                         color("setDrawColor", RULE);
                         doc.setLineWidth(0.5);
                         doc.line(x, y + ROW_H - 1, x + half - 12, y + ROW_H - 1);
@@ -514,11 +592,12 @@
                 y += 14;
             }
 
-            var groups = splitStops(streets);
+            var groups = splitStops(streets, r);
             var severalTowns = hasSeveralTowns(r);
-            listSection("Streets", groups.streets, groups.addresses.length
+            listSection("Streets", groups.streets, groups.addresses.length || groups.commercial.length
                 ? "No whole streets on this route." : "No streets entered for this route.");
             if (groups.addresses.length) listSection("Individual Addresses", groups.addresses, "");
+            if (groups.commercial.length) listSection("Commercial Rear Load", groups.commercial, "");
         });
 
         // Footer: which route, and its page count, so each sheet stands on its own
@@ -583,7 +662,8 @@
 
     function updateStreetsCount() {
         var lines = parseStreets(fields.streets.value);
-        streetsCount.textContent = lines.length ? stopCount(lines) : "";
+        var editing = editingId ? load().filter(function (e) { return e.id === editingId; })[0] : null;
+        streetsCount.textContent = lines.length ? stopCount(lines, editing) : "";
     }
 
     function readForm() {
@@ -678,6 +758,8 @@
                 if (c) kept[keyOf(line)] = c;
             });
             existing.cities = kept;
+            existing.commercial = keepFor(data.streets, existing.commercial);
+            existing.sites = keepFor(data.streets, existing.sites);
             existing.updated = Date.now();
         } else {
             data.id = newId();
@@ -724,6 +806,7 @@
     var SHARE_INBOX = "routeiq-share-inbox";
     var COL_ADDRESS = 4; // E
     var COL_CITY = 6;    // G
+    var COL_SITE = 3;    // D, Site Name: "Current Resident", or the account's name
     var importList = document.getElementById("rs-import-list");
     var importStatus = document.getElementById("rs-import-status");
     var importGo = document.getElementById("rs-import-go");
@@ -769,7 +852,7 @@
 
     function readFile(XLSX, file) {
         var parts = nameParts(file.name);
-        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], cities: {}, area: "", rows: null, error: "" };
+        var result = { fileName: file.name, route: parts.route, driver: parts.driver, lines: [], cities: {}, sites: {}, area: "", rows: null, error: "" };
         return file.arrayBuffer().then(function (buf) {
             var wb = XLSX.read(new Uint8Array(buf), { type: "array" });
             var sheet = wb.Sheets[wb.SheetNames[0]];
@@ -789,6 +872,8 @@
                     cities[city] = (cities[city] || 0) + 1;
                     result.cities[k] = city;
                 }
+                var name = isAddress(line) ? accountName(row[COL_SITE]) : "";
+                if (name) result.sites[k] = name;
             });
             // Most common city first; a route covering several towns lists up to three
             result.area = Object.keys(cities).sort(function (a, b) { return cities[b] - cities[a]; }).slice(0, 3).join(" / ");
@@ -816,10 +901,10 @@
             } else {
                 var key = String(item.route).toLowerCase();
                 var before = existing[key];
-                var detail = stopCount(item.lines) + (item.area ? " \u00B7 " + item.area : "");
+                var detail = stopCount(item.lines, before ? { commercial: keepFor(item.lines, before.commercial) } : null) + (item.area ? " \u00B7 " + item.area : "");
                 row.appendChild(el("p", "rs-import-note", detail));
                 var status = seenRoutes[key] ? "Also in another file here; this one is used"
-                    : before ? "Replaces Route " + before.route + " (" + stopCount(before.streets) + " now)" : "New route";
+                    : before ? "Replaces Route " + before.route + " (" + stopCount(before.streets, before) + " now)" : "New route";
                 row.appendChild(el("span", "mt-chip rs-import-chip" + (before || seenRoutes[key] ? " is-replace" : " is-new"), status));
                 if (!item.driver) row.appendChild(el("p", "rs-import-note is-warn", "No driver in the file name (expected \u201cMS-52-1 Bill Vaughn.xlsx\u201d)."));
                 seenRoutes[key] = true;
@@ -866,13 +951,16 @@
                 // The file is the source of truth for the list, driver and area; day and notes stay
                 r.streets = item.lines.slice();
                 r.cities = item.cities;
+                r.sites = item.sites;
+                // Commercial tags are made by hand, so they stay for addresses still on the route
+                r.commercial = keepFor(item.lines, r.commercial);
                 if (item.driver) r.driver = item.driver;
                 if (item.area) r.area = item.area;
                 r.updated = Date.now();
                 updated++;
             } else {
                 r = { id: newId(), route: item.route, day: "", driver: item.driver, area: item.area,
-                    streets: item.lines.slice(), cities: item.cities, notes: "", mapUrl: "", created: Date.now() };
+                    streets: item.lines.slice(), cities: item.cities, sites: item.sites, commercial: {}, notes: "", mapUrl: "", created: Date.now() };
                 list.push(r);
                 byRoute[key] = r;
                 added++;
@@ -931,6 +1019,45 @@
     }
     window.addEventListener("rs-check-shared", checkSharedFiles);
 
+    // A map (cities, sites, commercial tags) cut down to the lines still on the route
+    function keepFor(lines, map) {
+        var out = {};
+        (lines || []).forEach(function (line) {
+            var k = keyOf(line);
+            if (map && map[k]) out[k] = map[k];
+        });
+        return out;
+    }
+
+    /* Routes imported before account names were kept: their spreadsheets are saved
+       (house-store.js "sheets"), so column D is read from there once, without re-importing.
+       A route gets a sites map (even an empty one) so this only happens once per route. */
+    function namesFromSavedSheets() {
+        if (!window.HouseStore) return;
+        var untagged = load().filter(function (r) { return !r.sites; });
+        if (!untagged.length) return;
+        HouseStore.all("sheets").then(function (sheets) {
+            var byRoute = {};
+            sheets.forEach(function (s) { byRoute[s.route] = s; });
+            var list = load();
+            var changed = 0;
+            list.forEach(function (r) {
+                if (r.sites) return;
+                var sheet = byRoute[String(r.route).toLowerCase()];
+                if (!sheet || !sheet.rows) return;
+                var names = {};
+                sheet.rows.slice(1).forEach(function (row) {
+                    var line = String(row[COL_ADDRESS] || "").replace(/\s+/g, " ").trim();
+                    var name = line && isAddress(line) ? accountName(row[COL_SITE]) : "";
+                    if (name) names[keyOf(line)] = name;
+                });
+                r.sites = names;
+                changed++;
+            });
+            if (changed && save(list)) render();
+        }).catch(function () { /* no saved spreadsheets */ });
+    }
+
     /* ---------- CSV export ---------- */
 
     function csvCell(value) {
@@ -941,11 +1068,13 @@
 
     // One row per street, so the file sorts and filters well in a spreadsheet
     document.getElementById("rs-export").addEventListener("click", function () {
-        var rows = [["Route", "Service Day", "Driver", "Area", "Type", "Street / Address", "City", "Notes"]];
+        var rows = [["Route", "Service Day", "Driver", "Area", "Type", "Street / Address", "Site Name", "City", "Notes"]];
         load().sort(byRoute).forEach(function (r) {
             var streets = (r.streets || []).length ? r.streets : [""];
             streets.forEach(function (s) {
-                rows.push([r.route, r.day, r.driver, r.area, s ? (isAddress(s) ? "Address" : "Street") : "", s, s ? cityOf(r, s) : "", r.notes]);
+                var name = s ? siteNameOf(r, s) : "";
+                var type = !s ? "" : !isAddress(s) ? "Street" : isCommercial(r, s) ? "Commercial" : "Address";
+                rows.push([r.route, r.day, r.driver, r.area, type, s, name, s ? cityOf(r, s) : "", r.notes]);
             });
         });
         var csv = "﻿" + rows.map(function (row) { return row.map(csvCell).join(","); }).join("\r\n");
@@ -975,4 +1104,5 @@
     resetForm();
     render();
     checkSharedFiles();
+    namesFromSavedSheets();
 })();
