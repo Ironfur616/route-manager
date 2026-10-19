@@ -1268,12 +1268,15 @@
             if (i > 0) doc.addPage("tabloid", "landscape");
             var y = M;
 
-            // Slim header: route and sheet on the left, driver and day after it, logo at the right
+            // Slim header: route, the map's description (from its file name) and sheet on the left,
+            // driver and day under it, logo at the right
             if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO, y - 4, LOGO, LOGO);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(18);
             color("setTextColor", NAVY);
-            var title = "Route " + entry.route + " Map" + (sheets.length > 1 ? "  ·  Sheet " + (i + 1) + " of " + sheets.length : "");
+            var label = lib.label(s.sheet);
+            var title = "Route " + entry.route + " Map" + (label ? "  ·  " + label : "") +
+                (sheets.length > 1 ? "  ·  Sheet " + (i + 1) + " of " + sheets.length : "");
             doc.text(title, M, y + 16);
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
@@ -1360,7 +1363,7 @@
             return chain.then(function () {
                 return current(sheet).then(function (state) {
                     return printImage(sheet, state.trace).then(function (image) {
-                        sheets.push({ trace: state.trace, image: image });
+                        sheets.push({ sheet: sheet, trace: state.trace, image: image });
                     });
                 });
             });
