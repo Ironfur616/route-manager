@@ -21,7 +21,8 @@
         { route: "M-2-2", sheets: ["M-2-2"] },
         { route: "M-2-3", sheets: ["M-2-3"] },
         { route: "M-2-4", sheets: ["M-2-4-1", "M-2-4-2"] },
-        { route: "M-5-1", sheets: ["M-5-1-1_Canton Recycle", "M-5-1-2_Canton Recycle"] }
+        { route: "M-5-1", sheets: ["M-5-1-1_Canton Recycle", "M-5-1-2_Canton Recycle"] },
+        { route: "MR-56", sheets: ["MR-56-1_Canton Recycle Side 2", "MR-56-2_Canton Recycle Side 2"] }
     ];
 
     var DIR = "assets/Maps/";
