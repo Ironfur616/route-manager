@@ -24,8 +24,8 @@
    every device has it. A draft is dropped as soon as the library holds a trace at least as new.
 
    Print Map builds the handout: one 11x17 landscape page per sheet, minimum margins, a slim
-   house-format header (Earthwise logo, route, driver, day) and a legend only when blue or green
-   is used. It opens in the app's PDF viewer and is kept in Saved PDFs, like the route sheets. */
+   house-format header (Earthwise logo, route, the map's description from its file name) and a
+   legend only when blue or green is used. Drivers change, so the printed map never names one. It opens in the app's PDF viewer and is kept in Saved PDFs, like the route sheets. */
 (function () {
     "use strict";
 
@@ -68,7 +68,7 @@
         return entry.sheets.length > 1 ? "Sheet " + (index + 1) : "Map";
     }
 
-    // Driver and day for the handout header come from the route's card on Route Sheets
+    // The route's card on Route Sheets: driver, day and area shown on the route list (never printed)
     function routeSheet(route) {
         try {
             var list = JSON.parse(localStorage.getItem(SHEETS_KEY) || "[]");
@@ -1259,7 +1259,6 @@
         var PAGE_W = 1224, PAGE_H = 792, M = 18;
         var CONTENT_W = PAGE_W - M * 2;
         var LOGO = 40;
-        var info = routeSheet(entry.route) || {};
 
         var doc = new window.jspdf.jsPDF({ unit: "pt", format: "tabloid", orientation: "landscape" });
         function color(fn, c) { doc[fn](c[0], c[1], c[2]); }
@@ -1269,7 +1268,7 @@
             var y = M;
 
             // Slim header: route, the map's description (from its file name) and sheet on the left,
-            // driver and day under it, logo at the right
+            // logo at the right. No driver or day: a map outlasts whoever is driving the route.
             if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO, y - 4, LOGO, LOGO);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(18);
@@ -1281,9 +1280,7 @@
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
             color("setTextColor", GRAY);
-            var meta = [info.driver ? "Driver: " + info.driver : "", info.day ? "Service day: " + info.day : "",
-                "Earthwise Environmental Solutions"].filter(Boolean).join("   ·   ");
-            doc.text(meta, M, y + 30);
+            doc.text("Earthwise Environmental Solutions", M, y + 30);
             y += 38;
             color("setFillColor", GREEN);
             doc.rect(M, y, CONTENT_W, 2.5, "F");
@@ -1415,7 +1412,7 @@
         card.appendChild(head);
         card.appendChild(el("p", "mt-entry-meta", info
             ? [info.driver, info.day, info.area].filter(Boolean).join(" · ") || "On Route Sheets"
-            : "Not on Route Sheets yet, so the handout won't show a driver or day."));
+            : "Not on Route Sheets yet."));
 
         var chips = el("div", "mt-chips");
         card.appendChild(chips);
