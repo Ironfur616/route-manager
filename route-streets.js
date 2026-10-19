@@ -32,7 +32,8 @@
    Maps app), so Back returns here.
 
    Routes with a map in the Map Lens library (map-library.js) also get a Route Map button, which
-   opens the traced handout map in Map Lens. */
+   opens the traced handout map in Map Lens. Once that map's trace is published, the map icon
+   opens it too, in place of the map link. */
 (function () {
     "use strict";
 
@@ -361,17 +362,29 @@
         'stroke-width="2" stroke-linejoin="round"/></svg>';
 
     // Opens the route's map, or (no map yet) the edit dialog at the Map link field
+    // Once the route's traced map is published in Map Lens, the icon opens that instead
     function mapButton(r) {
         var has = !!r.mapUrl;
+        var traced = false;
         var b = el("button", "entry-icon-btn rs-map-btn" + (has ? "" : " is-empty"));
         b.type = "button";
         b.innerHTML = MAP_ICON;
         b.setAttribute("aria-label", (has ? "Open the map for route " : "Add a map for route ") + r.route);
         b.title = has ? "Open map" : "Add map link";
         b.addEventListener("click", function () {
-            if (has) window.open(r.mapUrl, "_blank", "noopener");
+            if (traced) openRouteMap(MapLibrary.find(r.route).route);
+            else if (has) window.open(r.mapUrl, "_blank", "noopener");
             else startEdit(r.id, fields.map);
         });
+        if (window.MapLibrary && MapLibrary.find(r.route)) {
+            MapLibrary.traced(r.route).then(function (done) {
+                if (!done) return;
+                traced = true;
+                b.classList.remove("is-empty");
+                b.setAttribute("aria-label", "Open the traced map for route " + r.route);
+                b.title = "Open traced map";
+            });
+        }
         return b;
     }
 

@@ -31,9 +31,29 @@
         return ROUTES.filter(function (r) { return r.route.toLowerCase() === key; })[0] || null;
     }
 
+    // Whether a route's map is done: any of its sheets has a published trace with strokes in it.
+    // Checked once per sheet per page load (the service worker always asks the network first).
+    var published = {};
+    function sheetTraced(sheet) {
+        if (!published[sheet]) {
+            published[sheet] = fetch(DIR + encodeURIComponent(sheet) + ".trace.json", { cache: "no-cache" })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (t) { return !!(t && Array.isArray(t.strokes) && t.strokes.length); })
+                .catch(function () { return false; });
+        }
+        return published[sheet];
+    }
+
     window.MapLibrary = {
         routes: ROUTES,
         find: find,
+        traced: function (route) {
+            var entry = find(route);
+            if (!entry) return Promise.resolve(false);
+            return Promise.all(entry.sheets.map(sheetTraced)).then(function (all) {
+                return all.some(Boolean);
+            });
+        },
         // The description after the sheet number ("M-5-1-1_Canton Recycle" → "Canton Recycle"),
         // printed in the handout's header; "" when the file name has none
         label: function (sheet) {
