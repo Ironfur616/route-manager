@@ -2,9 +2,16 @@
  * Simple client-side PIN gate.
  *
  * This is a convenience lock to keep the app from being casually opened
- * on a shared device, not real access control — the PIN and the check both
- * live in this file, so anyone who opens dev tools can bypass it. Don't put
- * anything sensitive behind it.
+ * on a shared device, not real access control — the check lives in this
+ * file, so anyone who opens dev tools can bypass it. Don't put anything
+ * sensitive behind it.
+ *
+ * The PIN itself isn't written here, only its SHA-256 hash (salted with
+ * SALT), so reading the code doesn't show it. With only 10,000 possible
+ * 4-digit PINs, a determined person could still find it by trying them all.
+ * To change the PIN, set PIN_HASH to the output of:
+ *   node -e 'console.log(require("crypto").createHash("sha256").update("routeiq-pin:" + "NEWPIN").digest("hex"))'
+ * and PIN_LENGTH to its number of digits.
  *
  * Pairs with the inline snippet in each page's <head> that adds the
  * "pin-locked" class to <html> before first paint (see styles.css for the
@@ -13,7 +20,9 @@
 (function () {
     "use strict";
 
-    var PIN = "1981";
+    var SALT = "routeiq-pin:";
+    var PIN_HASH = "70af690c2d9100f4a018bc3bf3419b12fb4b50527775d268e1c62e95fd3d5101";
+    var PIN_LENGTH = 4;
     var STORAGE_KEY = "fleetMgrUnlocked";
     var root = document.documentElement;
 
@@ -75,9 +84,9 @@
             '<form class="pin-lock-card" id="pin-lock-form" autocomplete="off">' +
                 '<img class="pin-lock-logo" src="assets/ew-logo.svg" alt="" width="130" height="82">' +
                 '<h2 id="pin-lock-title">Enter PIN</h2>' +
-                '<p class="pin-lock-hint">Enter the 4-digit code.</p>' +
+                '<p class="pin-lock-hint">Enter the ' + PIN_LENGTH + '-digit code.</p>' +
                 '<input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
-                    'maxlength="4" id="pin-lock-input" name="pin" aria-label="4-digit PIN" ' +
+                    'maxlength="' + PIN_LENGTH + '" id="pin-lock-input" name="pin" aria-label="' + PIN_LENGTH + '-digit PIN" ' +
                     'aria-describedby="pin-lock-error">' +
                 '<p class="pin-lock-error" id="pin-lock-error" aria-live="polite"></p>' +
                 '<button type="submit" class="pin-lock-submit">Unlock</button>' +
@@ -89,11 +98,35 @@
         var input = document.getElementById("pin-lock-input");
         var error = document.getElementById("pin-lock-error");
 
+        function hashOf(text) {
+            var bytes = new TextEncoder().encode(SALT + text);
+            return crypto.subtle.digest("SHA-256", bytes).then(function (buffer) {
+                return Array.prototype.map.call(new Uint8Array(buffer), function (b) {
+                    return (b < 16 ? "0" : "") + b.toString(16);
+                }).join("");
+            });
+        }
+
+        var checking = false;
         function tryUnlock() {
-            if (input.value === PIN) {
-                unlock();
+            if (checking) return;
+            // crypto.subtle only exists on https (and localhost); GitHub Pages is https
+            if (!window.crypto || !crypto.subtle) {
+                error.textContent = "This page must be opened over https to unlock.";
                 return;
             }
+            checking = true;
+            hashOf(input.value).then(function (hash) {
+                checking = false;
+                if (hash === PIN_HASH) unlock();
+                else wrong();
+            }, function () {
+                checking = false;
+                wrong();
+            });
+        }
+
+        function wrong() {
             error.textContent = "Incorrect PIN. Try again.";
             input.value = "";
             input.focus();
@@ -108,11 +141,11 @@
             tryUnlock();
         });
 
-        // Auto-submit once all 4 digits are entered, for quick entry on mobile
+        // Auto-submit once every digit is entered, for quick entry on mobile
         input.addEventListener("input", function () {
-            input.value = input.value.replace(/[^0-9]/g, "").slice(0, 6);
+            input.value = input.value.replace(/[^0-9]/g, "").slice(0, PIN_LENGTH);
             error.textContent = "";
-            if (input.value.length === PIN.length) {
+            if (input.value.length === PIN_LENGTH) {
                 tryUnlock();
             }
         });
