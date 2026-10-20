@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var PIN = "151515";
+    var PIN = "1981";
     var STORAGE_KEY = "fleetMgrUnlocked";
     var root = document.documentElement;
 
@@ -75,9 +75,9 @@
             '<form class="pin-lock-card" id="pin-lock-form" autocomplete="off">' +
                 '<img class="pin-lock-logo" src="assets/ew-logo.svg" alt="" width="130" height="82">' +
                 '<h2 id="pin-lock-title">Enter PIN</h2>' +
-                '<p class="pin-lock-hint">Enter the 6-digit code.</p>' +
+                '<p class="pin-lock-hint">Enter the 4-digit code.</p>' +
                 '<input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
-                    'maxlength="6" id="pin-lock-input" name="pin" aria-label="6-digit PIN" ' +
+                    'maxlength="4" id="pin-lock-input" name="pin" aria-label="4-digit PIN" ' +
                     'aria-describedby="pin-lock-error">' +
                 '<p class="pin-lock-error" id="pin-lock-error" aria-live="polite"></p>' +
                 '<button type="submit" class="pin-lock-submit">Unlock</button>' +
@@ -108,11 +108,11 @@
             tryUnlock();
         });
 
-        // Auto-submit once all 6 digits are entered, for quick entry on mobile
+        // Auto-submit once all 4 digits are entered, for quick entry on mobile
         input.addEventListener("input", function () {
             input.value = input.value.replace(/[^0-9]/g, "").slice(0, 6);
             error.textContent = "";
-            if (input.value.length === 6) {
+            if (input.value.length === PIN.length) {
                 tryUnlock();
             }
         });
