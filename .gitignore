@@ -1,2 +1,7 @@
 .vscode/
 assets/*test.pdf
+
+# Lytx GPS exports (truck, yard, violations): read on the tablet, never published
+assets/Maps/*.xlsx
+assets/Maps/*.xls
+assets/Maps/*.csv
