@@ -234,12 +234,14 @@
             <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
         </div>
         <div class="ml-publish-body">
-            <p>This saves <strong id="mlv-publish-file"></strong>: the highlighted streets only, no GPS data. Send that file to be added to the app. Once the app updates, every device has this map.</p>
+            <p>This saves <strong id="mlv-publish-file"></strong>: the highlighted streets only, no GPS data. Once it's added to the app and the app updates, every device has this map.</p>
             <p class="mt-hint">Until then, the map stays on this device as a draft.</p>
+            <p class="mt-message" id="mlv-publish-status" role="status" aria-live="polite"></p>
         </div>
         <div class="form-actions mt-dialog-actions">
-            <button type="button" class="send-email" data-dialog-close>Cancel</button>
-            <button type="button" class="generate-pdf" id="mlv-publish-go">Save Route File</button>
+            <button type="button" class="send-email" data-dialog-close>Close</button>
+            <button type="button" class="send-email" id="mlv-publish-go">Share / Save File</button>
+            <button type="button" class="generate-pdf" id="mlv-publish-drive" hidden>Save to Google Drive</button>
         </div>
     </dialog>
 

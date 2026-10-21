@@ -1104,27 +1104,84 @@
         return Promise.resolve();
     }
 
+    // The app shell's Google Drive upload (drive-backup.js): same sign-in and folder as backups
+    function drive() {
+        try {
+            var d = window.top.DriveBackup;
+            return d && d.configured() ? d : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    var publishStatus = document.getElementById("mlv-publish-status");
+    var driveBtn = document.getElementById("mlv-publish-drive");
+
+    function paintDrive() {
+        var d = drive();
+        driveBtn.hidden = !d;
+        if (!d) return;
+        var folder = d.folder();
+        driveBtn.textContent = folder ? "Save to Drive · " + folder.name : "Save to Google Drive";
+        d.preload();
+    }
+
     function openPublish() {
         if (!Object.keys(ed.draft.blocks).length && !ed.draft.strokes.length) {
             say("Nothing is highlighted yet.");
             return;
         }
         document.getElementById("mlv-publish-file").textContent = ed.route + ".route.json";
+        publishStatus.textContent = "";
+        paintDrive();
         if (publishDialog) publishDialog.open();
         else publishDialogEl.showModal();
     }
 
-    document.getElementById("mlv-publish-go").addEventListener("click", function () {
-        if (!ed) return;
+    // Stamps the draft as published and returns the file to send
+    function publishFile() {
         clearTimeout(saveTimer);
         saveTimer = null;
         ed.draft.updated = Date.now();
         var file = new File([fileText(ed.draft)], ed.route + ".route.json", { type: "application/json" });
         ed.draft.published = true;
         saveDraft(ed.route, ed.draft);
+        refreshStatus();
+        return file;
+    }
+
+    function driveError(err) {
+        var kind = err && err.kind;
+        if (kind === "cancelled") return "No folder picked, so nothing was saved.";
+        if (kind === "loading") return "Still connecting to Google. Tap again in a moment.";
+        if (kind === "signin") return "Google sign-in didn’t finish. Tap Save to Drive to try again.";
+        if (kind === "expired") return "The Google sign-in ran out. Tap Save to Drive again.";
+        if (kind === "folder") return "That Drive folder can’t be found anymore. Tap Save to Drive to pick it again.";
+        return navigator.onLine === false
+            ? "The tablet is offline. Connect, then tap Save to Drive again."
+            : "The upload to Drive didn’t finish. Try again, or use Share / Save File.";
+    }
+
+    driveBtn.addEventListener("click", function () {
+        var d = drive();
+        if (!ed || !d) return;
+        var file = publishFile();
+        driveBtn.disabled = true;
+        publishStatus.textContent = "Saving to Google Drive…";
+        d.save(file).then(function (done) {
+            return "Saved " + file.name + " to Google Drive in " + done.folder + ".";
+        }, driveError).then(function (message) {
+            publishStatus.textContent = message;
+            driveBtn.disabled = false;
+            paintDrive();
+        });
+    });
+
+    document.getElementById("mlv-publish-go").addEventListener("click", function () {
+        if (!ed) return;
+        var file = publishFile();
         if (publishDialog) publishDialog.close();
         else publishDialogEl.close();
-        refreshStatus();
         shareFile(file);
     });
 
