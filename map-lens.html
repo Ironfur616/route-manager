@@ -15,6 +15,7 @@
             }
         })();
     </script>
+    <link rel="stylesheet" href="leaflet.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -28,9 +29,28 @@
 
 <body>
     <section class="emp-info-section mt-section">
+        <div class="form-actions">
+            <button type="button" class="generate-pdf" id="mlv-import-open">Import Lytx GPS Export</button>
+        </div>
+        <input type="file" id="mlv-import-file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden>
+        <p class="mt-message" id="mlv-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="emp-info-section mt-section">
         <div class="emp-info">
             <fieldset>
-                <legend>MAP LENS</legend>
+                <legend>ROUTE MAPS</legend>
+                <p class="mt-count" id="mlv-count" aria-live="polite"></p>
+                <div class="mt-list" id="mlv-list"></div>
+            </fieldset>
+        </div>
+    </section>
+
+    <section class="emp-info-section mt-section">
+        <div class="emp-info">
+            <fieldset>
+                <legend>SCREENSHOT MAPS</legend>
+                <p class="mt-hint">The older maps traced over GPS screenshots. These go away once each route has a live map.</p>
 
                 <div class="mt-filters nc-filters">
                     <div class="field">
@@ -131,6 +151,98 @@
         </div>
     </dialog>
 
+    <!-- Live route map (map-live.js): OpenStreetMap with the highlighted streets -->
+    <dialog class="ml-editor mlv-editor" id="mlv-editor" aria-labelledby="mlv-title">
+        <div class="ml-bar">
+            <div class="ml-bar-text">
+                <h2 class="ml-title" id="mlv-title"></h2>
+                <p class="ml-status" id="mlv-status" aria-live="polite"></p>
+            </div>
+            <button type="button" class="pdf-viewer-close" id="mlv-close">Close</button>
+        </div>
+
+        <div class="mlv-map-wrap">
+            <div class="mlv-map" id="mlv-map"></div>
+            <div class="mlv-more" id="mlv-more" hidden>
+                <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
+                <button type="button" class="ml-tool" data-more="streets">Load Streets Here</button>
+                <button type="button" class="ml-tool" data-more="reimport">Replace GPS Trail</button>
+                <button type="button" class="ml-tool ml-tool-accent" data-more="publish">Publish</button>
+            </div>
+        </div>
+
+        <div class="ml-legend-row" id="mlv-legend-row" hidden>
+            <label for="mlv-legend-input" id="mlv-legend-label">Blue means</label>
+            <input type="text" id="mlv-legend-input" autocomplete="off" maxlength="40" placeholder="e.g. Alley, Rear load (prints in the legend)">
+        </div>
+
+        <div class="mlv-toolbar" id="mlv-edit-tools" hidden>
+            <div class="ml-group" role="group" aria-label="Tool">
+                <button type="button" class="ml-tool" data-mode="blocks" aria-pressed="true">Streets</button>
+                <button type="button" class="ml-tool" data-mode="draw" aria-pressed="false">Draw</button>
+                <button type="button" class="ml-tool" data-mode="erase" aria-pressed="false">Erase</button>
+                <button type="button" class="ml-tool" data-mode="move" aria-pressed="false">Move</button>
+            </div>
+            <div class="ml-group" role="group" aria-label="Highlighter color">
+                <button type="button" class="ml-tool ml-swatch ml-swatch-y" data-color="y" aria-pressed="true" aria-label="Yellow"></button>
+                <button type="button" class="ml-tool ml-swatch ml-swatch-b" data-color="b" aria-pressed="false" aria-label="Blue"></button>
+                <button type="button" class="ml-tool ml-swatch ml-swatch-g" data-color="g" aria-pressed="false" aria-label="Green"></button>
+            </div>
+            <div class="ml-group">
+                <button type="button" class="ml-tool" id="mlv-undo" aria-label="Undo">&#x21B6;</button>
+                <button type="button" class="ml-tool" id="mlv-redo" aria-label="Redo">&#x21B7;</button>
+                <button type="button" class="ml-tool" id="mlv-trail" aria-pressed="true">Trail</button>
+                <button type="button" class="ml-tool" id="mlv-more-btn" aria-expanded="false" aria-controls="mlv-more" aria-label="More">&#x22EF;</button>
+            </div>
+        </div>
+
+        <div class="mlv-toolbar" id="mlv-view-tools" hidden>
+            <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
+            <button type="button" class="ml-tool ml-tool-accent" id="mlv-edit">Edit Map</button>
+        </div>
+    </dialog>
+
+    <dialog class="send-dialog mt-dialog" id="mlv-import-dialog" aria-labelledby="mlv-import-title">
+        <form class="emp-info" id="mlv-import-form">
+            <div class="mt-dialog-head">
+                <h2 id="mlv-import-title">Import GPS Trail</h2>
+                <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+            <fieldset class="emp-fields">
+                <legend>Route</legend>
+                <p class="mt-hint mlv-import-summary" id="mlv-import-summary"></p>
+                <div class="field">
+                    <label for="mlv-import-route">Route</label>
+                    <input type="text" id="mlv-import-route" autocomplete="off" required>
+                </div>
+                <div class="field">
+                    <label for="mlv-import-label">Label (prints in the header)</label>
+                    <input type="text" id="mlv-import-label" autocomplete="off" placeholder="e.g. Canton Recycle">
+                </div>
+                <p class="mt-hint" id="mlv-import-note"></p>
+            </fieldset>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" data-dialog-close>Cancel</button>
+                <button type="submit" class="generate-pdf">Import</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="send-dialog mt-dialog" id="mlv-publish-dialog" aria-labelledby="mlv-publish-title">
+        <div class="mt-dialog-head">
+            <h2 id="mlv-publish-title">Publish Route Map</h2>
+            <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+        </div>
+        <div class="ml-publish-body">
+            <p>This saves <strong id="mlv-publish-file"></strong>: the highlighted streets only, no GPS data. Send that file to be added to the app. Once the app updates, every device has this map.</p>
+            <p class="mt-hint">Until then, the map stays on this device as a draft.</p>
+        </div>
+        <div class="form-actions mt-dialog-actions">
+            <button type="button" class="send-email" data-dialog-close>Cancel</button>
+            <button type="button" class="generate-pdf" id="mlv-publish-go">Save Route File</button>
+        </div>
+    </dialog>
+
     <dialog class="send-dialog mt-dialog" id="ml-publish-dialog" aria-labelledby="ml-publish-title">
         <div class="mt-dialog-head">
             <h2 id="ml-publish-title">Publish Trace</h2>
@@ -150,6 +262,9 @@
     <script src="pdf-store.js" defer></script>
     <script src="tracker-dialog.js" defer></script>
     <script src="map-library.js" defer></script>
+    <script src="leaflet.js" defer></script>
+    <script src="xlsx.mini.min.js" defer></script>
+    <script src="map-live.js" defer></script>
     <script src="map-lens.js" defer></script>
     <script src="sw-register.js" defer></script>
 </body>

@@ -1453,6 +1453,7 @@
     function showRoute(query) {
         var m = /[?&]route=([^&]*)/.exec(query || "");
         if (!m) return;
+        if (window.MapLive && MapLive.show(decodeURIComponent(m[1]))) return;
         var entry = lib.find(decodeURIComponent(m[1]));
         if (!entry) return;
         searchEl.value = "";

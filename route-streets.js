@@ -309,11 +309,11 @@
         print.setAttribute("aria-label", "Print route " + r.route);
         print.addEventListener("click", function () { printRoutes([r], print); });
         actions.appendChild(print);
-        if (window.MapLibrary && MapLibrary.find(r.route)) {
+        if (window.MapLibrary && MapLibrary.has(r.route)) {
             var traced = el("button", "mt-btn", "Route Map");
             traced.type = "button";
             traced.setAttribute("aria-label", "Open the traced map for route " + r.route);
-            traced.addEventListener("click", function () { openRouteMap(MapLibrary.find(r.route).route); });
+            traced.addEventListener("click", function () { openRouteMap(MapLibrary.has(r.route)); });
             actions.appendChild(traced);
         }
         if (window.CountyPull && (r.streets || []).length) {
@@ -372,11 +372,11 @@
         b.setAttribute("aria-label", (has ? "Open the map for route " : "Add a map for route ") + r.route);
         b.title = has ? "Open map" : "Add map link";
         b.addEventListener("click", function () {
-            if (traced) openRouteMap(MapLibrary.find(r.route).route);
+            if (traced) openRouteMap(MapLibrary.has(r.route));
             else if (has) window.open(r.mapUrl, "_blank", "noopener");
             else startEdit(r.id, fields.map);
         });
-        if (window.MapLibrary && MapLibrary.find(r.route)) {
+        if (window.MapLibrary && MapLibrary.has(r.route)) {
             MapLibrary.traced(r.route).then(function (done) {
                 if (!done) return;
                 traced = true;

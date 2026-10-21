@@ -1,9 +1,11 @@
 // Service worker for the Earthwise Route IQ.
 // Bump CACHE_NAME whenever a precached file changes so old caches get
 // cleaned up on the next activate.
-var CACHE_NAME = "fleet-mgr-v120";
+var CACHE_NAME = "fleet-mgr-v121";
 // Spreadsheets shared to the app wait here until Route Sheets imports them (never cleared on update)
 var SHARE_INBOX = "routeiq-share-inbox";
+// OpenStreetMap streets downloaded for live route maps (map-live.js): slow to fetch, so kept across updates
+var STREETS = "routeiq-streets";
 
 var PRECACHE_URLS = [
     "./",
@@ -33,6 +35,9 @@ var PRECACHE_URLS = [
     "./map-lens.html",
     "./map-lens.js",
     "./map-library.js",
+    "./map-live.js",
+    "./leaflet.js",
+    "./leaflet.css",
     "./house-store.js",
     "./route-lookup.js",
     "./drive-backup.js",
@@ -90,7 +95,7 @@ self.addEventListener("activate", function (event) {
                 return Promise.all(
                     keys
                         .filter(function (key) {
-                            return key !== CACHE_NAME && key !== SHARE_INBOX;
+                            return key !== CACHE_NAME && key !== SHARE_INBOX && key !== STREETS;
                         })
                         .map(function (key) {
                             return caches.delete(key);
@@ -126,11 +131,11 @@ self.addEventListener("fetch", function (event) {
     // code when online, falling back to the cached copy offline. "no-cache" makes the
     // browser check with the server (a cheap 304 when nothing changed) instead of
     // reusing its own copy for up to 10 minutes.
-    // Published map traces (assets/Maps/*.trace.json) count as code: a newly committed trace
-    // must reach every device, and a missing one is never cached
+    // Published map traces and route maps (assets/Maps/*.trace.json, *.route.json) count as code:
+    // a newly committed one must reach every device, and a missing one is never cached
     var isCode = request.mode === "navigate" ||
         request.destination === "script" || request.destination === "style" ||
-        /\.trace\.json$/i.test(new URL(request.url).pathname);
+        /\.(trace|route)\.json$/i.test(new URL(request.url).pathname);
     if (isCode && new URL(request.url).origin === self.location.origin) {
         event.respondWith(
             fetch(request.url, { cache: "no-cache", credentials: "same-origin" })
