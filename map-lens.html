@@ -192,15 +192,18 @@
             <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
         </div>
         <div class="ml-publish-body">
-            <p>This saves <strong id="mlv-publish-file"></strong>: the highlighted streets only, no GPS data. Once it's added to the app and the app updates, every device has this map.</p>
-            <p class="mt-hint">Until then, the map stays on this device as a draft.</p>
+            <p>Publishing makes <strong id="mlv-publish-file"></strong> the finished map on this tablet: it opens ready to view, navigate and print, and Route Sheets links to it. Later changes are a draft until you publish again.</p>
+            <p class="mt-hint">To add it to the app for other devices, also save a copy (highlighted streets only, no GPS data) and send it in.</p>
+            <div class="mlv-publish-copies">
+                <button type="button" class="send-email" id="mlv-publish-drive" hidden>Publish + Save to Google Drive</button>
+                <button type="button" class="send-email" id="mlv-publish-go">Publish + Share File</button>
+            </div>
             <p class="mt-message" id="mlv-publish-status" role="status" aria-live="polite"></p>
             <button type="button" class="mt-btn mlv-drive-change" id="mlv-publish-drive-change" hidden>Change Drive folder</button>
         </div>
         <div class="form-actions mt-dialog-actions">
             <button type="button" class="send-email" data-dialog-close>Close</button>
-            <button type="button" class="send-email" id="mlv-publish-go">Share / Save File</button>
-            <button type="button" class="generate-pdf" id="mlv-publish-drive" hidden>Save to Google Drive</button>
+            <button type="button" class="generate-pdf" id="mlv-publish-local">Publish</button>
         </div>
     </dialog>
 

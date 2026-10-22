@@ -5,7 +5,8 @@
 
      <route>.route.json         the highlighted streets (no GPS data), e.g. M-1-2.route.json
 
-   Routes are named exactly as on Route Sheets (no driver name).
+   Routes are named exactly as on Route Sheets (no driver name). A map can also be published on
+   the tablet alone (Publish, kept in fleetMgrRouteMapsPublished); has() and traced() count those.
 
    Shared by map-live.js and route-streets.js (the Route Map button and map icon on a route's card). */
 (function () {
@@ -29,10 +30,24 @@
         return DIR + encodeURIComponent(route) + ".route.json";
     }
 
+    // Maps published on this tablet only (map-live.js keeps them in fleetMgrRouteMapsPublished)
+    function localPublished(route) {
+        try {
+            var all = JSON.parse(localStorage.getItem("fleetMgrRouteMapsPublished") || "{}") || {};
+            var k = key(route);
+            var name = Object.keys(all).filter(function (r) { return key(r) === k; })[0];
+            return name ? { name: name, map: all[name] } : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     // Whether a route's published map has something highlighted. Checked once per page load
     // (the service worker always asks the network first).
     var published = {};
     function traced(route) {
+        var local = localPublished(route);
+        if (local && local.map && ((local.map.blocks || []).length || (local.map.strokes || []).length)) return Promise.resolve(true);
         var name = findLive(route);
         if (!name) return Promise.resolve(false);
         if (!published[name]) {
@@ -47,8 +62,11 @@
     window.MapLibrary = {
         live: LIVE,
         findLive: findLive,
-        // The route's name as the library has it, or null when it has no published map
-        has: findLive,
+        // The route's name as the library (or this tablet) has it, or null when it has no published map
+        has: function (route) {
+            var local = localPublished(route);
+            return findLive(route) || (local ? local.name : null);
+        },
         traced: traced,
         liveUrl: liveUrl
     };

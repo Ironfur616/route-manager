@@ -139,10 +139,40 @@
         }
     }
 
+    // Maps published on this tablet (Publish): the same shape as a library file, plus the GPS trail,
+    // kept so the map can be edited again (it never goes into a file that leaves the tablet).
+    // In localStorage under fleetMgr..., so they're in backups.
+    var PUBLISHED_KEY = "fleetMgrRouteMapsPublished";
+
+    function loadLocalPublished() {
+        try {
+            var data = JSON.parse(localStorage.getItem(PUBLISHED_KEY) || "{}");
+            return data && typeof data === "object" && !Array.isArray(data) ? data : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function localPublishedName(route) {
+        var k = routeKey(route);
+        return Object.keys(loadLocalPublished()).filter(function (r) { return routeKey(r) === k; })[0] || null;
+    }
+
+    function saveLocalPublished(route, m) {
+        var all = loadLocalPublished(), k = routeKey(route);
+        Object.keys(all).forEach(function (name) { if (routeKey(name) === k) delete all[name]; });
+        if (m) all[route] = m;
+        try {
+            localStorage.setItem(PUBLISHED_KEY, JSON.stringify(all));
+            return true;
+        } catch (e) {
+            say("This device's storage is full, so the map couldn't be published. Free some space and try again.");
+            return false;
+        }
+    }
+
     var published = {};
-    function publishedMap(route) {
-        var name = lib.findLive(route);
-        if (!name) return Promise.resolve(null);
+    function libraryMap(name) {
         if (!published[name]) {
             published[name] = fetch(lib.liveUrl(name), { cache: "no-cache" })
                 .then(function (r) { return r.ok ? r.json() : null; })
@@ -150,6 +180,19 @@
                 .catch(function () { return null; });
         }
         return published[name];
+    }
+
+    // The route's published map: the app library's file or this tablet's, whichever is newer
+    // (the tablet's is marked local)
+    function publishedMap(route) {
+        var name = lib.findLive(route), localName = localPublishedName(route);
+        var local = localName ? loadLocalPublished()[localName] : null;
+        return (name ? libraryMap(name) : Promise.resolve(null)).then(function (m) {
+            if (local && Array.isArray(local.blocks) && (!m || (local.updated || 0) >= (m.updated || 0))) {
+                return Object.assign({}, local, { local: true });
+            }
+            return m;
+        });
     }
 
     // A route's published map and local draft; a draft the library has caught up with is dropped
@@ -167,7 +210,7 @@
     function statusText(state) {
         if (state.draft && state.draft.published) return "Published, waiting for the app update";
         if (state.draft) return "Draft on this device";
-        if (state.lib) return "Published";
+        if (state.lib) return state.lib.local ? "Published on this tablet" : "Published";
         return "Not started";
     }
 
@@ -184,7 +227,7 @@
         return {
             route: m.route, label: m.label || "", updated: m.updated || 0,
             legend: { b: (m.legend || {}).b || "", g: (m.legend || {}).g || "" },
-            blocks: blocks, strokes: (m.strokes || []).slice(), trail: [],
+            blocks: blocks, strokes: (m.strokes || []).slice(), trail: (m.trail || []).slice(),
             start: m.start || null, end: m.end || null,
             // Maps published before pins and arrows existed get the defaults
             show: m.show ? { markers: !!m.show.markers, arrows: !!m.show.arrows } : Object.assign({}, DEFAULT_SHOW)
@@ -853,7 +896,7 @@
             drawTrail();
             map.invalidateSize();
             fitRoute();
-            if (state.draft || options.edit) startEditing();
+            if ((state.draft && !state.draft.published) || options.edit) startEditing();
             else setView();
         });
     }
@@ -1384,6 +1427,8 @@
             // A route that already has a map keeps its label unless the file name gives one
             var existing = state.draft || state.lib;
             importLabel.value = names.label || (existing && existing.label) || "";
+            importFileLabel = names.label;
+            importLabelTouched = false;
             importSummary.textContent = t.trail.length + " GPS points" +
                 (t.start ? ", " + t.start.toLocaleDateString() + " " + timeText(t.start) + "–" + timeText(t.end) : "") +
                 (t.vehicle ? ", truck " + t.vehicle : "") +
@@ -1406,6 +1451,19 @@
         importNote.textContent = existing ? "Route " + route + " already has a map. This replaces its GPS trail and keeps the highlighted streets." : "";
     }
     importRoute.addEventListener("input", updateImportNote);
+
+    // The label follows the route typed (that route's own label, if it has a map), until it's typed in
+    var importFileLabel = "", importLabelTouched = false, labelLookup = 0;
+    importLabel.addEventListener("input", function () { importLabelTouched = true; });
+    importRoute.addEventListener("input", function () {
+        if (importLabelTouched) return;
+        var ask = ++labelLookup;
+        current(cleanRoute(importRoute.value)).then(function (state) {
+            if (ask !== labelLookup || importLabelTouched) return;
+            var existing = state.draft || state.lib;
+            importLabel.value = importFileLabel || (existing && existing.label) || "";
+        });
+    });
 
     document.getElementById("mlv-import-form").addEventListener("submit", function (e) {
         e.preventDefault();
@@ -1458,15 +1516,16 @@
     // Another map already using this name (a draft on this device or a published map)
     function nameTaken(route) {
         if (routeKey(route) === routeKey(ed.route)) return false;
-        return !!(draftFor(route) || lib.findLive(route));
+        return !!(draftFor(route) || lib.findLive(route) || localPublishedName(route));
     }
 
     function updateRenameNote() {
         var route = cleanRoute(renameRoute.value);
         var renaming = route && routeKey(route) !== routeKey(ed.route);
         renameError.hidden = true;
-        renameNote.textContent = renaming && lib.findLive(ed.route)
-            ? "Route " + ed.route + " is published under that name. Publish again after renaming; the old copy stays in the app until it's taken out."
+        renameNote.textContent = !renaming ? ""
+            : lib.findLive(ed.route) ? "Route " + ed.route + " is in the app's library under that name. Publish again after renaming; the old copy stays in the app until it's taken out."
+            : localPublishedName(ed.route) ? "Route " + ed.route + " is published on this tablet. After renaming it's a draft under the new name until you publish again."
             : "";
     }
     renameRoute.addEventListener("input", updateRenameNote);
@@ -1508,6 +1567,7 @@
             // The draft now lives under the new name; a published copy under the old name stays
             if (routeKey(route) !== routeKey(old)) {
                 saveDraft(old, null);
+                saveLocalPublished(old, null);
                 moveStreets(old, route);
                 ed.state = { lib: null, draft: null };
             }
@@ -1518,7 +1578,7 @@
         titleEl.textContent = title(ed.route, ed.draft.label);
         if (renameDialog) renameDialog.close();
         else renameDialogEl.close();
-        say("Saved as " + title(ed.route, ed.draft.label) + "." + (route !== old && lib.findLive(old) ? " Publish to save it under the new name." : ""));
+        say("Saved as " + title(ed.route, ed.draft.label) + "." + (routeKey(route) !== routeKey(old) ? " Publish to make it the finished map under the new name." : ""));
         renderList();
     });
 
@@ -1590,7 +1650,7 @@
         driveChange.hidden = !(d && d.folder("maps"));
         if (!d) return;
         var folder = d.folder("maps");
-        driveBtn.textContent = folder ? "Save to Drive · " + folder.name : "Save to Google Drive";
+        driveBtn.textContent = folder ? "Publish + Save to Drive · " + folder.name : "Publish + Save to Google Drive";
         d.preload("maps");
     }
 
@@ -1599,23 +1659,35 @@
             say("Nothing is highlighted yet.");
             return;
         }
-        document.getElementById("mlv-publish-file").textContent = ed.route + ".route.json";
+        document.getElementById("mlv-publish-file").textContent = title(ed.route, ed.draft.label);
         publishStatus.textContent = "";
         paintDrive();
         if (publishDialog) publishDialog.open();
         else publishDialogEl.showModal();
     }
 
-    // Stamps the draft as published and returns the file to send
+    // Publishes on this tablet: keeps the map as it would be in the library (plus its trail) and
+    // lets the draft go, so it opens ready to view, navigate and print, and Route Sheets finds it.
+    // Returns the file for a Drive or shared copy (highlights only), or null if it couldn't save.
     function publishFile() {
         clearTimeout(saveTimer);
         saveTimer = null;
         ed.draft.updated = Date.now();
-        var file = new File([fileText(ed.draft)], ed.route + ".route.json", { type: "application/json" });
-        ed.draft.published = true;
-        saveDraft(ed.route, ed.draft);
-        refreshStatus();
-        return file;
+        delete ed.draft.published;
+        var text = fileText(ed.draft);
+        var m = JSON.parse(text);
+        if ((ed.draft.trail || []).length) m.trail = ed.draft.trail;
+        if (!saveLocalPublished(ed.route, m)) return null;
+        saveDraft(ed.route, null);
+        ed.state = { lib: Object.assign({}, m, { local: true }), draft: null };
+        renderList();
+        return new File([text], ed.route + ".route.json", { type: "application/json" });
+    }
+
+    // Done editing: the published map, ready to view
+    function showPublished() {
+        if (ed.editing) setView();
+        else refreshStatus();
     }
 
     function driveError(err) {
@@ -1625,20 +1697,22 @@
         if (kind === "signin") return "Google sign-in didn’t finish. Tap Save to Drive to try again.";
         if (kind === "expired") return "The Google sign-in ran out. Tap Save to Drive again.";
         if (kind === "folder") return "That Drive folder can’t be found anymore. Tap Save to Drive to pick it again.";
-        return navigator.onLine === false
-            ? "The tablet is offline. Connect, then tap Save to Drive again."
-            : "The upload to Drive didn’t finish. Try again, or use Share / Save File.";
+        return "Published on this tablet. " + (navigator.onLine === false
+            ? "The tablet is offline, so the Drive copy wasn’t saved. Connect, then tap Save to Drive again."
+            : "The Drive copy didn’t upload. Try again, or use Share / Save File.");
     }
 
     function saveToDrive(chooseAgain) {
         var d = drive();
         if (!ed || !d) return;
         var file = publishFile();
+        if (!file) return;
+        showPublished();
         driveBtn.disabled = true;
         publishStatus.textContent = d.folder("maps") && !chooseAgain ? "Saving to Google Drive…"
             : "Pick the Route Maps folder (it's inside the backups folder)…";
         d.save(file, { slot: "maps", chooseAgain: chooseAgain }).then(function (done) {
-            return "Saved " + file.name + " to Google Drive in " + done.folder + ".";
+            return "Published on this tablet, and saved " + file.name + " to Google Drive in " + done.folder + ".";
         }, driveError).then(function (message) {
             publishStatus.textContent = message;
             driveBtn.disabled = false;
@@ -1649,11 +1723,27 @@
     driveBtn.addEventListener("click", function () { saveToDrive(false); });
     driveChange.addEventListener("click", function () { saveToDrive(true); });
 
+    function closePublish() {
+        if (publishDialog) publishDialog.close();
+        else publishDialogEl.close();
+    }
+
+    // Publish: on this tablet only
+    document.getElementById("mlv-publish-local").addEventListener("click", function () {
+        if (!ed || !publishFile()) return;
+        closePublish();
+        showPublished();
+        say("Published on this tablet.");
+    });
+
+    // Publish and hand a copy to the share screen (email, Drive app, Files...)
     document.getElementById("mlv-publish-go").addEventListener("click", function () {
         if (!ed) return;
         var file = publishFile();
-        if (publishDialog) publishDialog.close();
-        else publishDialogEl.close();
+        if (!file) return;
+        closePublish();
+        showPublished();
+        say("Published on this tablet.");
         shareFile(file);
     });
 
@@ -2366,7 +2456,7 @@
     function allRoutes() {
         var names = {};
         lib.live.forEach(function (r) { names[routeKey(r)] = r; });
-        Object.keys(loadDrafts()).forEach(function (r) { if (!names[routeKey(r)]) names[routeKey(r)] = r; });
+        Object.keys(loadLocalPublished()).concat(Object.keys(loadDrafts())).forEach(function (r) { if (!names[routeKey(r)]) names[routeKey(r)] = r; });
         return Object.keys(names).map(function (k) { return names[k]; }).sort(function (a, b) {
             return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
         });
@@ -2428,7 +2518,8 @@
         var m = /[?&]route=([^&]*)/.exec(query || "");
         if (!m) return;
         var route = decodeURIComponent(m[1]);
-        var name = lib.findLive(route) || Object.keys(loadDrafts()).filter(function (r) { return routeKey(r) === routeKey(route); })[0];
+        var name = lib.findLive(route) || localPublishedName(route) ||
+            Object.keys(loadDrafts()).filter(function (r) { return routeKey(r) === routeKey(route); })[0];
         if (!name) {
             messageEl.textContent = "Route " + route + " doesn't have a map yet.";
             return;
