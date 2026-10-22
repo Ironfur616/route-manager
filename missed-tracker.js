@@ -1,4 +1,5 @@
-/* Missed collection tracker (missed-tracker.html).
+/* Service Issues (missed-tracker.html, formerly Missed Collections): missed pickups and other
+   service problems by address.
     Unlike the observation forms, this is a running log, not a draft: entries are kept in
     localStorage until they are deleted. The page opts out of the shell's draft handling with
    data-no-draft on <html>. Every change re-reads storage first, so two open tabs stay in step.
@@ -370,7 +371,7 @@
         }
         if (e.contactedBoro) flags.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
         var times = counts[addressKey(e.address)];
-        if (times > 1) flags.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
+        if (times > 1) flags.appendChild(el("span", "mt-chip mt-chip-repeat", times + " issues at this address"));
         if (flags.children.length) card.appendChild(flags);
 
         // Everything else, when open
@@ -458,13 +459,13 @@
         if (filtering && archived.length) archiveEl.open = true;
 
         if (!entries.length) {
-            countEl.textContent = "No missed collections logged yet. Tap Log Missed Collection to add the first one.";
+            countEl.textContent = "No service issues logged yet. Tap Log Service Issue to add the first one.";
         } else if (!shown.length) {
             countEl.textContent = "Nothing matches the current search or filter.";
         } else if (!recent.length) {
             countEl.textContent = filtering
                 ? "No matches in the last 7 days. " + archived.length + " in Archived below."
-                : "Nothing logged in the last 7 days. Older misses are in Archived below.";
+                : "Nothing logged in the last 7 days. Older issues are in Archived below.";
         } else {
             countEl.textContent = "Showing " + recent.length + " from the last 7 days" +
                 (archived.length ? ", " + archived.length + " archived" : "") +
@@ -510,7 +511,7 @@
         var routes = todo.filter(function (t) { return t.patch.route; }).length;
         var drivers = todo.length - routes;
         document.getElementById("mt-backfill-text").textContent =
-            (routes ? routes + " miss" + (routes === 1 ? " is" : "es are") + " missing a route" : "") +
+            (routes ? routes + " issue" + (routes === 1 ? " is" : "s are") + " missing a route" : "") +
             (routes && drivers ? " and " : "") +
             (drivers ? drivers + " " + (routes ? "more " : "") + "missing a driver" : "") +
             " that Route Sheets can fill in.";
@@ -528,7 +529,7 @@
         });
         if (save(list)) {
             document.getElementById("mt-backfill-done").textContent =
-                "Filled in " + todo.length + " miss" + (todo.length === 1 ? "" : "es") + " from Route Sheets.";
+                "Filled in " + todo.length + " issue" + (todo.length === 1 ? "" : "s") + " from Route Sheets.";
         }
         render();
     });
@@ -541,7 +542,7 @@
         }
         var n = load().filter(function (e) { return e.id !== editingId && addressKey(e.address) === key; }).length;
         addressHint.textContent = n
-            ? "Heads up: " + n + " earlier miss" + (n === 1 ? "" : "es") + " logged at this address."
+            ? "Heads up: " + n + " earlier issue" + (n === 1 ? "" : "s") + " logged at this address."
             : "";
     }
 
@@ -564,7 +565,7 @@
     // misses from the same route in a row. Only the parts that differ per stop are cleared.
     function resetForm(keepContext) {
         editingId = null;
-        formTitle.textContent = "Log a Missed Collection";
+        formTitle.textContent = "Log a Service Issue";
         submitBtn.textContent = "Save Entry";
 
         var keep = keepContext ? readForm() : {};
@@ -718,7 +719,7 @@
         if (!entry) return;
         TrackerDialog.confirmDelete({
             title: "Delete entry?",
-            message: "The missed collection at " + entry.address + " on " + prettyDate(entry.date) +
+            message: "The service issue at " + entry.address + " on " + prettyDate(entry.date) +
                 " will be deleted. This cannot be undone.",
             confirmLabel: "Delete entry"
         }, function () {
@@ -751,7 +752,7 @@
         var entries = load().sort(newest);
         var counts = addressCounts(entries);
         var rows = [["Date", "Route", "Address", "City", "Service", "Reasons", "Driver", "Unit", "Status",
-            "Contacted Boro / Twp", "Misses at address", "Added At", "Resolved At", "Notes"]];
+            "Contacted Boro / Twp", "Issues at address", "Added At", "Resolved At", "Notes"]];
         entries.forEach(function (e) {
             rows.push([e.date, e.route, e.address, e.city, e.service, (e.reasons || []).join("; "), e.driver, e.unit,
                 labelFor(STATUSES, e.status), e.contactedBoro ? "Yes" : "No", counts[addressKey(e.address)],
@@ -763,7 +764,7 @@
         var url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
         var link = document.createElement("a");
         link.href = url;
-        link.download = "missed-collections-" + dateString(new Date()) + ".csv";
+        link.download = "service-issues-" + dateString(new Date()) + ".csv";
         document.body.appendChild(link);
         link.click();
         link.remove();

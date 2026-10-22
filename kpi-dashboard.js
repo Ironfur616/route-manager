@@ -26,11 +26,11 @@
         { value: "all", label: "All time", days: null }
     ];
     var CARDS = [
-        { id: "missed-summary", label: "Missed Collections: summary", build: buildMissedSummary },
-        { id: "missed-trend", label: "Missed Collections: misses over time", build: buildMissedTrend },
-        { id: "missed-reasons", label: "Missed Collections: top reasons", build: buildMissedReasons },
-        { id: "missed-routes", label: "Missed Collections: misses by route", build: buildMissedRoutes },
-        { id: "missed-repeat", label: "Missed Collections: repeat addresses", build: buildRepeatAddresses },
+        { id: "missed-summary", label: "Service Issues: summary", build: buildMissedSummary },
+        { id: "missed-trend", label: "Service Issues: issues over time", build: buildMissedTrend },
+        { id: "missed-reasons", label: "Service Issues: top reasons", build: buildMissedReasons },
+        { id: "missed-routes", label: "Service Issues: issues by route", build: buildMissedRoutes },
+        { id: "missed-repeat", label: "Service Issues: repeat addresses", build: buildRepeatAddresses },
         { id: "newcust-summary", label: "New Customers", build: buildNewCustomers },
         { id: "bulk-summary", label: "Bulk Pickup Requests", build: buildBulk },
         { id: "service-summary", label: "Handicap & Elderly Service", build: buildService },
@@ -259,7 +259,7 @@
         var plotW = W - L - R, plotH = H - T - B;
         var max = niceMax(Math.max.apply(null, buckets.map(function (b) { return b.value; }).concat([0])));
         var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, width: W, height: H, class: "kpi-chart", role: "img",
-            "aria-label": "Column chart of misses per " + unit + ". Values are in the table view." });
+            "aria-label": "Column chart of service issues per " + unit + ". Values are in the table view." });
 
         [0, 0.5, 1].forEach(function (f) {
             var y = T + plotH - f * plotH;
@@ -288,7 +288,7 @@
             // The hit target is the whole column band, taller and wider than the bar
             var hit = svgEl("rect", { x: L + i * band, y: T, width: band, height: plotH, class: "kpi-col-hit", tabindex: "0",
                 "aria-label": b.tip + ": " + b.value });
-            var tipValue = num(b.value) + " miss" + (b.value === 1 ? "" : "es");
+            var tipValue = num(b.value) + " issue" + (b.value === 1 ? "" : "s");
             hit.addEventListener("pointerenter", function () { showTip(hit, tipValue, b.tip); });
             hit.addEventListener("pointerdown", function () { showTip(hit, tipValue, b.tip); });
             hit.addEventListener("focus", function () { showTip(hit, tipValue, b.tip); });
@@ -310,16 +310,16 @@
         return svg;
     }
 
-    /* ---------- Missed collections ---------- */
+    /* ---------- Service issues (missed-tracker) ---------- */
 
     function missesIn(range) {
         return readList(KEYS.missed).filter(function (e) { return inRange(e.date, range); });
     }
 
     function buildMissedSummary(range) {
-        var c = card("Missed Collections", "Misses dated in the " + range.label);
+        var c = card("Service Issues", "Issues dated in the " + range.label);
         var all = readList(KEYS.missed);
-        if (!all.length) return empty(c, "No missed collections logged yet.");
+        if (!all.length) return empty(c, "No service issues logged yet.");
         var list = missesIn(range);
         var resolved = list.filter(function (e) { return e.status === "resolved"; });
         var timed = resolved.filter(function (e) { return e.resolvedAt && e.created && e.resolvedAt >= e.created; });
@@ -329,7 +329,7 @@
         if (range.days) {
             var prev = all.filter(function (e) { return e.date >= range.prevStart && e.date <= range.prevEnd; }).length;
             var diff = list.length - prev;
-            // Fewer misses is the good direction
+            // Fewer issues is the good direction
             delta = {
                 text: (diff > 0 ? "▲ " + diff : diff < 0 ? "▼ " + Math.abs(diff) : "No change") + " vs prior " + range.days + " days",
                 good: diff < 0 ? true : diff > 0 ? false : null
@@ -337,7 +337,7 @@
         }
 
         c.appendChild(tiles([
-            { label: "Misses", value: num(list.length), delta: delta },
+            { label: "Issues", value: num(list.length), delta: delta },
             { label: "Open now", value: num(all.filter(function (e) { return e.status !== "resolved" && e.status !== "rca"; }).length), note: "All dates" },
             { label: "Under RCA", value: num(all.filter(function (e) { return e.status === "rca"; }).length), note: "All dates" },
             { label: "Resolved", value: percent(resolved.length, list.length), note: num(resolved.length) + " of " + num(list.length) },
@@ -351,8 +351,8 @@
 
     function buildMissedTrend(range) {
         var all = readList(KEYS.missed);
-        var c = card("Misses over time", "Tap a column for its count");
-        if (!all.length) return empty(c, "No missed collections logged yet.");
+        var c = card("Issues over time", "Tap a column for its count");
+        if (!all.length) return empty(c, "No service issues logged yet.");
 
         var start = range.start || all.reduce(function (m, e) { return e.date < m ? e.date : m; }, range.end);
         var spanDays = Math.round((parseDate(range.end) - parseDate(start)) / 86400000) + 1;
@@ -375,11 +375,11 @@
                 if (e.date >= buckets[i].from && e.date <= buckets[i].to) { buckets[i].value++; break; }
             }
         });
-        c.querySelector(".kpi-card-sub").textContent = "Misses per " + (byWeek ? "week" : "day") + " · tap a column for its count";
+        c.querySelector(".kpi-card-sub").textContent = "Issues per " + (byWeek ? "week" : "day") + " · tap a column for its count";
         var wrap = el("div", "kpi-chart-wrap");
         wrap.appendChild(columnChart(buckets, byWeek ? "week" : "day"));
         c.appendChild(wrap);
-        c.appendChild(tableView([byWeek ? "Week of" : "Date", "Misses"], buckets.map(function (b) { return [b.tip.replace(/^Week of /, ""), b.value]; })));
+        c.appendChild(tableView([byWeek ? "Week of" : "Date", "Issues"], buckets.map(function (b) { return [b.tip.replace(/^Week of /, ""), b.value]; })));
         return c;
     }
 
@@ -393,22 +393,22 @@
 
     function buildMissedReasons(range) {
         var list = missesIn(range);
-        var c = card("Top miss reasons", "In the " + range.label + " · a miss can have more than one reason");
+        var c = card("Top issue reasons", "In the " + range.label + " · an issue can have more than one reason");
         var reasons = [];
         list.forEach(function (e) {
             (e.reasons || []).forEach(function (r) { if (r !== "Customer issued a yellow tag") reasons.push(r); });
         });
         var top = topCounts(reasons, 6);
-        if (!top.length) return empty(c, "No misses in this range.");
+        if (!top.length) return empty(c, "No issues in this range.");
         c.appendChild(barList(top));
         return c;
     }
 
     function buildMissedRoutes(range) {
         var list = missesIn(range);
-        var c = card("Misses by route", "In the " + range.label + " · top 8 routes");
+        var c = card("Issues by route", "In the " + range.label + " · top 8 routes");
         var top = topCounts(list.map(function (e) { return e.route ? "Route " + e.route : "No route entered"; }), 8);
-        if (!top.length) return empty(c, "No misses in this range.");
+        if (!top.length) return empty(c, "No issues in this range.");
         c.appendChild(barList(top));
         return c;
     }
@@ -426,7 +426,7 @@
 
     function buildRepeatAddresses(range) {
         var list = missesIn(range);
-        var c = card("Repeat addresses", "Missed more than once in the " + range.label);
+        var c = card("Repeat addresses", "More than one issue in the " + range.label);
         var groups = {};
         list.forEach(function (e) {
             var k = addressKey(e.address);
@@ -438,10 +438,10 @@
         });
         var rows = Object.keys(groups).map(function (k) { return groups[k]; }).filter(function (g) { return g.count > 1; })
             .sort(function (a, b) { return b.count - a.count || (a.last < b.last ? 1 : -1); }).slice(0, 10);
-        if (!rows.length) return empty(c, "No address was missed more than once in this range.");
+        if (!rows.length) return empty(c, "No address had more than one issue in this range.");
         var table = el("table", "kpi-table kpi-table-open");
         var tr = el("tr");
-        ["Address", "Misses", "Route", "Last miss"].forEach(function (h) { tr.appendChild(el("th", null, h)).setAttribute("scope", "col"); });
+        ["Address", "Issues", "Route", "Last issue"].forEach(function (h) { tr.appendChild(el("th", null, h)).setAttribute("scope", "col"); });
         table.appendChild(el("thead")).appendChild(tr);
         var body = table.appendChild(el("tbody"));
         rows.forEach(function (g) {

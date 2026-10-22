@@ -42,7 +42,7 @@
 
     // What the preview counts, in the order it lists them
     var COUNTED = [
-        ["fleetMgrMissed", "Missed collections"],
+        ["fleetMgrMissed", "Service issues"],
         ["fleetMgrNewCustomers", "New customers"],
         ["fleetMgrBulkPickup", "Bulk pickup requests"],
         ["fleetMgrRCA", "RCA cases"],
