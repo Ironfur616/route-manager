@@ -53,9 +53,10 @@ each section. When an item is done, move it to **Done** at the bottom with the d
       Would let published maps, and later Service Requests and Route Sheets, sync to every tablet.
 - [ ] **Google Drive sign-in is in Testing mode** in the Cloud project: anyone else who backs up or
       publishes to Drive must be added as a test user, or the app published.
-- [ ] **PIN gate** is a convenience lock, not real security (see notes kept outside this repo).
 
 ## Done
 
 - 2026-10-22: GPS trail visible on every part of the map; street taps pick the right street;
   Rename / Label for maps; Publish on the tablet without Drive.
+- 2026-10-22: New PIN, kept only as a fingerprint (hash) in the code; earlier PINs no longer work.
+  The PIN screen is a convenience lock for a shared tablet, not real security.

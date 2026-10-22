@@ -21,7 +21,7 @@
     "use strict";
 
     var SALT = "routeiq-pin:";
-    var PIN_HASH = "70af690c2d9100f4a018bc3bf3419b12fb4b50527775d268e1c62e95fd3d5101";
+    var PIN_HASH = "5d1e5acacc61854b530e4286e85e48beed133cdee37faf5149a2643976cdc067";
     var PIN_LENGTH = 4;
     var STORAGE_KEY = "fleetMgrUnlocked";
     var root = document.documentElement;
