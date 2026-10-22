@@ -858,7 +858,10 @@
         viewTools.hidden = true;
         editTools.hidden = false;
         setMode(ed.mode);
-        showTrail(true);
+        // The trail guides the first highlighting; once streets are highlighted it starts hidden.
+        // The Trail button's choice holds for the rest of the session.
+        var highlighted = Object.keys(ed.draft.blocks).length > 0 || ed.draft.strokes.length > 0;
+        showTrail(ed.trailChoice != null ? ed.trailChoice : !highlighted);
         refreshStatus();
         loadStreets();
         requestAnimationFrame(function () { map.invalidateSize(); });
@@ -1213,7 +1216,11 @@
 
     undoBtn.addEventListener("click", function () { if (ed) undoRedo(ed.undo, ed.redo); });
     redoBtn.addEventListener("click", function () { if (ed) undoRedo(ed.redo, ed.undo); });
-    trailBtn.addEventListener("click", function () { if (ed) showTrail(!ed.showTrail); });
+    trailBtn.addEventListener("click", function () {
+        if (!ed) return;
+        showTrail(!ed.showTrail);
+        ed.trailChoice = ed.showTrail;
+    });
     document.getElementById("mlv-edit").addEventListener("click", function () { if (ed) startEditing(); });
 
     legendInput.addEventListener("input", function () {
