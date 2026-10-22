@@ -609,7 +609,9 @@
         }).addTo(map);
         // The highlighter: drawn opaque on a pane shown multiplied at partial strength, so streets
         // and their names show through and overlapping highlights don't darken
-        map.createPane("mlvTrail").style.zIndex = 410;
+        // The trail is a guide for highlighting, so it's drawn over the highlighter (whose
+        // multiply blend would otherwise tint it out of sight on highlighted streets)
+        map.createPane("mlvTrail").style.zIndex = 430;
         var hl = map.createPane("mlvHighlight");
         hl.style.zIndex = 420;
         hl.style.mixBlendMode = "multiply";
@@ -742,6 +744,10 @@
         if (liveStroke) { map.removeLayer(liveStroke); liveStroke = null; }
     }
 
+    // Purple with a white outline: unlike the highlighters (yellow, blue, green) and OSM's red
+    // and orange main roads, it stands out on every part of the map. Faster driving is dashed.
+    var TRAIL_COLOR = "#7E22CE";
+
     function drawTrail() {
         trailGroup.clearLayers();
         var t = ed.draft.trail || [];
@@ -749,9 +755,11 @@
         var run = [t[0]], fast = t[1][2] > SLOW_MPH;
         function flush() {
             if (run.length < 2) return;
-            trailGroup.addLayer(L.polyline(run.map(function (p) { return [p[0], p[1]]; }), fast
-                ? { renderer: trailRenderer, color: "#6b7280", weight: 2, opacity: 0.5, dashArray: "6 6", interactive: false }
-                : { renderer: trailRenderer, color: "#DC143C", weight: 2, opacity: 0.6, interactive: false }));
+            var line = run.map(function (p) { return [p[0], p[1]]; });
+            trailGroup.addLayer(L.polyline(line, { renderer: trailRenderer, color: "#FFFFFF", weight: fast ? 4 : 5, opacity: 0.85,
+                dashArray: fast ? "7 7" : null, lineCap: "round", lineJoin: "round", interactive: false }));
+            trailGroup.addLayer(L.polyline(line, { renderer: trailRenderer, color: TRAIL_COLOR, weight: fast ? 2 : 2.5, opacity: fast ? 0.7 : 0.9,
+                dashArray: fast ? "7 7" : null, lineCap: "round", lineJoin: "round", interactive: false }));
         }
         for (var i = 1; i < t.length; i++) {
             var f = t[i][2] > SLOW_MPH;
@@ -767,7 +775,8 @@
         flush();
         t.forEach(function (p) {
             if (p[2] <= SLOW_MPH) {
-                trailGroup.addLayer(L.circleMarker([p[0], p[1]], { renderer: trailRenderer, radius: 2, stroke: false, fillColor: "#DC143C", fillOpacity: 0.7, interactive: false }));
+                trailGroup.addLayer(L.circleMarker([p[0], p[1]], { renderer: trailRenderer, radius: 2.5, color: "#FFFFFF", weight: 1.5, opacity: 0.9,
+                    fillColor: TRAIL_COLOR, fillOpacity: 1, interactive: false }));
             }
         });
     }
