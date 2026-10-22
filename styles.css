@@ -1687,6 +1687,11 @@ body.shell {
     cursor: pointer;
 }
 
+/* The one-tap Resolved checkbox beside it, in the resolved green */
+.mt-entry-resolved input {
+    accent-color: var(--forest-green);
+}
+
 .mt-entry-status {
     flex: 1 1 100%;
     min-width: 0;

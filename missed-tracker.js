@@ -357,12 +357,25 @@
         contactedLabel.htmlFor = contactedId;
         contacted.appendChild(contactedBox);
         contacted.appendChild(contactedLabel);
+        // One tap to Resolved without opening the status list; unticking puts the status back
+        var resolvedId = "mt-resolved-" + e.id;
+        var resolved = el("div", "mt-entry-contacted mt-entry-resolved");
+        var resolvedBox = el("input");
+        resolvedBox.type = "checkbox";
+        resolvedBox.id = resolvedId;
+        resolvedBox.checked = e.status === "resolved";
+        resolvedBox.addEventListener("change", function () { setResolved(e.id, resolvedBox.checked); });
+        var resolvedLabel = el("label", null, "Resolved");
+        resolvedLabel.htmlFor = resolvedId;
+        resolved.appendChild(resolvedBox);
+        resolved.appendChild(resolvedLabel);
         var status = el("select", "mt-entry-status");
         status.setAttribute("aria-label", "Status for " + e.address);
         fillSelect(status, STATUSES);
         status.value = e.status;
         status.addEventListener("change", function () { setStatus(e.id, status.value); });
         actions.appendChild(contacted);
+        actions.appendChild(resolved);
         actions.appendChild(status);
         card.appendChild(actions);
 
@@ -613,9 +626,31 @@
         var list = load();
         list.forEach(function (e) {
             if (e.id === id) {
+                // Kept in step with the Resolved checkbox, which can put this status back
+                if (value === "resolved" && e.status !== "resolved") e.statusBeforeResolved = e.status;
+                else if (value !== "resolved") delete e.statusBeforeResolved;
                 applyStatus(e, value);
                 e.updated = Date.now();
             }
+        });
+        save(list);
+        render();
+    }
+
+    // The Resolved checkbox: remembers the status it replaced, so unticking puts that back
+    // (Open when there's nothing to go back to)
+    function setResolved(id, on) {
+        var list = load();
+        list.forEach(function (e) {
+            if (e.id !== id) return;
+            if (on && e.status !== "resolved") {
+                e.statusBeforeResolved = e.status;
+                applyStatus(e, "resolved");
+            } else if (!on && e.status === "resolved") {
+                applyStatus(e, e.statusBeforeResolved || "open");
+                delete e.statusBeforeResolved;
+            }
+            e.updated = Date.now();
         });
         save(list);
         render();
