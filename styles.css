@@ -3718,13 +3718,13 @@ body.shell {
     font-size: 0.875rem;
 }
 
-/* Reminder bar along the bottom of the app */
+/* Reminder bar along the bottom of the app. It takes its own row at the end of the shell's
+   column (not floating), so the open tab ends above it instead of hiding its bottom (a form's
+   Save button, the map's toolbar) underneath. */
 .backup-reminder {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
+    position: relative;
     z-index: 50;
+    flex: none;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;

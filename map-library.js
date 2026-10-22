@@ -33,7 +33,7 @@
     ];
 
     // Published live route maps (each has assets/Maps/<route>.route.json)
-    var LIVE = [];
+    var LIVE = ["M-1-2"];
 
     var DIR = "assets/Maps/";
 
