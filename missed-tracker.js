@@ -301,38 +301,89 @@
             .toLowerCase().indexOf(term) !== -1;
     }
 
+    // Cards start collapsed: the address, one summary line, the flags that need attention and the
+    // Resolved checkbox. Tapping the card's top opens the rest. Open cards stay open through redraws.
+    var expanded = {};
+
+    function checkRow(id, labelText, checked, extraClass, onChange) {
+        var row = el("div", "mt-entry-contacted" + (extraClass ? " " + extraClass : ""));
+        var box = el("input");
+        box.type = "checkbox";
+        box.id = id;
+        box.checked = checked;
+        box.addEventListener("change", function () { onChange(box.checked); });
+        var label = el("label", null, labelText);
+        label.htmlFor = id;
+        row.appendChild(box);
+        row.appendChild(label);
+        return row;
+    }
+
     function buildCard(e, counts) {
         var isYellow = hasYellowTag(e);
-        var card = el("article", "mt-entry mt-status-" + e.status + (isYellow ? " mt-yellow-tag" : ""));
+        var open = !!expanded[e.id];
+        var card = el("article", "mt-entry mt-status-" + e.status + (isYellow ? " mt-yellow-tag" : "") + (open ? " is-open" : ""));
+        var detailsId = "mt-details-" + e.id;
 
-        var head = el("div", "mt-entry-head entry-head");
-        // Date under the address, so the address keeps the full width beside the icons
-        var title = el("div", "entry-title");
-        title.appendChild(el("h3", "mt-entry-address", e.address));
-        title.appendChild(el("span", "mt-entry-date", prettyDate(e.date)));
-        head.appendChild(title);
-        // Edit and Delete as icons in the top-right corner, to keep each card compact
-        head.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
+        // Top: the toggle (address and summary) with the Resolved checkbox beside it
+        var head = el("div", "mt-entry-top");
+        var toggle = el("button", "mt-entry-toggle");
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-controls", detailsId);
+        toggle.appendChild(el("span", "mt-entry-caret"));
+        var title = el("span", "mt-entry-titles");
+        title.appendChild(el("span", "mt-entry-address", e.address));
+        // Date \u00B7 Route \u00B7 status, each kept whole so a narrow card only wraps between them
+        // (Under RCA shows as its flag below instead)
+        var summary = [prettyDate(e.date)];
+        if (e.route) summary.push("Route " + e.route);
+        if (e.status !== "rca") summary.push(labelFor(STATUSES, e.status));
+        var summaryEl = el("span", "mt-entry-summary");
+        summary.forEach(function (part, i) {
+            if (i) summaryEl.appendChild(document.createTextNode(" \u00B7 "));
+            summaryEl.appendChild(el("span", "mt-entry-summary-part", part));
+        });
+        title.appendChild(summaryEl);
+        toggle.appendChild(title);
+        toggle.addEventListener("click", function () {
+            expanded[e.id] = !expanded[e.id];
+            var now = !!expanded[e.id];
+            card.classList.toggle("is-open", now);
+            toggle.setAttribute("aria-expanded", String(now));
+            details.hidden = !now;
+        });
+        head.appendChild(toggle);
+        // One tap to Resolved without opening the status list; unticking puts the status back
+        head.appendChild(checkRow("mt-resolved-" + e.id, "Resolved", e.status === "resolved", "mt-entry-resolved",
+            function (on) { setResolved(e.id, on); }));
         card.appendChild(head);
 
-        var chips = el("div", "mt-chips");
-        if (isYellow) chips.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
+        // Flags worth seeing without opening the card
+        var flags = el("div", "mt-chips mt-entry-flags");
+        if (isYellow) flags.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
         if (e.status === "rca") {
             var rcaFlag = el("span", "mt-chip mt-chip-rca");
             rcaFlag.innerHTML = CONE_ICON;
             rcaFlag.appendChild(document.createTextNode("Under RCA Investigation"));
-            chips.appendChild(rcaFlag);
+            flags.appendChild(rcaFlag);
         }
-        if (e.contactedBoro) chips.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
+        if (e.contactedBoro) flags.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
+        var times = counts[addressKey(e.address)];
+        if (times > 1) flags.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
+        if (flags.children.length) card.appendChild(flags);
+
+        // Everything else, when open
+        var details = el("div", "mt-entry-details");
+        details.id = detailsId;
+        details.hidden = !open;
+
+        var chips = el("div", "mt-chips");
         // The yellow tag reason already gets its own badge above, so it's left out here to avoid repeating it
         (e.reasons || []).filter(function (r) { return r !== YELLOW_TAG_REASON; }).forEach(function (r) {
             chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
         });
         chips.appendChild(el("span", "mt-chip", e.service));
-        // Under RCA already has its flag above
-        if (e.status !== "rca") chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
-        var times = counts[addressKey(e.address)];
-        if (times > 1) chips.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
         // From the route's county house list: where the cans go, or a house that isn't on the list
         var house = window.RouteLookup ? RouteLookup.house(e.address, e.city) : null;
         if (house && house.status === "on" && house.alley && house.use !== false) {
@@ -340,15 +391,14 @@
         } else if (house && house.status === "off") {
             chips.appendChild(el("span", "mt-chip mt-chip-repeat", "Not on Route " + house.route + "'s house list"));
         }
-        card.appendChild(chips);
+        details.appendChild(chips);
 
         var meta = [];
         if (e.city) meta.push(e.city);
-        if (e.route) meta.push("Route " + e.route);
         if (e.driver) meta.push(e.driver);
         if (e.unit) meta.push("Unit " + e.unit);
-        if (meta.length) card.appendChild(el("p", "mt-entry-meta", meta.join(" · ")));
-        if (e.notes) card.appendChild(el("p", "mt-entry-notes", e.notes));
+        if (meta.length) details.appendChild(el("p", "mt-entry-meta", meta.join(" \u00B7 ")));
+        if (e.notes) details.appendChild(el("p", "mt-entry-notes", e.notes));
 
         var stamps = [];
         if (e.created) stamps.push("Added " + prettyStamp(e.created));
@@ -356,42 +406,22 @@
         if (stamps.length) {
             var stampsEl = el("p", "mt-entry-stamps");
             stamps.forEach(function (t) { stampsEl.appendChild(el("span", null, t)); });
-            card.appendChild(stampsEl);
+            details.appendChild(stampsEl);
         }
 
         var actions = el("div", "mt-entry-actions");
-        var contactedId = "mt-boro-" + e.id;
-        var contacted = el("div", "mt-entry-contacted");
-        var contactedBox = el("input");
-        contactedBox.type = "checkbox";
-        contactedBox.id = contactedId;
-        contactedBox.checked = !!e.contactedBoro;
-        contactedBox.addEventListener("change", function () { setContacted(e.id, contactedBox.checked); });
-        var contactedLabel = el("label", null, "Contacted Boro / Twp");
-        contactedLabel.htmlFor = contactedId;
-        contacted.appendChild(contactedBox);
-        contacted.appendChild(contactedLabel);
-        // One tap to Resolved without opening the status list; unticking puts the status back
-        var resolvedId = "mt-resolved-" + e.id;
-        var resolved = el("div", "mt-entry-contacted mt-entry-resolved");
-        var resolvedBox = el("input");
-        resolvedBox.type = "checkbox";
-        resolvedBox.id = resolvedId;
-        resolvedBox.checked = e.status === "resolved";
-        resolvedBox.addEventListener("change", function () { setResolved(e.id, resolvedBox.checked); });
-        var resolvedLabel = el("label", null, "Resolved");
-        resolvedLabel.htmlFor = resolvedId;
-        resolved.appendChild(resolvedBox);
-        resolved.appendChild(resolvedLabel);
+        actions.appendChild(checkRow("mt-boro-" + e.id, "Contacted Boro / Twp", !!e.contactedBoro, "",
+            function (on) { setContacted(e.id, on); }));
         var status = el("select", "mt-entry-status");
         status.setAttribute("aria-label", "Status for " + e.address);
         fillSelect(status, STATUSES);
         status.value = e.status;
         status.addEventListener("change", function () { setStatus(e.id, status.value); });
-        actions.appendChild(contacted);
-        actions.appendChild(resolved);
         actions.appendChild(status);
-        card.appendChild(actions);
+        // Edit and Delete as icons at the end of the open card
+        actions.appendChild(TrackerDialog.entryTools(e.address, function () { startEdit(e.id); }, function () { remove(e.id); }));
+        details.appendChild(actions);
+        card.appendChild(details);
 
         return card;
     }
