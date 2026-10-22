@@ -11,14 +11,19 @@
    Google Picker API. Until both are filled in below, DriveBackup.configured() is false and
    backup.js offers only the share screen and Downloads.
 
+   Published route maps (map-live.js) go to a folder of their own (e.g. "Route Maps" inside the
+   backups folder), picked the same way the first time and remembered in fleetMgrRouteMapsDrive.
+   Calls that take `slot` use "maps" for that folder; leaving it out means the backups folder.
+
      DriveBackup.configured()          -> bool
-     DriveBackup.folder()              -> { id, name } or null
-     DriveBackup.preload()             loads Google's scripts ahead of the tap that needs them
+     DriveBackup.folder(slot)          -> { id, name } or null
+     DriveBackup.preload(slot)         loads Google's scripts ahead of the tap that needs them
      DriveBackup.ready()               -> bool, whether a tap can sign in right now
      DriveBackup.save(file, opts)      -> Promise of { name, folder }; signs in and (first time,
                                           or opts.chooseAgain) picks the folder first.
                                           opts.beforePicker() runs before the picker shows.
-     DriveBackup.forget()              forgets the folder
+                                          opts.slot picks which folder ("maps" or the backups').
+     DriveBackup.forget(slot)          forgets the folder
 */
 (function () {
     "use strict";
@@ -30,6 +35,14 @@
     };
     var SCOPE = "https://www.googleapis.com/auth/drive.file";
     var FOLDER_KEY = "fleetMgrBackupDrive";
+    var SLOTS = {
+        maps: { key: "fleetMgrRouteMapsDrive", title: "Pick the folder for published route maps (Route Maps)" }
+    };
+    var BACKUPS = { key: FOLDER_KEY, title: "Pick the folder for Route IQ backups" };
+
+    function slotOf(name) {
+        return SLOTS[name] || BACKUPS;
+    }
     var SMALL = 5 * 1024 * 1024;     // up to this, one request; bigger files use a resumable upload
 
     var token = null, tokenExpires = 0, tokenClient = null;
@@ -53,19 +66,20 @@
         return !!(CONFIG.clientId && CONFIG.apiKey);
     }
 
-    function readFolder() {
+    // Without a key, the backups folder (which also records that Google permission was given)
+    function readFolder(key) {
         try {
-            var v = JSON.parse(localStorage.getItem(FOLDER_KEY) || "null");
+            var v = JSON.parse(localStorage.getItem(key || FOLDER_KEY) || "null");
             return v && v.id ? v : null;
         } catch (e) {
             return null;
         }
     }
 
-    function writeFolder(v) {
+    function writeFolder(v, key) {
         try {
-            if (v) localStorage.setItem(FOLDER_KEY, JSON.stringify(v));
-            else localStorage.removeItem(FOLDER_KEY);
+            if (v) localStorage.setItem(key || FOLDER_KEY, JSON.stringify(v));
+            else localStorage.removeItem(key || FOLDER_KEY);
         } catch (e) { /* storage blocked: it'll ask for the folder again */ }
     }
 
@@ -73,10 +87,10 @@
         return !!(window.google && google.accounts && google.accounts.oauth2);
     }
 
-    function preload() {
+    function preload(slot) {
         if (!configured()) return;
         loadScript("https://accounts.google.com/gsi/client").catch(function () {});
-        if (!readFolder()) {
+        if (!readFolder(slotOf(slot).key)) {
             loadScript("https://apis.google.com/js/api.js").then(function () {
                 return new Promise(function (resolve) { gapi.load("picker", { callback: resolve }); });
             }).catch(function () {});
@@ -112,7 +126,7 @@
         return out;
     }
 
-    function pickFolder(accessToken, beforePicker) {
+    function pickFolder(accessToken, beforePicker, title, startIn) {
         return loadScript("https://apis.google.com/js/api.js").then(function () {
             return new Promise(function (resolve) { gapi.load("picker", { callback: resolve }); });
         }).then(function () {
@@ -122,9 +136,11 @@
                     .setIncludeFolders(true)
                     .setSelectFolderEnabled(true)
                     .setMimeTypes("application/vnd.google-apps.folder");
+                // Opens inside a folder when there's one to start from (Route Maps sits in the backups folder)
+                if (startIn) view.setParent(startIn);
                 new google.picker.PickerBuilder()
                     .addView(view)
-                    .setTitle("Pick the folder for Route IQ backups")
+                    .setTitle(title)
                     .setOAuthToken(accessToken)
                     .setDeveloperKey(CONFIG.apiKey)
                     .setAppId(CONFIG.appId)
@@ -180,18 +196,20 @@
 
     function save(file, opts) {
         opts = opts || {};
+        var slot = slotOf(opts.slot);
         return getToken().then(function (accessToken) {
-            var folder = opts.chooseAgain ? null : readFolder();
+            var folder = opts.chooseAgain ? null : readFolder(slot.key);
             if (folder) return [accessToken, folder];
-            return pickFolder(accessToken, opts.beforePicker).then(function (picked) {
+            var startIn = slot === BACKUPS ? null : (readFolder() || {}).id;
+            return pickFolder(accessToken, opts.beforePicker, slot.title, startIn).then(function (picked) {
                 if (!picked) throw { kind: "cancelled" };
-                writeFolder({ id: picked.id, name: picked.name, consented: true });
-                return [accessToken, readFolder()];
+                writeFolder({ id: picked.id, name: picked.name, consented: true }, slot.key);
+                return [accessToken, readFolder(slot.key)];
             });
         }).then(function (pair) {
             return upload(file, pair[1].id, pair[0]).catch(function (err) {
                 if (err && err.kind === "expired") token = null;
-                if (err && err.kind === "folder") writeFolder(merge(readFolder() || {}, { id: "" }));
+                if (err && err.kind === "folder") writeFolder(merge(readFolder(slot.key) || {}, { id: "" }), slot.key);
                 throw err;
             }).then(function (made) {
                 return { name: made && made.name, folder: pair[1].name };
@@ -201,10 +219,10 @@
 
     window.DriveBackup = {
         configured: configured,
-        folder: function () { var f = readFolder(); return f && f.id ? f : null; },
+        folder: function (slot) { var f = readFolder(slotOf(slot).key); return f && f.id ? f : null; },
         preload: preload,
         ready: function () { return hasGis() || (token && Date.now() < tokenExpires - 60000); },
         save: save,
-        forget: function () { writeFolder(null); }
+        forget: function (slot) { writeFolder(null, slotOf(slot).key); }
     };
 })();

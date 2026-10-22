@@ -1117,13 +1117,17 @@
     var publishStatus = document.getElementById("mlv-publish-status");
     var driveBtn = document.getElementById("mlv-publish-drive");
 
+    var driveChange = document.getElementById("mlv-publish-drive-change");
+
+    // Published maps get their own Drive folder ("maps" slot), apart from the backups
     function paintDrive() {
         var d = drive();
         driveBtn.hidden = !d;
+        driveChange.hidden = !(d && d.folder("maps"));
         if (!d) return;
-        var folder = d.folder();
+        var folder = d.folder("maps");
         driveBtn.textContent = folder ? "Save to Drive · " + folder.name : "Save to Google Drive";
-        d.preload();
+        d.preload("maps");
     }
 
     function openPublish() {
@@ -1162,20 +1166,24 @@
             : "The upload to Drive didn’t finish. Try again, or use Share / Save File.";
     }
 
-    driveBtn.addEventListener("click", function () {
+    function saveToDrive(chooseAgain) {
         var d = drive();
         if (!ed || !d) return;
         var file = publishFile();
         driveBtn.disabled = true;
-        publishStatus.textContent = "Saving to Google Drive…";
-        d.save(file).then(function (done) {
+        publishStatus.textContent = d.folder("maps") && !chooseAgain ? "Saving to Google Drive…"
+            : "Pick the Route Maps folder (it's inside the backups folder)…";
+        d.save(file, { slot: "maps", chooseAgain: chooseAgain }).then(function (done) {
             return "Saved " + file.name + " to Google Drive in " + done.folder + ".";
         }, driveError).then(function (message) {
             publishStatus.textContent = message;
             driveBtn.disabled = false;
             paintDrive();
         });
-    });
+    }
+
+    driveBtn.addEventListener("click", function () { saveToDrive(false); });
+    driveChange.addEventListener("click", function () { saveToDrive(true); });
 
     document.getElementById("mlv-publish-go").addEventListener("click", function () {
         if (!ed) return;
