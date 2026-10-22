@@ -71,6 +71,7 @@
                 <button type="button" class="ml-tool" data-more="markers">Start/End Pins: On</button>
                 <button type="button" class="ml-tool" data-more="ends">Reset Start/End</button>
                 <button type="button" class="ml-tool" data-more="arrows">Direction Arrows: Off</button>
+                <button type="button" class="ml-tool" data-more="rename">Rename / Label</button>
                 <button type="button" class="ml-tool" data-more="streets">Load Streets Here</button>
                 <button type="button" class="ml-tool" data-more="reimport">Replace GPS Trail</button>
                 <button type="button" class="ml-tool" data-more="print">Print Map</button>
@@ -141,6 +142,32 @@
             <div class="form-actions mt-dialog-actions">
                 <button type="button" class="send-email" data-dialog-close>Cancel</button>
                 <button type="submit" class="generate-pdf">Import</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="send-dialog mt-dialog" id="mlv-rename-dialog" aria-labelledby="mlv-rename-title">
+        <form class="emp-info" id="mlv-rename-form">
+            <div class="mt-dialog-head">
+                <h2 id="mlv-rename-title">Rename / Label</h2>
+                <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+            </div>
+            <fieldset class="emp-fields">
+                <legend>Route</legend>
+                <div class="field">
+                    <label for="mlv-rename-route">Route (as on Route Sheets)</label>
+                    <input type="text" id="mlv-rename-route" autocomplete="off" required>
+                </div>
+                <div class="field">
+                    <label for="mlv-rename-label">Label (prints in the header)</label>
+                    <input type="text" id="mlv-rename-label" autocomplete="off" placeholder="e.g. Canton Recycle">
+                </div>
+                <p class="mt-hint" id="mlv-rename-note"></p>
+                <p class="send-error mt-dialog-error" id="mlv-rename-error" hidden></p>
+            </fieldset>
+            <div class="form-actions mt-dialog-actions">
+                <button type="button" class="send-email" data-dialog-close>Cancel</button>
+                <button type="submit" class="generate-pdf">Save</button>
             </div>
         </form>
     </dialog>

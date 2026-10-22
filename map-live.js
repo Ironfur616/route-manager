@@ -1295,6 +1295,7 @@
             else if (what === "publish") openPublish();
             else if (what === "print") printRoute(ed.route, b);
             else if (what === "navigate") startNav();
+            else if (what === "rename") openRename();
             else if (what === "markers" || what === "arrows") {
                 ed.undo.push(snapshot());
                 ed.redo = [];
@@ -1408,7 +1409,7 @@
 
     document.getElementById("mlv-import-form").addEventListener("submit", function (e) {
         e.preventDefault();
-        var route = importRoute.value.trim().replace(/^route\s+/i, "");
+        var route = cleanRoute(importRoute.value);
         if (!route || !pendingImport) return;
         var label = importLabel.value.trim();
         var t = pendingImport;
@@ -1434,6 +1435,91 @@
             renderList();
             open(base.route, { edit: true });
         });
+    });
+
+    /* ---------- Rename / Label ---------- */
+    /* The route name (as on Route Sheets) and the label printed in the header can change after the
+       map is made. A new name moves the draft, and the route's downloaded streets, over to it. A
+       published map's file is named for the route, so the copy under the old name stays in the
+       app until the map is published under the new one and the old file is taken out. */
+
+    var renameDialogEl = document.getElementById("mlv-rename-dialog");
+    var renameDialog = window.TrackerDialog ? TrackerDialog(renameDialogEl, {}) : null;
+    var renameRoute = document.getElementById("mlv-rename-route");
+    var renameLabel = document.getElementById("mlv-rename-label");
+    var renameNote = document.getElementById("mlv-rename-note");
+    var renameError = document.getElementById("mlv-rename-error");
+
+    // "route ms-77 " → "MS-77": route codes are uppercase on Route Sheets (matching ignores case anyway)
+    function cleanRoute(text) {
+        return String(text || "").trim().replace(/^route\s+/i, "").replace(/\s+/g, " ").toUpperCase();
+    }
+
+    // Another map already using this name (a draft on this device or a published map)
+    function nameTaken(route) {
+        if (routeKey(route) === routeKey(ed.route)) return false;
+        return !!(draftFor(route) || lib.findLive(route));
+    }
+
+    function updateRenameNote() {
+        var route = cleanRoute(renameRoute.value);
+        var renaming = route && routeKey(route) !== routeKey(ed.route);
+        renameError.hidden = true;
+        renameNote.textContent = renaming && lib.findLive(ed.route)
+            ? "Route " + ed.route + " is published under that name. Publish again after renaming; the old copy stays in the app until it's taken out."
+            : "";
+    }
+    renameRoute.addEventListener("input", updateRenameNote);
+
+    function openRename() {
+        if (!ed || !ed.editing) return;
+        renameRoute.value = ed.route;
+        renameLabel.value = ed.draft.label || "";
+        updateRenameNote();
+        if (renameDialog) renameDialog.open();
+        else renameDialogEl.showModal();
+    }
+
+    function moveStreets(from, to) {
+        if (!window.caches) return;
+        caches.open(STREETS_CACHE).then(function (c) {
+            return c.match(streetsKey(from)).then(function (r) {
+                if (!r) return;
+                return c.put(streetsKey(to), r).then(function () { return c.delete(streetsKey(from)); });
+            });
+        }).catch(function () { /* the new name downloads them again */ });
+    }
+
+    document.getElementById("mlv-rename-form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!ed) return;
+        var route = cleanRoute(renameRoute.value), label = renameLabel.value.trim();
+        if (!route) return;
+        if (nameTaken(route)) {
+            renameError.textContent = "Route " + route + " already has a map. Pick another name, or open that map instead.";
+            renameError.hidden = false;
+            return;
+        }
+        var old = ed.route;
+        flushSave();
+        ed.draft.label = label;
+        if (route !== old) {
+            ed.draft.route = route;
+            // The draft now lives under the new name; a published copy under the old name stays
+            if (routeKey(route) !== routeKey(old)) {
+                saveDraft(old, null);
+                moveStreets(old, route);
+                ed.state = { lib: null, draft: null };
+            }
+            ed.route = route;
+        }
+        changed();
+        flushSave();
+        titleEl.textContent = title(ed.route, ed.draft.label);
+        if (renameDialog) renameDialog.close();
+        else renameDialogEl.close();
+        say("Saved as " + title(ed.route, ed.draft.label) + "." + (route !== old && lib.findLive(old) ? " Publish to save it under the new name." : ""));
+        renderList();
     });
 
     /* ---------- Publish ---------- */
