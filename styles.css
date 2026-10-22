@@ -4631,3 +4631,55 @@ label.cp-house-row {
     margin-bottom: 0.5rem;
     font-weight: 600;
 }
+
+/* Direction arrows and Start / End pins on live route maps */
+.mlv-arrow span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.mlv-arrow svg {
+    overflow: visible;
+}
+
+.mlv-arrow path {
+    fill: #043960;
+    stroke: #ffffff;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+
+/* Set by hand in Arrows mode */
+.mlv-arrow.is-manual path {
+    fill: #7c2d92;
+}
+
+.mlv-end span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 28px;
+    border: 3px solid #ffffff;
+    border-radius: 14px;
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.mlv-end-start span {
+    background-color: #15803d;
+}
+
+.mlv-end-end span {
+    background-color: #b91c1c;
+}
+
+.mlv-end.leaflet-marker-draggable span {
+    cursor: grab;
+}

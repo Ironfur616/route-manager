@@ -165,8 +165,12 @@
             <div class="mlv-map" id="mlv-map"></div>
             <div class="mlv-more" id="mlv-more" hidden>
                 <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
+                <button type="button" class="ml-tool" data-more="markers">Start/End Pins: On</button>
+                <button type="button" class="ml-tool" data-more="ends">Reset Start/End</button>
+                <button type="button" class="ml-tool" data-more="arrows">Direction Arrows: Off</button>
                 <button type="button" class="ml-tool" data-more="streets">Load Streets Here</button>
                 <button type="button" class="ml-tool" data-more="reimport">Replace GPS Trail</button>
+                <button type="button" class="ml-tool" data-more="print">Print Map</button>
                 <button type="button" class="ml-tool ml-tool-accent" data-more="publish">Publish</button>
             </div>
         </div>
@@ -180,6 +184,7 @@
             <div class="ml-group" role="group" aria-label="Tool">
                 <button type="button" class="ml-tool" data-mode="blocks" aria-pressed="true">Streets</button>
                 <button type="button" class="ml-tool" data-mode="draw" aria-pressed="false">Draw</button>
+                <button type="button" class="ml-tool" data-mode="arrows" aria-pressed="false">Arrows</button>
                 <button type="button" class="ml-tool" data-mode="erase" aria-pressed="false">Erase</button>
                 <button type="button" class="ml-tool" data-mode="move" aria-pressed="false">Move</button>
             </div>
@@ -198,6 +203,7 @@
 
         <div class="mlv-toolbar" id="mlv-view-tools" hidden>
             <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
+            <button type="button" class="ml-tool" data-more="print">Print Map</button>
             <button type="button" class="ml-tool ml-tool-accent" id="mlv-edit">Edit Map</button>
         </div>
     </dialog>
@@ -226,6 +232,20 @@
                 <button type="submit" class="generate-pdf">Import</button>
             </div>
         </form>
+    </dialog>
+
+    <dialog class="send-dialog mt-dialog" id="mlv-print-dialog" aria-labelledby="mlv-print-title">
+        <div class="mt-dialog-head">
+            <h2 id="mlv-print-title">Print Map</h2>
+            <button type="button" class="mt-dialog-close" aria-label="Close" data-dialog-close>&times;</button>
+        </div>
+        <div class="ml-publish-body">
+            <p>This route doesn't fit on one 11x17 sheet up close. Street names print the same size either way; zoomed out shows more of the area around the route.</p>
+        </div>
+        <div class="form-actions mt-dialog-actions">
+            <button type="button" class="send-email" id="mlv-print-far">1 sheet, zoomed out</button>
+            <button type="button" class="generate-pdf" id="mlv-print-near">2 sheets, closer in</button>
+        </div>
     </dialog>
 
     <dialog class="send-dialog mt-dialog" id="mlv-publish-dialog" aria-labelledby="mlv-publish-title">

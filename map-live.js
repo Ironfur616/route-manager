@@ -19,6 +19,11 @@
    Two fingers always pan and zoom, and a second finger cancels what the first one started. Move
    pans with one finger. Yellow is the basic route street; blue and green mean what the legend says.
 
+   The trail's time order also gives each highlighted block a direction of travel (arrows,
+   off by default; Arrows mode sets them by hand) and the route's Start and End pins (on by
+   default, dragged to adjust). Print Map makes the 11x17 handout from OpenStreetMap itself, so
+   street names print.
+
    Drafts are kept in localStorage (fleetMgrRouteMaps, so they're in backups). Publish saves
    <route>.route.json (highlights only); once committed to assets/Maps/ and listed in
    map-library.js, every device has it, and the draft is dropped when the library holds one at
@@ -169,11 +174,20 @@
     // Published files list blocks; drafts keep them by id
     function fromFile(m) {
         var blocks = {};
-        (m.blocks || []).forEach(function (b) { blocks[b.id] = { c: b.c, n: b.n || "", g: b.g }; });
+        (m.blocks || []).forEach(function (b) {
+            var copy = { c: b.c, n: b.n || "", g: b.g };
+            if (b.d) copy.d = b.d;
+            if (b.dm != null) copy.dm = b.dm;
+            if (b.t != null) copy.t = b.t;
+            blocks[b.id] = copy;
+        });
         return {
             route: m.route, label: m.label || "", updated: m.updated || 0,
             legend: { b: (m.legend || {}).b || "", g: (m.legend || {}).g || "" },
-            blocks: blocks, strokes: (m.strokes || []).slice(), trail: []
+            blocks: blocks, strokes: (m.strokes || []).slice(), trail: [],
+            start: m.start || null, end: m.end || null,
+            // Maps published before pins and arrows existed get the defaults
+            show: m.show ? { markers: !!m.show.markers, arrows: !!m.show.arrows } : Object.assign({}, DEFAULT_SHOW)
         };
     }
 
@@ -238,6 +252,7 @@
         var cTime = col(function (h) { return h === "time"; });
         var cSpeed = col(function (h) { return /^speed\b/.test(h) && h.indexOf("limit") < 0 && h.indexOf("max") < 0; });
         var cVehicle = col(function (h) { return h === "vehicle_name" || h === "vehicle"; });
+        var cHeading = col(function (h) { return h === "heading"; });
 
         var recs = rows.slice(1).map(function (r) {
             return {
@@ -245,7 +260,8 @@
                 lat: parseFloat(r[cLat]), lng: parseFloat(r[cLng]),
                 mph: cSpeed >= 0 ? parseFloat(r[cSpeed]) || 0 : 0,
                 t: cDate >= 0 ? timeOf(r[cDate], cTime >= 0 ? r[cTime] : 0) : NaN,
-                vehicle: cVehicle >= 0 ? String(r[cVehicle]).trim() : ""
+                vehicle: cVehicle >= 0 ? String(r[cVehicle]).trim() : "",
+                heading: cHeading >= 0 && r[cHeading] !== "" ? parseFloat(r[cHeading]) : NaN
             };
         }).filter(function (r) { return isFinite(r.lat) && isFinite(r.lng) && (r.lat || r.lng); });
         if (recs.every(function (r) { return isFinite(r.t); })) recs.sort(function (a, b) { return a.t - b.t; });
@@ -266,7 +282,9 @@
         var t0 = isFinite(trailRows[0].t) ? trailRows[0].t : 0;
         return {
             trail: trailRows.map(function (r) {
-                return [round5(r.lat), round5(r.lng), Math.round(r.mph), isFinite(r.t) ? r.t - t0 : 0];
+                // [lat, lng, mph, seconds from the start, heading in degrees (-1 when not given)]
+                return [round5(r.lat), round5(r.lng), Math.round(r.mph), isFinite(r.t) ? r.t - t0 : 0,
+                    isFinite(r.heading) ? Math.round(r.heading) : -1];
             }),
             start: isFinite(trailRows[0].t) ? new Date(trailRows[0].t * 1000) : null,
             end: isFinite(trailRows[trailRows.length - 1].t) ? new Date(trailRows[trailRows.length - 1].t * 1000) : null,
@@ -383,6 +401,153 @@
         return blocks;
     }
 
+    /* ---------- Driving order: direction arrows, start and end ---------- */
+    /* The Lytx trail is in time order, so it shows which way each highlighted block was driven.
+       Every trail point within NEAR_M of a block (away from its ends, where cross streets meet)
+       votes by comparing the truck's heading (or, without one, the line to its neighbors) with
+       the block's own direction; a block driven both ways gets a double arrow. The earliest vote
+       is when the block was first driven (t), which orders the route for navigation later.
+       Arrows mode sets a direction by hand (dm), which wins over the trail's (d). */
+
+    var NEAR_M = 20, END_M = 12, AGREE = 0.64; // cos 50°
+    var DEFAULT_SHOW = { markers: true, arrows: false };
+
+    // Flat meters around a latitude: plenty accurate across one route
+    function localXY(lat0) {
+        var kx = 111320 * Math.cos(lat0 * Math.PI / 180), ky = 110540;
+        return function (p) { return [p[1] * kx, p[0] * ky]; };
+    }
+
+    function travelVectors(trail, P) {
+        return trail.map(function (p, i) {
+            if (p.length > 4 && p[4] >= 0 && p[2] > 2) {
+                var a = p[4] * Math.PI / 180;
+                return [Math.sin(a), Math.cos(a)];
+            }
+            var a0 = P[Math.max(0, i - 1)], b0 = P[Math.min(P.length - 1, i + 1)];
+            var dx = b0[0] - a0[0], dy = b0[1] - a0[1], len = Math.hypot(dx, dy);
+            return len > 3 ? [dx / len, dy / len] : null;
+        });
+    }
+
+    function lengths(G) {
+        var cum = [0];
+        for (var i = 1; i < G.length; i++) cum.push(cum[i - 1] + Math.hypot(G[i][0] - G[i - 1][0], G[i][1] - G[i - 1][1]));
+        return cum;
+    }
+
+    // Sets d (1 along the block's points, -1 against, 2 both) and t on every highlighted block.
+    // Blocks are replaced, not changed, so undo snapshots keep their own copies.
+    function computeDirections(draft) {
+        var trail = draft.trail || [];
+        var ids = Object.keys(draft.blocks);
+        if (trail.length < 3 || !ids.length) return;
+        var xy = localXY(trail[0][0]);
+        var P = trail.map(xy), V = travelVectors(trail, P);
+        ids.forEach(function (id) {
+            var b = draft.blocks[id], G = b.g.map(xy), cum = lengths(G), len = cum[cum.length - 1];
+            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            G.forEach(function (q) {
+                minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]);
+                minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]);
+            });
+            var plus = 0, minus = 0, first = null;
+            for (var k = 0; k < P.length; k++) {
+                var p = P[k], v = V[k];
+                if (!v || p[0] < minX - NEAR_M || p[0] > maxX + NEAR_M || p[1] < minY - NEAR_M || p[1] > maxY + NEAR_M) continue;
+                var best = Infinity, along = 0, seg = 0;
+                for (var j = 1; j < G.length; j++) {
+                    var ax = G[j - 1][0], ay = G[j - 1][1], dx = G[j][0] - ax, dy = G[j][1] - ay, l2 = dx * dx + dy * dy;
+                    var t = l2 ? Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2)) : 0;
+                    var d = Math.hypot(ax + t * dx - p[0], ay + t * dy - p[1]);
+                    if (d < best) { best = d; along = cum[j - 1] + t * Math.sqrt(l2); seg = j; }
+                }
+                if (best > NEAR_M || !seg) continue;
+                if (len > 3 * END_M && (along < END_M || along > len - END_M)) continue;
+                var sx = G[seg][0] - G[seg - 1][0], sy = G[seg][1] - G[seg - 1][1], sl = Math.hypot(sx, sy);
+                if (!sl) continue;
+                var dot = (v[0] * sx + v[1] * sy) / sl;
+                if (dot > AGREE) plus++;
+                else if (dot < -AGREE) minus++;
+                else continue;
+                if (first === null) first = trail[k][3];
+            }
+            var dir = 0;
+            if (plus && minus) dir = plus >= 3 * minus ? 1 : minus >= 3 * plus ? -1 : 2;
+            else if (plus) dir = 1;
+            else if (minus) dir = -1;
+            var nb = Object.assign({}, b);
+            if (dir) nb.d = dir; else delete nb.d;
+            if (first !== null) nb.t = first; else delete nb.t;
+            draft.blocks[id] = nb;
+        });
+    }
+
+    function directionOf(b) {
+        return b.dm != null ? b.dm : (b.d || 0);
+    }
+
+    // The nearest point on a highlighted block within maxM meters of pt, or null
+    function snapToBlocks(draft, pt, maxM) {
+        var xy = localXY(pt[0]), p = xy(pt), best = null, bestD = maxM;
+        Object.keys(draft.blocks).forEach(function (id) {
+            var g = draft.blocks[id].g;
+            for (var j = 1; j < g.length; j++) {
+                var a = xy(g[j - 1]), b = xy(g[j]), dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+                var t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0;
+                var d = Math.hypot(a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
+                if (d < bestD) {
+                    bestD = d;
+                    best = [round5(g[j - 1][0] + t * (g[j][0] - g[j - 1][0])), round5(g[j - 1][1] + t * (g[j][1] - g[j - 1][1]))];
+                }
+            }
+        });
+        return best;
+    }
+
+    // Start: where the trail first reaches a highlighted street at collection speed; end: where it
+    // last leaves one. Without a trail, the first and last driven blocks (or any) stand in.
+    function autoEnds(draft) {
+        var ids = Object.keys(draft.blocks);
+        if (!ids.length && !draft.strokes.length) { draft.start = draft.end = null; return; }
+        var trail = (draft.trail || []).filter(function (p) { return p[2] <= SLOW_MPH; });
+        var start = null, end = null, i;
+        for (i = 0; i < trail.length && !start; i++) start = snapToBlocks(draft, trail[i], 40);
+        for (i = trail.length - 1; i >= 0 && !end; i--) end = snapToBlocks(draft, trail[i], 40);
+        if (!start || !end) {
+            var order = ids.map(function (id) { return draft.blocks[id]; }).sort(function (a, b) {
+                return (a.t != null ? a.t : Infinity) - (b.t != null ? b.t : Infinity);
+            });
+            var lines = order.map(function (b) { return b.g; }).concat(draft.strokes.map(function (s) { return s.g; }));
+            start = start || lines[0][0];
+            end = end || lines[lines.length - 1][lines[lines.length - 1].length - 1];
+        }
+        draft.start = start;
+        draft.end = end;
+    }
+
+    // Meters per pixel at a zoom level, at a latitude (web map tiles)
+    function metersPerPixel(z, lat) {
+        return 156543.03 * Math.cos(lat * Math.PI / 180) / Math.pow(2, z);
+    }
+
+    // Where a block's arrows go: about every `spacing` meters (one at least), each turned to the
+    // direction of travel (degrees clockwise from north, which is straight up on the north-up map)
+    function arrowSpots(g, dir, spacing) {
+        var xy = localXY(g[0][0]), G = g.map(xy), cum = lengths(G), len = cum[cum.length - 1];
+        if (!len) return [];
+        var n = Math.max(1, Math.round(len / (spacing || 140))), spots = [];
+        for (var k = 0; k < n; k++) {
+            var target = len * (k + 0.5) / n, j = 1;
+            while (j < G.length - 1 && cum[j] < target) j++;
+            var segLen = cum[j] - cum[j - 1] || 1, f = (target - cum[j - 1]) / segLen;
+            var lat = g[j - 1][0] + f * (g[j][0] - g[j - 1][0]), lng = g[j - 1][1] + f * (g[j][1] - g[j - 1][1]);
+            var deg = Math.atan2(G[j][0] - G[j - 1][0], G[j][1] - G[j - 1][1]) * 180 / Math.PI;
+            spots.push({ ll: [lat, lng], deg: dir === -1 ? deg + 180 : deg, both: dir === 2 });
+        }
+        return spots;
+    }
+
     /* ---------- Map ---------- */
 
     var dialog = document.getElementById("mlv-editor");
@@ -402,6 +567,7 @@
 
     var map = null, hlRenderer = null, trailRenderer = null;
     var trailGroup = null, strokeGroup = null, liveStroke = null;
+    var arrowGroup = null, endsGroup = null;
     var blockLayers = {};
 
     function say(text) {
@@ -430,6 +596,12 @@
         hlRenderer = L.canvas({ pane: "mlvHighlight", padding: 0.5 });
         trailGroup = L.layerGroup();
         strokeGroup = L.layerGroup().addTo(map);
+        arrowGroup = L.layerGroup().addTo(map);
+        endsGroup = L.layerGroup().addTo(map);
+        // Arrows are spaced on screen, so zooming re-spaces them
+        map.on("zoomend", function () {
+            if (ed && ((ed.draft.show || {}).arrows || (ed.editing && ed.mode === "arrows"))) syncExtras();
+        });
         wirePointer();
     }
 
@@ -472,11 +644,77 @@
         });
     }
 
+    // Direction arrows (when shown, and always in Arrows mode) and the Start / End pins, which
+    // can be dragged while editing
+    var ARROW_SVG = '<svg viewBox="-10 -10 20 20" width="20" height="20" aria-hidden="true"><path d="M0-8L7 6 0 2-7 6Z"/></svg>';
+    var BOTH_SVG = '<svg viewBox="-10 -12 20 24" width="20" height="24" aria-hidden="true"><path d="M0-11L6-1 0-4-6-1ZM0 11L6 1 0 4-6 1Z"/></svg>';
+
+    function syncExtras() {
+        if (!ed) return;
+        arrowGroup.clearLayers();
+        endsGroup.clearLayers();
+        var show = ed.draft.show || {};
+        if (show.arrows || (ed.editing && ed.mode === "arrows")) {
+            var spacing = 110 * metersPerPixel(map.getZoom(), map.getCenter().lat);
+            Object.keys(ed.draft.blocks).forEach(function (id) {
+                var b = ed.draft.blocks[id], dir = directionOf(b);
+                if (!dir) return;
+                arrowSpots(b.g, dir, spacing).forEach(function (spot) {
+                    arrowGroup.addLayer(L.marker(spot.ll, {
+                        interactive: false, keyboard: false,
+                        icon: L.divIcon({
+                            className: "mlv-arrow" + (b.dm != null ? " is-manual" : ""),
+                            html: '<span style="transform: rotate(' + spot.deg.toFixed(1) + 'deg)">' + (spot.both ? BOTH_SVG : ARROW_SVG) + "</span>",
+                            iconSize: [24, 24], iconAnchor: [12, 12]
+                        })
+                    }));
+                });
+            });
+        }
+        if (show.markers) {
+            [["start", "Start"], ["end", "End"]].forEach(function (pair) {
+                var at = ed.draft[pair[0]];
+                if (!at) return;
+                var m = L.marker(at, {
+                    draggable: ed.editing, keyboard: false, interactive: ed.editing,
+                    title: ed.editing ? "Drag to move the " + pair[1].toLowerCase() : pair[1],
+                    icon: L.divIcon({ className: "mlv-end mlv-end-" + pair[0], html: "<span>" + pair[1] + "</span>", iconSize: [60, 28], iconAnchor: [30, 14] })
+                });
+                m.on("dragend", function () {
+                    var ll = m.getLatLng();
+                    ed.undo.push(snapshot());
+                    ed.redo = [];
+                    ed.draft[pair[0]] = [round5(ll.lat), round5(ll.lng)];
+                    ed.draft.endsAuto = false;
+                    changed();
+                });
+                endsGroup.addLayer(m);
+            });
+        }
+        syncMenu();
+    }
+
+    function syncMenu() {
+        var show = ed.draft.show || {};
+        dialog.querySelectorAll('[data-more="markers"]').forEach(function (b) { b.textContent = "Start/End Pins: " + (show.markers ? "On" : "Off"); });
+        dialog.querySelectorAll('[data-more="arrows"]').forEach(function (b) { b.textContent = "Direction Arrows: " + (show.arrows ? "On" : "Off"); });
+        dialog.querySelectorAll('[data-more="ends"]').forEach(function (b) { b.hidden = !show.markers; });
+    }
+
+    // After the highlights change: directions from the trail, and auto-placed ends kept current
+    function refreshOrder() {
+        if ((ed.draft.trail || []).length) computeDirections(ed.draft);
+        var show = ed.draft.show || {};
+        if (show.markers && (ed.draft.endsAuto !== false || !ed.draft.start)) autoEnds(ed.draft);
+    }
+
     function clearLayers() {
         Object.keys(blockLayers).forEach(function (id) { map.removeLayer(blockLayers[id].layer); });
         blockLayers = {};
         strokeGroup.clearLayers();
         trailGroup.clearLayers();
+        arrowGroup.clearLayers();
+        endsGroup.clearLayers();
         if (liveStroke) { map.removeLayer(liveStroke); liveStroke = null; }
     }
 
@@ -564,9 +802,12 @@
             ed.draft.blocks = ed.draft.blocks || {};
             ed.draft.strokes = ed.draft.strokes || [];
             ed.draft.legend = ed.draft.legend || { b: "", g: "" };
+            ed.draft.show = ed.draft.show || { markers: false, arrows: false };
+            if (ed.draft.show.markers && !ed.draft.start) autoEnds(ed.draft);
             titleEl.textContent = title(ed.route, ed.draft.label);
             syncBlocks();
             syncStrokes();
+            syncExtras();
             drawTrail();
             map.invalidateSize();
             fitRoute();
@@ -582,6 +823,7 @@
         legendRow.hidden = true;
         map.dragging.enable();
         showTrail(false);
+        syncExtras();
         say(statusText({ lib: ed.state.lib, draft: null }));
         requestAnimationFrame(function () { map.invalidateSize(); });
     }
@@ -678,6 +920,8 @@
         else map.dragging.disable();
         mapEl.classList.toggle("is-drawing", mode !== "move");
         syncColor();
+        syncExtras();
+        if (mode === "arrows") say("Tap a highlighted block to change its arrow: one way, the other way, both ways, none.");
     }
 
     function syncColor() {
@@ -695,17 +939,28 @@
     }
 
     function snapshot() {
-        return { blocks: Object.assign({}, ed.draft.blocks), strokes: ed.draft.strokes.slice() };
+        return {
+            blocks: Object.assign({}, ed.draft.blocks), strokes: ed.draft.strokes.slice(),
+            start: ed.draft.start, end: ed.draft.end, endsAuto: ed.draft.endsAuto,
+            show: Object.assign({}, ed.draft.show)
+        };
     }
 
     function restore(s) {
         ed.draft.blocks = Object.assign({}, s.blocks);
         ed.draft.strokes = s.strokes.slice();
+        ed.draft.start = s.start;
+        ed.draft.end = s.end;
+        ed.draft.endsAuto = s.endsAuto;
+        ed.draft.show = Object.assign({}, s.show);
         syncBlocks();
         syncStrokes();
+        syncExtras();
     }
 
     function changed() {
+        refreshOrder();
+        syncExtras();
         ed.draft.updated = Date.now();
         delete ed.draft.published;
         clearTimeout(saveTimer);
@@ -768,7 +1023,7 @@
                 return;
             }
             if (ed.action.touched[hit.id]) return;
-            ed.draft.blocks[hit.id] = { c: ed.color, n: b.n, g: b.g };
+            ed.draft.blocks[hit.id] = Object.assign({}, b, { c: ed.color });
             ed.action.touched[hit.id] = true;
             ed.action.changed = true;
             syncBlocks();
@@ -817,6 +1072,17 @@
         }
     }
 
+    // Arrows mode: one way, the other way, both ways, none, then back around (set by hand)
+    var NEXT_DIR = { "1": -1, "-1": 2, "2": 0, "0": 1 };
+    function arrowAt(latlng) {
+        var hit = nearest(highlightedItems(), latlng, HIT_PX);
+        if (!hit) return;
+        var b = ed.draft.blocks[hit.id];
+        ed.draft.blocks[hit.id] = Object.assign({}, b, { dm: NEXT_DIR[String(directionOf(b))] });
+        ed.action.changed = true;
+        syncExtras();
+    }
+
     function wirePointer() {
         var pointers = {};
 
@@ -826,6 +1092,7 @@
             ed.action = { id: e.pointerId, before: snapshot(), touched: {}, changed: false, clearOnTap: null, moved: false, sx: e.clientX, sy: e.clientY };
             var ll = map.mouseEventToLatLng(e);
             if (ed.mode === "blocks") blocksAt(ll, true);
+            else if (ed.mode === "arrows") arrowAt(ll);
             else if (ed.mode === "erase") eraseAt(ll);
             else if (ed.mode === "draw") {
                 ed.action.stroke = { c: ed.color, g: [[round5(ll.lat), round5(ll.lng)]] };
@@ -867,7 +1134,7 @@
         mapEl.addEventListener("pointerdown", function (e) {
             pointers[e.pointerId] = true;
             if (!ed || !ed.editing || ed.mode === "move") return;
-            if (e.target.closest && e.target.closest(".leaflet-control")) return;
+            if (e.target.closest && e.target.closest(".leaflet-control, .leaflet-marker-icon.leaflet-interactive")) return;
             if (count() > 1) { cancel(); return; }
             if (e.pointerType === "mouse" && e.button !== 0) return;
             begin(e);
@@ -945,6 +1212,19 @@
             else if (what === "streets") loadStreetsHere();
             else if (what === "reimport") { importFor = ed.route; fileInput.click(); }
             else if (what === "publish") openPublish();
+            else if (what === "print") printRoute(ed.route, b);
+            else if (what === "markers" || what === "arrows") {
+                ed.undo.push(snapshot());
+                ed.redo = [];
+                ed.draft.show[what] = !ed.draft.show[what];
+                if (what === "markers" && ed.draft.show.markers && !ed.draft.start) ed.draft.endsAuto = true;
+                changed();
+            } else if (what === "ends") {
+                ed.undo.push(snapshot());
+                ed.redo = [];
+                ed.draft.endsAuto = true;
+                changed();
+            }
         });
     });
 
@@ -1008,14 +1288,18 @@
         fileInput.value = "";
         if (!file) return;
         messageEl.textContent = "Reading " + file.name + "…";
+        var t, names;
         readRows(file).then(function (rows) {
-            var t = lytxTrail(rows);
-            var names = nameFromFile(file.name);
+            t = lytxTrail(rows);
+            names = nameFromFile(file.name);
+            return current(importFor || names.route);
+        }).then(function (state) {
             pendingImport = t;
             importRoute.value = importFor || names.route;
             importRoute.readOnly = !!importFor;
-            var existing = draftFor(importRoute.value);
-            importLabel.value = existing ? existing.label || names.label : names.label;
+            // A route that already has a map keeps its label unless the file name gives one
+            var existing = state.draft || state.lib;
+            importLabel.value = names.label || (existing && existing.label) || "";
             importSummary.textContent = t.trail.length + " GPS points" +
                 (t.start ? ", " + t.start.toLocaleDateString() + " " + timeText(t.start) + "–" + timeText(t.end) : "") +
                 (t.vehicle ? ", truck " + t.vehicle : "") +
@@ -1055,6 +1339,10 @@
             base.route = base.route || route;
             base.label = label;
             base.trail = t.trail;
+            base.show = base.show || Object.assign({}, DEFAULT_SHOW);
+            if (base.endsAuto !== false) base.endsAuto = true;
+            computeDirections(base);
+            if (base.show.markers) autoEnds(base);
             base.updated = Date.now();
             delete base.published;
             if (!saveDraft(base.route, base)) return;
@@ -1072,8 +1360,12 @@
 
     function fileText(d) {
         var blocks = Object.keys(d.blocks).sort().map(function (id) {
-            var b = d.blocks[id];
-            return "    " + JSON.stringify({ id: id, c: b.c, n: b.n || "", g: b.g });
+            var b = d.blocks[id], out = { id: id, c: b.c, n: b.n || "" };
+            if (b.d) out.d = b.d;
+            if (b.dm != null) out.dm = b.dm;
+            if (b.t != null) out.t = b.t;
+            out.g = b.g;
+            return "    " + JSON.stringify(out);
         });
         var strokes = d.strokes.map(function (s) { return "    " + JSON.stringify({ c: s.c, g: s.g }); });
         return "{\n" +
@@ -1081,6 +1373,9 @@
             '  "label": ' + JSON.stringify(d.label || "") + ",\n" +
             '  "updated": ' + d.updated + ",\n" +
             '  "legend": ' + JSON.stringify({ b: d.legend.b || "", g: d.legend.g || "" }) + ",\n" +
+            '  "show": ' + JSON.stringify({ markers: !!(d.show || {}).markers, arrows: !!(d.show || {}).arrows }) + ",\n" +
+            '  "start": ' + JSON.stringify(d.start || null) + ",\n" +
+            '  "end": ' + JSON.stringify(d.end || null) + ",\n" +
             '  "blocks": [\n' + blocks.join(",\n") + (blocks.length ? "\n" : "") + "  ],\n" +
             '  "strokes": [\n' + strokes.join(",\n") + (strokes.length ? "\n" : "") + "  ]\n}\n";
     }
@@ -1193,6 +1488,370 @@
         shareFile(file);
     });
 
+    /* ---------- Print Map ---------- */
+    /* An 11x17 landscape handout drawn from OpenStreetMap, so street names print. Each sheet is
+       a 1584 x 900 pixel picture (the page's map area at 96 dpi, the size OSM's labels are made
+       for), laid in the house format: slim header (route, label, sheet; logo at the right), the
+       map, a legend, and the credit OSM requires. A route too big for one sheet is cut into as
+       many as it needs, overlapping a little (see planSheets for the zoom). Never names a
+       driver: maps outlast whoever drives the route. */
+
+    var SHEET_W = 1584, SHEET_H = 900, SHEET_PAD = 48, SHEET_OVERLAP = 64;
+    var END_COLORS = { start: "#15803d", end: "#b91c1c" };
+
+    var logoPromise = null;
+    function loadLogo() {
+        if (!logoPromise) {
+            logoPromise = fetch("assets/icons/ew-logo-192.png")
+                .then(function (r) { return r.blob(); })
+                .then(function (blob) {
+                    return new Promise(function (resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function () { resolve(reader.result); };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                })
+                .catch(function () { logoPromise = null; return null; });
+        }
+        return logoPromise;
+    }
+
+    function contentPoints(src) {
+        var pts = [];
+        Object.keys(src.blocks).forEach(function (id) { pts = pts.concat(src.blocks[id].g); });
+        src.strokes.forEach(function (s) { pts = pts.concat(s.g); });
+        if (src.show && src.show.markers) [src.start, src.end].forEach(function (p) { if (p) pts.push(p); });
+        return pts;
+    }
+
+    // The sheets for printing at one zoom: OSM's labels print the same size at every zoom, so
+    // 17 is closer in (more sheets) and 16 farther out (fewer); 16 still names residential
+    // streets, and 15 and out drop too many of them
+    function planSheets(src, z) {
+        var crs = L.CRS.EPSG3857, pts = contentPoints(src);
+        if (!pts.length) return null;
+        var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        pts.forEach(function (p) {
+            var q = crs.latLngToPoint(L.latLng(p[0], p[1]), z);
+            minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x);
+            minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+        });
+        var w = maxX - minX + 2 * SHEET_PAD, h = maxY - minY + 2 * SHEET_PAD;
+        var cols = Math.max(1, Math.ceil((w - SHEET_OVERLAP) / (SHEET_W - SHEET_OVERLAP)));
+        var rows = Math.max(1, Math.ceil((h - SHEET_OVERLAP) / (SHEET_H - SHEET_OVERLAP)));
+        var plan = { z: z, cols: cols, rows: rows, minX: minX, minY: minY, w: w, h: h };
+        // The sheets' grid, centered on the route
+        var gridW = plan.cols * SHEET_W - (plan.cols - 1) * SHEET_OVERLAP;
+        var gridH = plan.rows * SHEET_H - (plan.rows - 1) * SHEET_OVERLAP;
+        var x0 = plan.minX - SHEET_PAD - (gridW - plan.w) / 2, y0 = plan.minY - SHEET_PAD - (gridH - plan.h) / 2;
+        plan.sheets = [];
+        for (var r = 0; r < plan.rows; r++) {
+            for (var c = 0; c < plan.cols; c++) {
+                plan.sheets.push({ x: Math.round(x0 + c * (SHEET_W - SHEET_OVERLAP)), y: Math.round(y0 + r * (SHEET_H - SHEET_OVERLAP)) });
+            }
+        }
+        return plan;
+    }
+
+    function tileImage(z, x, y) {
+        return new Promise(function (resolve) {
+            var img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = function () { resolve(img); };
+            img.onerror = function () { resolve(null); };
+            img.src = "https://tile.openstreetmap.org/" + z + "/" + x + "/" + y + ".png";
+        });
+    }
+
+    function drawArrow(ctx, x, y, deg, both) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(deg * Math.PI / 180);
+        ctx.beginPath();
+        if (both) {
+            ctx.moveTo(0, -11); ctx.lineTo(6, -1); ctx.lineTo(0, -4); ctx.lineTo(-6, -1); ctx.closePath();
+            ctx.moveTo(0, 11); ctx.lineTo(6, 1); ctx.lineTo(0, 4); ctx.lineTo(-6, 1); ctx.closePath();
+        } else {
+            ctx.moveTo(0, -8); ctx.lineTo(7, 6); ctx.lineTo(0, 2); ctx.lineTo(-7, 6); ctx.closePath();
+        }
+        ctx.lineJoin = "round";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+        ctx.fillStyle = "#043960";
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawPin(ctx, x, y, text, color) {
+        ctx.save();
+        ctx.font = "bold 15px Helvetica, Arial, sans-serif";
+        var w = Math.max(56, ctx.measureText(text).width + 22), h = 26;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x - w / 2, y - h / 2, w, h, 13);
+        else ctx.rect(x - w / 2, y - h / 2, w, h);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x, y + 1);
+        ctx.restore();
+    }
+
+    function renderSheet(src, z, ox, oy) {
+        var crs = L.CRS.EPSG3857;
+        var canvas = document.createElement("canvas");
+        canvas.width = SHEET_W;
+        canvas.height = SHEET_H;
+        var ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#f2efe9";
+        ctx.fillRect(0, 0, SHEET_W, SHEET_H);
+        function at(p) {
+            var q = crs.latLngToPoint(L.latLng(p[0], p[1]), z);
+            return [q.x - ox, q.y - oy];
+        }
+        var n = Math.pow(2, z), loads = [];
+        for (var tx = Math.floor(ox / 256); tx <= Math.floor((ox + SHEET_W - 1) / 256); tx++) {
+            for (var ty = Math.floor(oy / 256); ty <= Math.floor((oy + SHEET_H - 1) / 256); ty++) {
+                if (ty < 0 || ty >= n) continue;
+                (function (tx, ty) {
+                    loads.push(tileImage(z, ((tx % n) + n) % n, ty).then(function (img) {
+                        if (img) ctx.drawImage(img, tx * 256 - ox, ty * 256 - oy);
+                    }));
+                })(tx, ty);
+            }
+        }
+        return Promise.all(loads).then(function () {
+            // The highlighter, as on screen: opaque on its own layer, multiplied at partial strength
+            var ink = document.createElement("canvas");
+            ink.width = SHEET_W;
+            ink.height = SHEET_H;
+            var ictx = ink.getContext("2d");
+            ictx.lineCap = "round";
+            ictx.lineJoin = "round";
+            ictx.lineWidth = LINE_PX;
+            function line(g, c) {
+                ictx.strokeStyle = COLORS[c] || COLORS.y;
+                ictx.beginPath();
+                g.forEach(function (p, i) {
+                    var q = at(p);
+                    if (i) ictx.lineTo(q[0], q[1]);
+                    else ictx.moveTo(q[0], q[1]);
+                });
+                if (g.length === 1) ictx.lineTo(at(g[0])[0] + 0.01, at(g[0])[1]);
+                ictx.stroke();
+            }
+            Object.keys(src.blocks).forEach(function (id) { line(src.blocks[id].g, src.blocks[id].c); });
+            src.strokes.forEach(function (s) { line(s.g, s.c); });
+            ctx.globalAlpha = 0.6;
+            ctx.globalCompositeOperation = "multiply";
+            ctx.drawImage(ink, 0, 0);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "source-over";
+            ink.width = 0;
+
+            var show = src.show || {};
+            if (show.arrows) {
+                var spacing = 120 * metersPerPixel(z, crs.pointToLatLng(L.point(ox + SHEET_W / 2, oy + SHEET_H / 2), z).lat);
+                Object.keys(src.blocks).forEach(function (id) {
+                    var b = src.blocks[id], dir = directionOf(b);
+                    if (!dir) return;
+                    arrowSpots(b.g, dir, spacing).forEach(function (spot) {
+                        var q = at(spot.ll);
+                        if (q[0] > -20 && q[1] > -20 && q[0] < SHEET_W + 20 && q[1] < SHEET_H + 20) drawArrow(ctx, q[0], q[1], spot.deg, spot.both);
+                    });
+                });
+            }
+            if (show.markers) {
+                if (src.start) drawPin(ctx, at(src.start)[0], at(src.start)[1], "Start", END_COLORS.start);
+                if (src.end) drawPin(ctx, at(src.end)[0], at(src.end)[1], "End", END_COLORS.end);
+            }
+            var data = canvas.toDataURL("image/jpeg", 0.92);
+            canvas.width = 0;
+            return data;
+        });
+    }
+
+    function hexToRgb(hex) {
+        var v = parseInt(hex.slice(1), 16);
+        return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+    }
+
+    // Colors are listed when blue or green is used (yellow is then "Route streets"); pins and
+    // arrows when they're shown
+    function legendItems(src) {
+        var used = {}, items = [], legend = src.legend || {}, show = src.show || {};
+        Object.keys(src.blocks).forEach(function (id) { used[src.blocks[id].c] = true; });
+        src.strokes.forEach(function (s) { used[s.c] = true; });
+        if (used.b || used.g) {
+            if (used.y) items.push({ swatch: COLORS.y, label: "Route streets" });
+            if (used.b) items.push({ swatch: COLORS.b, label: legend.b || "Blue" });
+            if (used.g) items.push({ swatch: COLORS.g, label: legend.g || "Green" });
+        }
+        if (show.markers && (src.start || src.end)) items.push({ pin: true, label: "Start / End of route" });
+        if (show.arrows) items.push({ arrow: true, label: "Direction of travel" });
+        return items;
+    }
+
+    function buildPrint(src, images, logo) {
+        var NAVY = [4, 57, 96], GREEN = [4, 102, 53], GRAY = [110, 118, 126], INK = [26, 26, 26];
+        var PAGE_W = 1224, PAGE_H = 792, M = 18, CONTENT_W = PAGE_W - M * 2, LOGO = 40;
+        var MAP_W = SHEET_W * 0.75, MAP_H = SHEET_H * 0.75; // 96 dpi → points
+        var doc = new window.jspdf.jsPDF({ unit: "pt", format: "tabloid", orientation: "landscape" });
+        function color(fn, c) { doc[fn](c[0], c[1], c[2]); }
+        var legend = legendItems(src);
+        var printed = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+        images.forEach(function (image, i) {
+            if (i > 0) doc.addPage("tabloid", "landscape");
+            var y = M;
+            if (logo) doc.addImage(logo, "PNG", PAGE_W - M - LOGO, y - 4, LOGO, LOGO);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            color("setTextColor", NAVY);
+            doc.text("Route " + src.route + " Map" + (src.label ? "  ·  " + src.label : "") +
+                (images.length > 1 ? "  ·  Sheet " + (i + 1) + " of " + images.length : ""), M, y + 16);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            color("setTextColor", GRAY);
+            doc.text("Earthwise Environmental Solutions", M, y + 30);
+            y += 38;
+            color("setFillColor", GREEN);
+            doc.rect(M, y, CONTENT_W, 2.5, "F");
+            y += 7;
+
+            doc.addImage(image, "JPEG", M + (CONTENT_W - MAP_W) / 2, y, MAP_W, MAP_H);
+            color("setDrawColor", [200, 206, 212]);
+            doc.setLineWidth(0.5);
+            doc.rect(M + (CONTENT_W - MAP_W) / 2, y, MAP_W, MAP_H, "S");
+            y += MAP_H + 9;
+
+            var x = M;
+            doc.setFontSize(10);
+            legend.forEach(function (item) {
+                if (item.swatch) {
+                    var rgb = hexToRgb(item.swatch).map(function (v) { return Math.round(255 - (255 - v) * 0.6); });
+                    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+                    doc.roundedRect(x, y, 28, 10, 2, 2, "F");
+                    x += 34;
+                } else if (item.pin) {
+                    color("setFillColor", hexToRgb(END_COLORS.start));
+                    doc.roundedRect(x, y - 1, 14, 12, 6, 6, "F");
+                    color("setFillColor", hexToRgb(END_COLORS.end));
+                    doc.roundedRect(x + 17, y - 1, 14, 12, 6, 6, "F");
+                    x += 37;
+                } else if (item.arrow) {
+                    color("setFillColor", NAVY);
+                    doc.triangle(x + 2, y + 9, x + 14, y + 5, x + 2, y + 1, "F");
+                    x += 20;
+                }
+                color("setTextColor", INK);
+                doc.setFont("helvetica", "bold");
+                doc.text(item.label, x, y + 8.5);
+                x += doc.getTextWidth(item.label) + 24;
+            });
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            color("setTextColor", GRAY);
+            doc.text("Map © OpenStreetMap contributors  ·  Printed " + printed, M, PAGE_H - M + 4);
+            doc.text("Route " + src.route + "  ·  Page " + (i + 1) + " of " + images.length, PAGE_W - M, PAGE_H - M + 4, { align: "right" });
+        });
+        return doc;
+    }
+
+    // Asks which way to print a route that doesn't fit on one sheet close up
+    var printDialogEl = document.getElementById("mlv-print-dialog");
+    var printDialog = window.TrackerDialog ? TrackerDialog(printDialogEl, {}) : null;
+    var printChoice = null;
+
+    function sheetsText(n, how) {
+        return n + " sheet" + (n === 1 ? "" : "s") + ", " + how;
+    }
+
+    function askSheets(far, near) {
+        return new Promise(function (resolve, reject) {
+            document.getElementById("mlv-print-far").textContent = sheetsText(far.sheets.length, "zoomed out");
+            document.getElementById("mlv-print-near").textContent = sheetsText(near.sheets.length, "closer in");
+            printChoice = { far: far, near: near, resolve: resolve, reject: reject };
+            if (printDialog) printDialog.open();
+            else printDialogEl.showModal();
+        });
+    }
+
+    function choosePrint(which) {
+        var c = printChoice;
+        printChoice = null;
+        if (printDialog) printDialog.close();
+        else printDialogEl.close();
+        if (!c) return;
+        if (which) c.resolve(c[which]);
+        else c.reject({ cancelled: true });
+    }
+
+    document.getElementById("mlv-print-far").addEventListener("click", function () { choosePrint("far"); });
+    document.getElementById("mlv-print-near").addEventListener("click", function () { choosePrint("near"); });
+    // Closed any other way (X, Escape): nothing prints
+    printDialogEl.addEventListener("close", function () { if (printChoice) choosePrint(null); });
+
+    function printRoute(route, button) {
+        if (!window.jspdf) {
+            alert("The PDF library did not load. Reload the page and try again.");
+            return;
+        }
+        if (ed && routeKey(ed.route) === routeKey(route)) flushSave();
+        var label = button.textContent;
+        button.disabled = true;
+        button.textContent = "Preparing…";
+        current(route).then(function (state) {
+            var src = state.draft ? JSON.parse(JSON.stringify(state.draft)) : state.lib ? fromFile(state.lib) : null;
+            if (!src) throw { message: "This route has no map yet." };
+            src.blocks = src.blocks || {};
+            src.strokes = src.strokes || [];
+            src.show = src.show || {};
+            if (src.show.markers && !src.start) autoEnds(src);
+            var near = planSheets(src, 17);
+            if (!near) throw { message: "Nothing is highlighted on this map yet." };
+            var far = planSheets(src, 16);
+            // Fits close up, or zooming out wouldn't save a sheet: no need to ask
+            if (near.sheets.length === 1 || far.sheets.length === near.sheets.length) return [src, near];
+            return askSheets(far, near).then(function (plan) { return [src, plan]; });
+        }).then(function (picked) {
+            var src = picked[0], plan = picked[1];
+            var images = [];
+            return plan.sheets.reduce(function (chain, sheet) {
+                return chain.then(function () {
+                    return renderSheet(src, plan.z, sheet.x, sheet.y).then(function (data) { images.push(data); });
+                });
+            }, Promise.resolve()).then(loadLogo).then(function (logo) {
+                var doc = buildPrint(src, images, logo);
+                var now = new Date();
+                var day = now.getFullYear() + "-" + ("0" + (now.getMonth() + 1)).slice(-2) + "-" + ("0" + now.getDate()).slice(-2);
+                var name = ("Route " + src.route + " Map - " + day + ".pdf").replace(/[\\/:*?"<>|]/g, "");
+                var file = new File([doc.output("blob")], name, { type: "application/pdf" });
+                if (window.PdfStore) window.PdfStore.add(file.name, file).catch(function () {});
+                var viewer = null;
+                try { viewer = window.top.PdfViewer; } catch (e) { /* not inside the app */ }
+                if (viewer) viewer.open(file);
+                else doc.save(file.name);
+            });
+        }).catch(function (err) {
+            if (err && err.cancelled) return;
+            console.error(err);
+            var text = err && err.message && !(err instanceof Error) ? err.message : "Sorry, the map couldn't be printed. Check the signal and try again.";
+            if (dialog.open) say(text);
+            else messageEl.textContent = text;
+        }).then(function () {
+            button.disabled = false;
+            button.textContent = label;
+        });
+    }
+
     /* ---------- Route list ---------- */
 
     var renderToken = 0;
@@ -1247,6 +1906,11 @@
         b.type = "button";
         b.addEventListener("click", function () { open(route); });
         actions.appendChild(b);
+        var print = el("button", "mt-btn", "Print Map");
+        print.type = "button";
+        print.setAttribute("aria-label", "Print the map for route " + route);
+        print.addEventListener("click", function () { printRoute(route, print); });
+        actions.appendChild(print);
         card.appendChild(actions);
         return card;
     }
