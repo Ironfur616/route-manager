@@ -2286,18 +2286,25 @@
         return card;
     }
 
-    // Opened from Route Sheets (map-lens.html?route=M-1-2): a live map wins over a screenshot map
-    function show(route) {
+    // Opened from a route's card on Route Sheets: map-lens.html?route=M-1-2, or, with Map Lens
+    // already open in a tab, the shell's "routeiq-open" event carrying that address
+    function showFromQuery(query) {
+        var m = /[?&]route=([^&]*)/.exec(query || "");
+        if (!m) return;
+        var route = decodeURIComponent(m[1]);
         var name = lib.findLive(route) || Object.keys(loadDrafts()).filter(function (r) { return routeKey(r) === routeKey(route); })[0];
-        if (!name) return false;
+        if (!name) {
+            messageEl.textContent = "Route " + route + " doesn't have a map yet.";
+            return;
+        }
         var card = document.getElementById(cardId(name));
         if (card) card.scrollIntoView({ block: "start" });
         open(name);
-        return true;
     }
 
-    window.MapLive = { show: show };
+    window.addEventListener("routeiq-open", function (e) { showFromQuery(String(e.detail || "").replace(/^[^?]*/, "")); });
     window.addEventListener("storage", function (e) { if (e.key === SHEETS_KEY && !dialog.open) renderList(); });
 
     renderList();
+    showFromQuery(location.search);
 })();

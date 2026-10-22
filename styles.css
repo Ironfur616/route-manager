@@ -4207,8 +4207,8 @@ label.cp-house-row {
     margin: 0.375rem 0.375rem 0 0;
 }
 
-/* ---------- Map Lens (map-lens.js) ---------- */
-/* Route cards: the left border turns green once any sheet is traced */
+/* ---------- Map Lens: the map editor's frame, tool buttons and route cards ---------- */
+/* Route cards: the left border turns green once the route has a map */
 .ml-card {
     border-left-color: var(--line);
 }
@@ -4284,20 +4284,6 @@ label.cp-house-row {
     display: none;
 }
 
-/* Phones: the tools scroll sideways in one row rather than eating the map's height */
-.ml-tools {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    overflow-x: auto;
-    border-bottom: 1px solid rgba(var(--navy-rgb), 0.2);
-    background-color: var(--surface);
-    -webkit-overflow-scrolling: touch;
-}
-
-.ml-tools[hidden],
 .ml-legend-row[hidden] {
     display: none;
 }
@@ -4307,13 +4293,6 @@ label.cp-house-row {
     flex: none;
     align-items: center;
     gap: 0.25rem;
-}
-
-.ml-group-label {
-    margin-right: 0.125rem;
-    color: var(--heading);
-    font-size: 0.8125rem;
-    font-weight: 700;
 }
 
 .ml-tool {
@@ -4370,11 +4349,6 @@ label.cp-house-row {
 .ml-swatch-b[aria-pressed="true"] { background-color: #1E90FF; }
 .ml-swatch-g[aria-pressed="true"] { background-color: #22C55E; }
 
-.ml-opacity {
-    width: 7rem;
-    accent-color: var(--fill-navy);
-}
-
 .ml-legend-row {
     display: flex;
     flex: none;
@@ -4404,163 +4378,8 @@ label.cp-house-row {
     font: inherit;
 }
 
-.ml-align-tools {
-    flex-wrap: wrap;
-}
-
-.ml-align-help {
-    flex: 1 1 100%;
-    margin: 0;
-    color: var(--heading);
-    font-weight: 600;
-}
-
-/* Work area: the map, or (lining up) breadcrumbs above the map */
-.ml-work {
-    position: relative;
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-height: 0;
-}
-
-.ml-editor.is-aligning .ml-work {
-    padding: 0.5rem;
-}
-
-.ml-pane {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.ml-pane[hidden] {
-    display: none;
-}
-
-.ml-pane-label {
-    margin: 0 0 0.25rem;
-    color: var(--heading);
-    font-size: 0.8125rem;
-    font-weight: 700;
-}
-
-.ml-pane-label[hidden] {
-    display: none;
-}
-
-.ml-viewport {
-    position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    background-color: var(--viewer-bg);
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-.ml-stage {
-    position: absolute;
-    top: 0;
-    left: 0;
-    transform-origin: 0 0;
-    background-color: #fff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-}
-
-.ml-stage[hidden] {
-    display: none;
-}
-
-.ml-layer,
-.ml-crumbs-img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    pointer-events: none;
-}
-
-.ml-layer[hidden] {
-    display: none;
-}
-
-/* Highlighter: an opaque layer shown multiplied at partial strength, like ink over paper */
-.ml-ink {
-    opacity: 0.55;
-    mix-blend-mode: multiply;
-}
-
-.ml-lens-ring {
-    position: absolute;
-    top: 0;
-    left: 0;
-    border: 2px solid rgba(220, 20, 60, 0.8);
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-}
-
-.ml-lens-ring[hidden] {
-    display: none;
-}
-
-/* Numbered points matched while lining up */
-.ml-pin {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    background-color: #DC143C;
-    color: #fff;
-    font-size: 0.8125rem;
-    font-weight: 700;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    pointer-events: none;
-}
-
-.ml-pin.is-waiting {
-    background-color: var(--fill-navy);
-}
-
-.ml-loading {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    padding: 2rem 1rem;
-    color: var(--heading);
-    font-weight: 600;
-    text-align: center;
-    pointer-events: none;
-}
-
-.ml-loading[hidden] {
-    display: none;
-}
-
 .ml-publish-body {
     padding: 0 1rem;
-}
-
-/* Tablets and up: tools wrap instead of scrolling, and lining up goes side by side */
-@media (min-width: 48em) {
-    .ml-tools {
-        flex-wrap: wrap;
-        overflow-x: visible;
-    }
-
-    .ml-editor.is-aligning .ml-work {
-        flex-direction: row;
-    }
 }
 
 /* ---------- Live route maps (map-live.js) ---------- */
