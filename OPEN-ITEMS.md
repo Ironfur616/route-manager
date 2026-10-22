@@ -8,6 +8,11 @@ each section. When an item is done, move it to **Done** at the bottom with the d
 - [ ] **Road-test navigation.** Drive a route with Navigate and Voice on, tablet mounted. Note
       missed or wrong turns, prompts too early or late, and whether "Head to … on the right"
       makes sense.
+- [ ] **Navigation order follows one recorded GPS day.** Since 2026-10-22 each GPS point counts
+      for one street only, the order uses the pass where the truck spent the most time, and the
+      blocks between points are inferred along highlighted streets (M-1-2: 86 of 91 blocks in
+      order, jumps 16 → 11). Remaining jumps are where the truck really drove other streets. If
+      the recorded day isn't how the route should be run, add a way to set the order by hand.
 - [ ] **Check arrows and Start/End pins** on a real route. M-1-2: 82 of 91 blocks got a driving
       direction from the GPS; the rest need Arrows mode or stay without arrows.
 - [ ] **Print a handout on real 11x17 paper**, both "1 sheet, zoomed out" and "2 sheets, closer

@@ -450,14 +450,22 @@
     }
 
     /* ---------- Driving order: direction arrows, start and end ---------- */
-    /* The Lytx trail is in time order, so it shows which way each highlighted block was driven.
-       Every trail point within NEAR_M of a block (away from its ends, where cross streets meet)
-       votes by comparing the truck's heading (or, without one, the line to its neighbors) with
-       the block's own direction; a block driven both ways gets a double arrow. The earliest vote
-       is when the block was first driven (t), which orders the route for navigation later.
+    /* The Lytx trail is in time order, so it shows which way each highlighted block was driven
+       and when. Each trail point goes to the one highlighted block it's nearest (within NEAR_M,
+       away from the block's ends, where cross streets meet, and running the same way within 50°),
+       never to two, so a point on one street can't also count for the street or alley beside it.
+       The block's direction comes from those points (driven both ways: a double arrow). Its place
+       in the route (t) is the start of the pass where the truck spent the most time on it, which
+       is when it was collected (slow, with stops), not a quick drive-through on the way somewhere.
+       Between two points in a row on highlighted blocks that don't touch, the truck drove the
+       blocks in between: points 30 seconds apart skip right over short blocks, especially at
+       speed. The shortest way between them along the highlighted blocks (up to PATH_MAX_M) gets
+       those blocks credited, in that direction, at the times in between.
        Arrows mode sets a direction by hand (dm), which wins over the trail's (d). */
 
     var NEAR_M = 20, END_M = 12, AGREE = 0.64; // cos 50°
+    var PATH_MAX_M = 800, PATH_MAX_S = 600, W_PATH = 0.5;
+    var PASS_GAP_S = 120;                       // points further apart in time are separate passes
     var DEFAULT_SHOW = { markers: true, arrows: false };
 
     // Flat meters around a latitude: plenty accurate across one route
@@ -484,16 +492,15 @@
         return cum;
     }
 
-    // Sets d (1 along the block's points, -1 against, 2 both) and t on every highlighted block.
-    // Blocks are replaced, not changed, so undo snapshots keep their own copies.
     // At 30 seconds apart, the trail's points miss short blocks. Between two slow points close
     // enough that the truck likely stayed on one street, points every DENSE_M along the line
-    // between them carry that line's direction (time spread evenly between the two).
-    var DENSE_M = 10, DENSE_MAX_M = 120;
+    // between them carry that line's direction (time spread evenly between the two). They count
+    // for less than real GPS points (W_FILLED).
+    var DENSE_M = 10, DENSE_MAX_M = 120, W_FILLED = 0.25;
     function densify(trail, P, V) {
-        var outP = [], outV = [], outT = [];
+        var outP = [], outV = [], outT = [], outW = [];
         for (var i = 0; i < trail.length; i++) {
-            outP.push(P[i]); outV.push(V[i]); outT.push(trail[i][3]);
+            outP.push(P[i]); outV.push(V[i]); outT.push(trail[i][3]); outW.push(1);
             if (i === trail.length - 1 || trail[i][2] > SLOW_MPH || trail[i + 1][2] > SLOW_MPH) continue;
             var a = P[i], b = P[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
             if (len < 2 * DENSE_M || len > DENSE_MAX_M) continue;
@@ -502,54 +509,143 @@
                 outP.push([a[0] + dx * k / n, a[1] + dy * k / n]);
                 outV.push(v);
                 outT.push(trail[i][3] + (trail[i + 1][3] - trail[i][3]) * k / n);
+                outW.push(W_FILLED);
             }
         }
-        return { P: outP, V: outV, T: outT };
+        return { P: outP, V: outV, T: outT, W: outW };
     }
 
+    // Blocks meet where their end points match (they're cut from the same OSM nodes)
+    function nodeKey(pt) {
+        return pt[0].toFixed(5) + "," + pt[1].toFixed(5);
+    }
+
+    // The highlighted blocks (edges { to, sh, sign }) from one block end to another, shortest
+    // first, no longer than maxM; [] when they're the same point, null when there's no such way
+    function shortestPath(adj, from, to, maxM) {
+        if (from === to) return [];
+        var dist = {}, prev = {}, open = [from], done = {};
+        dist[from] = 0;
+        while (open.length) {
+            var bi = 0;
+            for (var i = 1; i < open.length; i++) if (dist[open[i]] < dist[open[bi]]) bi = i;
+            var u = open.splice(bi, 1)[0];
+            if (u === to) break;
+            done[u] = true;
+            (adj[u] || []).forEach(function (e) {
+                var nd = dist[u] + e.sh.len;
+                if (nd > maxM || done[e.to]) return;
+                if (dist[e.to] == null) open.push(e.to);
+                if (dist[e.to] == null || nd < dist[e.to]) {
+                    dist[e.to] = nd;
+                    prev[e.to] = { from: u, e: e };
+                }
+            });
+        }
+        if (dist[to] == null) return null;
+        var path = [];
+        for (var n = to; n !== from; n = prev[n].from) path.unshift(prev[n].e);
+        return path;
+    }
+
+    // Sets d (1 along the block's points, -1 against, 2 both) and t on every highlighted block.
+    // Blocks are replaced, not changed, so undo snapshots keep their own copies.
     function computeDirections(draft) {
         var trail = draft.trail || [];
         var ids = Object.keys(draft.blocks);
         if (trail.length < 3 || !ids.length) return;
         var xy = localXY(trail[0][0]);
-        var dense = densify(trail, trail.map(xy), travelVectors(trail, trail.map(xy)));
-        var P = dense.P, V = dense.V, T = dense.T;
-        ids.forEach(function (id) {
-            var b = draft.blocks[id], G = b.g.map(xy), cum = lengths(G), len = cum[cum.length - 1];
-            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        var P0 = trail.map(xy);
+        var dense = densify(trail, P0, travelVectors(trail, P0));
+        var P = dense.P, V = dense.V, T = dense.T, W = dense.W;
+        var seq = []; // the points that went to a block, in time order
+
+        // Each block in meters, with its box widened by NEAR_M for a quick first check
+        var shapes = ids.map(function (id) {
+            var G = draft.blocks[id].g.map(xy), cum = lengths(G);
+            var box = [Infinity, Infinity, -Infinity, -Infinity];
             G.forEach(function (q) {
-                minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]);
-                minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]);
+                box[0] = Math.min(box[0], q[0] - NEAR_M); box[1] = Math.min(box[1], q[1] - NEAR_M);
+                box[2] = Math.max(box[2], q[0] + NEAR_M); box[3] = Math.max(box[3], q[1] + NEAR_M);
             });
-            var plus = 0, minus = 0, first = null;
-            for (var k = 0; k < P.length; k++) {
-                var p = P[k], v = V[k];
-                if (!v || p[0] < minX - NEAR_M || p[0] > maxX + NEAR_M || p[1] < minY - NEAR_M || p[1] > maxY + NEAR_M) continue;
-                var best = Infinity, along = 0, seg = 0;
+            var g = draft.blocks[id].g;
+            return { id: id, G: G, cum: cum, len: cum[cum.length - 1], box: box, votes: [],
+                a: nodeKey(g[0]), b: nodeKey(g[g.length - 1]) };
+        });
+
+        // Every point to the single nearest block it fits
+        for (var k = 0; k < P.length; k++) {
+            var p = P[k], v = V[k];
+            if (!v) continue;
+            var pick = null;
+            for (var n = 0; n < shapes.length; n++) {
+                var sh = shapes[n], box = sh.box;
+                if (p[0] < box[0] || p[0] > box[2] || p[1] < box[1] || p[1] > box[3]) continue;
+                var G = sh.G, best = Infinity, along = 0, seg = 0;
                 for (var j = 1; j < G.length; j++) {
                     var ax = G[j - 1][0], ay = G[j - 1][1], dx = G[j][0] - ax, dy = G[j][1] - ay, l2 = dx * dx + dy * dy;
                     var t = l2 ? Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2)) : 0;
                     var d = Math.hypot(ax + t * dx - p[0], ay + t * dy - p[1]);
-                    if (d < best) { best = d; along = cum[j - 1] + t * Math.sqrt(l2); seg = j; }
+                    if (d < best) { best = d; along = sh.cum[j - 1] + t * Math.sqrt(l2); seg = j; }
                 }
                 if (best > NEAR_M || !seg) continue;
-                if (len > 3 * END_M && (along < END_M || along > len - END_M)) continue;
+                if (sh.len > 3 * END_M && (along < END_M || along > sh.len - END_M)) continue;
                 var sx = G[seg][0] - G[seg - 1][0], sy = G[seg][1] - G[seg - 1][1], sl = Math.hypot(sx, sy);
                 if (!sl) continue;
                 var dot = (v[0] * sx + v[1] * sy) / sl;
-                if (dot > AGREE) plus++;
-                else if (dot < -AGREE) minus++;
-                else continue;
-                if (first === null) first = Math.round(T[k]);
+                if (Math.abs(dot) <= AGREE) continue;
+                if (!pick || best < pick.d) pick = { sh: sh, d: best, sign: dot > 0 ? 1 : -1 };
             }
+            if (pick) {
+                pick.sh.votes.push({ t: T[k], sign: pick.sign, w: W[k] });
+                seq.push({ sh: pick.sh, sign: pick.sign, t: T[k] });
+            }
+        }
+
+        // The blocks between consecutive points that land on blocks which don't touch
+        var adj = {};
+        shapes.forEach(function (sh) {
+            (adj[sh.a] = adj[sh.a] || []).push({ to: sh.b, sh: sh, sign: 1 });
+            (adj[sh.b] = adj[sh.b] || []).push({ to: sh.a, sh: sh, sign: -1 });
+        });
+        for (var q = 1; q < seq.length; q++) {
+            var x = seq[q - 1], y = seq[q];
+            if (x.sh === y.sh || y.t - x.t > PATH_MAX_S) continue;
+            var path = shortestPath(adj, x.sign > 0 ? x.sh.b : x.sh.a, y.sign > 0 ? y.sh.a : y.sh.b, PATH_MAX_M);
+            if (!path) continue;
+            path.forEach(function (e, i) {
+                e.sh.votes.push({ t: x.t + (y.t - x.t) * (i + 1) / (path.length + 1), sign: e.sign, w: W_PATH });
+            });
+        }
+        shapes.forEach(function (sh) { sh.votes.sort(function (u, w) { return u.t - w.t; }); });
+
+        shapes.forEach(function (sh) {
+            var plus = 0, minus = 0;
+            sh.votes.forEach(function (vote) {
+                if (vote.sign > 0) plus += vote.w; else minus += vote.w;
+            });
+            // A lone filled-in point isn't enough to call a direction
             var dir = 0;
-            if (plus && minus) dir = plus >= 3 * minus ? 1 : minus >= 3 * plus ? -1 : 2;
-            else if (plus) dir = 1;
-            else if (minus) dir = -1;
-            var nb = Object.assign({}, b);
+            if (plus + minus >= 0.5) {
+                if (plus && minus) dir = plus >= 3 * minus ? 1 : minus >= 3 * plus ? -1 : 2;
+                else dir = plus ? 1 : -1;
+            }
+            // Passes: runs of points no more than PASS_GAP_S apart; the heaviest is the collection
+            var passes = [], pass = null;
+            sh.votes.forEach(function (vote) {
+                if (!pass || vote.t - pass.last > PASS_GAP_S) {
+                    pass = { start: vote.t, last: vote.t, w: 0 };
+                    passes.push(pass);
+                }
+                pass.last = vote.t;
+                pass.w += vote.w;
+            });
+            var main = null;
+            passes.forEach(function (ps) { if (!main || ps.w > main.w) main = ps; });
+            var b = draft.blocks[sh.id], nb = Object.assign({}, b);
             if (dir) nb.d = dir; else delete nb.d;
-            if (first !== null) nb.t = first; else delete nb.t;
-            draft.blocks[id] = nb;
+            if (dir && main) nb.t = Math.round(main.start); else delete nb.t;
+            draft.blocks[sh.id] = nb;
         });
     }
 
