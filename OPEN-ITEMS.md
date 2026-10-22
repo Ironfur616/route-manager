@@ -15,16 +15,10 @@ each section. When an item is done, move it to **Done** at the bottom with the d
 - [ ] **Rebuild the routes whose screenshot maps were retired** (needs a Lytx Location History
       export for each): M-2-1, M-2-2, M-2-3, M-2-4, M-5-1 (Canton Recycle), MR-56 (Canton
       Recycle Side 2).
-- [ ] **No way to delete a map** (draft or published on the tablet). Also needed to clear the
-      old copy after renaming a map that's in the app's library.
-- [ ] **Street downloads depend on a free public server** (Overpass, overpass-api.de): about
-      30 s per route, sometimes much slower or failing. Watch how often it fails; options are
-      a paid/self-hosted server or shipping street data with the app.
-- [ ] **Sharing a Lytx .xlsx to Route IQ from the share sheet** goes to Route Sheets' import, not
-      Map Lens. Use Map Lens' Import button for now; could route by the file's columns.
-- [ ] **Route list will need search/sort** (by route, driver, service day) once there are many maps.
-- [ ] **Old screenshot-map drafts** may still sit in the tablet's storage (fleetMgrMapLens). Harmless;
-      clear them sometime.
+- [ ] **Street downloads depend on one free public server** (Overpass, overpass-api.de): 30-45 s
+      per route on a normal day, sometimes failing (it now retries once and shows a timer; the
+      mirrors tried were down). The real fix is a different street source, e.g. free vector map
+      tiles from a fast CDN, which needs its own street-cutting since tiles have no OSM way IDs.
 - [ ] **Printing pulls many map tiles from OpenStreetMap.** Fine at today's volume; if printing
       gets heavy, switch to a tile provider meant for it (OSM's usage policy).
 
@@ -56,6 +50,9 @@ each section. When an item is done, move it to **Done** at the bottom with the d
 
 ## Done
 
+- 2026-10-22: Map Lens: delete a map (card trash icon or ⋯ → Delete Map); route list search and
+  sort; GPS exports shared to Route IQ go to Map Lens; old screenshot drafts cleared; street
+  download retries once with a timer.
 - 2026-10-22: GPS trail visible on every part of the map; street taps pick the right street;
   Rename / Label for maps; Publish on the tablet without Drive.
 - 2026-10-22: New PIN, kept only as a fingerprint (hash) in the code; earlier PINs no longer work.

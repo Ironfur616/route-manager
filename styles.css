@@ -4780,3 +4780,9 @@ label.cp-house-row {
         flex: 1 1 12rem;
     }
 }
+
+/* Delete Map in the map editor's menu */
+.mlv-more .mlv-more-danger {
+    border-color: var(--danger);
+    color: var(--danger);
+}

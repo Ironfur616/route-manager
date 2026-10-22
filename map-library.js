@@ -59,7 +59,27 @@
         return published[name];
     }
 
+    // Whether a spreadsheet is a GPS (Lytx location history) export rather than a route sheet:
+    // its first row has latitude and longitude columns. Reads .xlsx with the page's XLSX reader.
+    function isGpsFile(file) {
+        function hasLatLng(row) {
+            var head = (row || []).map(function (h) { return String(h).trim().toLowerCase(); });
+            return (head.indexOf("latitude") !== -1 || head.indexOf("lat") !== -1) &&
+                (head.indexOf("longitude") !== -1 || head.indexOf("lng") !== -1 || head.indexOf("lon") !== -1);
+        }
+        if (/\.csv$/i.test(file.name)) {
+            return file.slice(0, 4096).text().then(function (t) { return hasLatLng(t.split(/\r?\n/)[0].split(",")); });
+        }
+        if (!/\.xlsx?$/i.test(file.name) || !window.XLSX) return Promise.resolve(false);
+        return file.arrayBuffer().then(function (buf) {
+            var wb = XLSX.read(new Uint8Array(buf), { type: "array", sheetRows: 1 });
+            var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" });
+            return hasLatLng(rows[0]);
+        }).catch(function () { return false; });
+    }
+
     window.MapLibrary = {
+        isGpsFile: isGpsFile,
         live: LIVE,
         findLive: findLive,
         // The route's name as the library (or this tablet) has it, or null when it has no published map

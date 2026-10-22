@@ -1026,6 +1026,14 @@
         fileInput.value = "";
     });
 
+    function openMapLensImport() {
+        var href = "map-lens.html?import-shared=1";
+        var tabs = null;
+        try { tabs = window.top.RouteIQTabs; } catch (e) { /* not inside the app */ }
+        if (tabs) tabs.open(href);
+        else location.href = href;
+    }
+
     // Files shared to Route IQ from another app wait in the service worker's inbox
     function checkSharedFiles() {
         if (!window.caches) return;
@@ -1044,8 +1052,19 @@
                 })).then(function (items) {
                     items = items.filter(Boolean);
                     if (!items.length) return;
-                    return Promise.all(items.map(function (i) { return cache.delete(i.req); })).then(function () {
-                        handleFiles(items.map(function (i) { return i.file; }));
+                    // A GPS export (latitude / longitude columns) is Map Lens' to import: it's left
+                    // in the inbox and Map Lens is opened to pick it up
+                    return loadXlsx().then(function () {
+                        return Promise.all(items.map(function (i) {
+                            return window.MapLibrary ? MapLibrary.isGpsFile(i.file) : false;
+                        }));
+                    }, function () { return items.map(function () { return false; }); }).then(function (gps) {
+                        var sheets = items.filter(function (i, n) { return !gps[n]; });
+                        if (gps.some(Boolean)) openMapLensImport();
+                        if (!sheets.length) return;
+                        return Promise.all(sheets.map(function (i) { return cache.delete(i.req); })).then(function () {
+                            handleFiles(sheets.map(function (i) { return i.file; }));
+                        });
                     });
                 });
             });

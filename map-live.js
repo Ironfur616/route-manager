@@ -35,9 +35,11 @@
     var DRAFTS_KEY = "fleetMgrRouteMaps";
     var SHEETS_KEY = "fleetMgrRouteStreets";
     var STREETS_CACHE = "routeiq-streets";
+    // The main public Overpass server, tried twice: its wait is mostly its own queue (a small query
+    // can take as long as a whole route), and the mirrors tried in 2026 failed or timed out
     var OVERPASS = [
         { url: "https://overpass-api.de/api/interpreter", wait: 100000 },
-        { url: "https://overpass.private.coffee/api/interpreter", wait: 60000 }
+        { url: "https://overpass-api.de/api/interpreter", wait: 100000, pause: 4000 }
     ];
     var HIGHWAYS = "primary|secondary|tertiary|unclassified|residential|living_street|service|road";
     var CELL = 0.004;       // degrees: the squares of map the street download covers (~400 m)
@@ -362,7 +364,9 @@
                 return r.json();
             }).catch(function (err) {
                 clearTimeout(timer);
-                if (++i < OVERPASS.length) return attempt();
+                if (++i < OVERPASS.length) {
+                    return new Promise(function (resolve) { setTimeout(resolve, OVERPASS[i].pause || 0); }).then(attempt);
+                }
                 throw err;
             });
         }
@@ -937,6 +941,19 @@
         say(text);
     }
 
+    // "Downloading streets… 25 s": counts up each second until stop() is called, so a slow day
+    // doesn't look frozen
+    function downloadClock(what) {
+        var started = Date.now(), token = openToken;
+        function show() {
+            if (token !== openToken || !ed) return;
+            streetsNote(what + "\u2026 " + Math.round((Date.now() - started) / 1000) + " s (the street server can take a minute)");
+        }
+        show();
+        var timer = setInterval(show, 1000);
+        return { stop: function () { clearInterval(timer); } };
+    }
+
     function streetsNote(text) {
         ed.streetsState = text;
         refreshStatus();
@@ -954,11 +971,15 @@
                 ed.draft.strokes.forEach(function (s) { pts = pts.concat(s.g); });
             }
             if (!pts.length) return [];
-            streetsNote("Downloading streets, this can take up to a minute…");
+            var clock = downloadClock("Downloading streets");
             return overpass(cellsQuery(pts)).then(function (json) {
+                clock.stop();
                 var w = compactWays(json);
                 cacheWays(route, w);
                 return w;
+            }, function (err) {
+                clock.stop();
+                throw err;
             });
         }).then(function (ways) {
             if (token !== openToken || !ed) return;
@@ -983,8 +1004,9 @@
             return;
         }
         var route = ed.route, token = openToken;
-        streetsNote("Downloading the streets in view…");
+        var clock = downloadClock("Downloading the streets in view");
         overpass(boundsQuery(map.getBounds())).then(function (json) {
+            clock.stop();
             if (token !== openToken || !ed) return;
             ed.ways = ed.ways || {};
             compactWays(json).forEach(function (w) { ed.ways[w.id] = w; });
@@ -995,6 +1017,7 @@
             cacheWays(route, ways);
             streetsNote("");
         }).catch(function (err) {
+            clock.stop();
             console.error(err);
             if (token === openToken && ed) streetsNote("Streets couldn't be downloaded. Check the signal and try again.");
         });
@@ -1339,6 +1362,7 @@
             else if (what === "print") printRoute(ed.route, b);
             else if (what === "navigate") startNav();
             else if (what === "rename") openRename();
+            else if (what === "delete") deleteMap(ed.route);
             else if (what === "markers" || what === "arrows") {
                 ed.undo.push(snapshot());
                 ed.redo = [];
@@ -1413,8 +1437,11 @@
     fileInput.addEventListener("change", function () {
         var file = fileInput.files[0];
         fileInput.value = "";
-        if (!file) return;
-        messageEl.textContent = "Reading " + file.name + "…";
+        if (file) importFile(file);
+    });
+
+    function importFile(file) {
+        messageEl.textContent = "Reading " + file.name + "\u2026";
         var t, names;
         readRows(file).then(function (rows) {
             t = lytxTrail(rows);
@@ -1443,7 +1470,38 @@
             messageEl.textContent = err && err.message ? err.message : "That file couldn't be read.";
             if (dialog.open) say(messageEl.textContent);
         });
-    });
+    }
+
+    // A GPS export shared to Route IQ from another app: the service worker keeps shared files in
+    // its inbox, Route Sheets takes the route spreadsheets and opens Map Lens for a GPS export
+    // (latitude / longitude columns). The first one waiting is imported.
+    var SHARE_INBOX = "routeiq-share-inbox";
+    function checkSharedGps() {
+        if (!window.caches) return;
+        caches.open(SHARE_INBOX).then(function (cache) {
+            return cache.keys().then(function (requests) {
+                return requests.reduce(function (chain, req) {
+                    return chain.then(function (found) {
+                        if (found) return found;
+                        return cache.match(req).then(function (res) {
+                            var name = decodeURIComponent((res && res.headers.get("X-File-Name")) || "");
+                            if (!/\.(xlsx|xls|csv)$/i.test(name)) return null;
+                            return res.blob().then(function (blob) {
+                                var file = new File([blob], name, { type: blob.type });
+                                return lib.isGpsFile(file).then(function (gps) { return gps ? { req: req, file: file } : null; });
+                            });
+                        });
+                    });
+                }, Promise.resolve(null)).then(function (found) {
+                    if (!found) return;
+                    return cache.delete(found.req).then(function () {
+                        importFor = null;
+                        importFile(found.file);
+                    });
+                });
+            });
+        }).catch(function () { /* nothing was shared */ });
+    }
 
     function updateImportNote() {
         var route = importRoute.value.trim();
@@ -1494,6 +1552,35 @@
             open(base.route, { edit: true });
         });
     });
+
+    /* ---------- Delete ---------- */
+    /* Removes a route's map from this tablet: its draft, the copy published here, and its
+       downloaded streets. A map built into the app (the library) can't be deleted from here. */
+
+    function deleteMap(route) {
+        if (!window.TrackerDialog) return;
+        var inLibrary = lib.findLive(route);
+        TrackerDialog.confirmDelete({
+            title: "Delete Route " + route + "'s map?",
+            message: "This deletes the map on this tablet: its highlighted streets, any draft and the copy published here." +
+                (inLibrary ? " The copy built into the app stays; it can only be taken out of the app itself." : " This cannot be undone, except from a backup made before now."),
+            confirmLabel: "Delete map"
+        }, function () {
+            saveDraft(route, null);
+            saveLocalPublished(route, null);
+            if (window.caches) caches.open(STREETS_CACHE).then(function (c) { return c.delete(streetsKey(route)); }).catch(function () {});
+            // Close the map without saving it back
+            if (ed && routeKey(ed.route) === routeKey(route)) {
+                clearTimeout(saveTimer);
+                saveTimer = null;
+                if (map) clearLayers();
+                ed = null;
+                if (dialog.open) dialog.close();
+            }
+            messageEl.textContent = "Deleted Route " + route + "'s map." + (inLibrary ? " The app's built-in copy is still listed." : "");
+            renderList();
+        });
+    }
 
     /* ---------- Rename / Label ---------- */
     /* The route name (as on Route Sheets) and the label printed in the header can change after the
@@ -2462,26 +2549,73 @@
         });
     }
 
+    var searchEl = document.getElementById("mlv-search");
+    var sortEl = document.getElementById("mlv-sort");
+    var SORT_KEY = "fleetMgrMapLensSort";
+    var DAY_ORDER = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
+
+    // What the list searches and sorts by: Route Sheets' driver, day and area, and this tablet's
+    // label and last change (a library map's label shows on its card once its file loads)
+    function mapInfo(route) {
+        var info = routeSheet(route) || {};
+        var draft = draftFor(route), localName = localPublishedName(route);
+        var local = localName ? loadLocalPublished()[localName] : null;
+        return {
+            route: route,
+            label: (draft && draft.label) || (local && local.label) || "",
+            driver: info.driver || "", day: info.day || "", area: info.area || "",
+            changed: Math.max(draft ? draft.updated || 0 : 0, local ? local.updated || 0 : 0),
+            onTablet: !!(draft || local)
+        };
+    }
+
     function renderList() {
         var token = ++renderToken;
-        var routes = allRoutes();
+        var all = allRoutes().map(mapInfo);
+        var term = searchEl.value.trim().toLowerCase();
+        var shown = all.filter(function (m) {
+            return !term || [m.route, "route " + m.route, m.label, m.driver, m.day, m.area].join("\n").toLowerCase().indexOf(term) !== -1;
+        });
+        var by = sortEl.value;
+        shown.sort(function (a, b) {
+            var byRoute = a.route.localeCompare(b.route, undefined, { numeric: true, sensitivity: "base" });
+            if (by === "day") return ((DAY_ORDER[a.day.toLowerCase()] || 9) - (DAY_ORDER[b.day.toLowerCase()] || 9)) || byRoute;
+            if (by === "driver") return (a.driver || "\uffff").localeCompare(b.driver || "\uffff") || byRoute;
+            if (by === "changed") return (b.changed - a.changed) || byRoute;
+            return byRoute;
+        });
         listEl.textContent = "";
-        routes.forEach(function (route) { listEl.appendChild(buildCard(route, token)); });
-        countEl.textContent = routes.length ? routes.length + " route map" + (routes.length === 1 ? "" : "s") + "."
-            : "No route maps yet. Export a route day's Location History from Lytx, then tap Import Lytx GPS Export.";
+        shown.forEach(function (m) { listEl.appendChild(buildCard(m, token)); });
+        countEl.textContent = !all.length ? "No route maps yet. Export a route day's Location History from Lytx, then tap Import Lytx GPS Export."
+            : !shown.length ? "No map matches \u201C" + searchEl.value.trim() + "\u201D."
+            : term ? shown.length + " of " + all.length + " route maps match."
+            : all.length + " route map" + (all.length === 1 ? "" : "s") + ".";
     }
+
+    searchEl.addEventListener("input", renderList);
+    try { if (localStorage.getItem(SORT_KEY)) sortEl.value = localStorage.getItem(SORT_KEY); } catch (e) { /* default order */ }
+    if (!sortEl.value) sortEl.value = "route";
+    sortEl.addEventListener("change", function () {
+        try { localStorage.setItem(SORT_KEY, sortEl.value); } catch (e) { /* just this visit */ }
+        renderList();
+    });
 
     function cardId(route) {
         return "mlv-route-" + route.replace(/[^A-Za-z0-9-]/g, "_");
     }
 
-    function buildCard(route, token) {
+    function buildCard(m, token) {
+        var route = m.route;
         var info = routeSheet(route);
         var card = el("article", "mt-entry ml-card");
         card.id = cardId(route);
-        var head = el("div", "mt-entry-head");
-        var h = el("h3", "mt-entry-address", "Route " + route);
+        var head = el("div", "mt-entry-head entry-head");
+        var h = el("h3", "mt-entry-address", title(route, m.label));
         head.appendChild(h);
+        // Delete, for a map kept on this tablet (a draft or published here)
+        if (m.onTablet && window.TrackerDialog) {
+            head.appendChild(TrackerDialog.entryTools("route " + route + " map", null, function () { deleteMap(route); }));
+        }
         card.appendChild(head);
         card.appendChild(el("p", "mt-entry-meta", info
             ? [info.driver, info.day, info.area].filter(Boolean).join(" · ") || "On Route Sheets"
@@ -2529,9 +2663,17 @@
         open(name);
     }
 
-    window.addEventListener("routeiq-open", function (e) { showFromQuery(String(e.detail || "").replace(/^[^?]*/, "")); });
+    window.addEventListener("routeiq-open", function (e) {
+        var query = String(e.detail || "").replace(/^[^?]*/, "");
+        if (/[?&]import-shared=1/.test(query)) checkSharedGps();
+        showFromQuery(query);
+    });
+
+    // Traces from the retired screenshot maps (map-lens.js, removed 2026-10-22): nothing opens them
+    try { localStorage.removeItem("fleetMgrMapLens"); } catch (e) { /* storage blocked */ }
     window.addEventListener("storage", function (e) { if (e.key === SHEETS_KEY && !dialog.open) renderList(); });
 
     renderList();
     showFromQuery(location.search);
+    if (/[?&]import-shared=1/.test(location.search)) checkSharedGps();
 })();

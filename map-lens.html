@@ -40,6 +40,21 @@
         <div class="emp-info">
             <fieldset>
                 <legend>ROUTE MAPS</legend>
+                <div class="mt-filters nc-filters">
+                    <div class="field">
+                        <label for="mlv-search">Find a route</label>
+                        <input type="search" id="mlv-search" placeholder="Route, label, driver, day or area" autocomplete="off">
+                    </div>
+                    <div class="field">
+                        <label for="mlv-sort">Sort by</label>
+                        <select id="mlv-sort">
+                            <option value="route">Route</option>
+                            <option value="day">Service day</option>
+                            <option value="driver">Driver</option>
+                            <option value="changed">Last changed on this tablet</option>
+                        </select>
+                    </div>
+                </div>
                 <p class="mt-count" id="mlv-count" aria-live="polite"></p>
                 <div class="mt-list" id="mlv-list"></div>
             </fieldset>
@@ -72,6 +87,7 @@
                 <button type="button" class="ml-tool" data-more="ends">Reset Start/End</button>
                 <button type="button" class="ml-tool" data-more="arrows">Direction Arrows: Off</button>
                 <button type="button" class="ml-tool" data-more="rename">Rename / Label</button>
+                <button type="button" class="ml-tool mlv-more-danger" data-more="delete">Delete Map</button>
                 <button type="button" class="ml-tool" data-more="streets">Load Streets Here</button>
                 <button type="button" class="ml-tool" data-more="reimport">Replace GPS Trail</button>
                 <button type="button" class="ml-tool" data-more="print">Print Map</button>
