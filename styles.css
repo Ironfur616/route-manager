@@ -78,14 +78,7 @@
     background-color: #FFFFFF;
 }
 
-/* The navy logo artwork would vanish on dark: the PIN card shows it on a white plate, and the
-   start-screen watermark is drawn in white instead */
-:root[data-theme="dark"] .pin-lock-logo {
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    background-color: #FFFFFF;
-}
-
+/* The navy logo artwork would vanish on dark: the start-screen watermark is drawn in white */
 :root[data-theme="dark"] .tab-empty::before {
     filter: brightness(0) invert(1);
     opacity: 0.06;
@@ -897,6 +890,7 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     display: none;
 }
 
+/* A phone-style keypad on the app's navy, the same in light and dark mode */
 #pin-lock-overlay {
     position: fixed;
     inset: 0;
@@ -904,91 +898,104 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
-    background-color: var(--fill-navy);
+    padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    background-color: var(--deep-navy);
+    color: #FFFFFF;
 }
 
 .pin-lock-card {
     width: 100%;
     max-width: 20rem;
-    padding: 2rem 1.5rem;
-    border-bottom: 4px solid var(--forest-green);
-    border-radius: 4px;
-    background-color: var(--surface);
+    margin: auto;
     text-align: center;
 }
 
+/* The navy logo artwork, drawn in white */
 .pin-lock-logo {
-    width: 6.5rem;
+    display: block;
+    width: 6rem;
     height: auto;
-    margin: 0 auto 1rem;
+    margin: 0 auto 1.25rem;
+    filter: brightness(0) invert(1);
 }
 
 .pin-lock-card h2 {
-    margin: 0 0 0.5rem;
-    color: var(--heading);
+    margin: 0 0 1.25rem;
+    color: #FFFFFF;
     font-size: 1.25rem;
     font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
-.pin-lock-hint {
-    margin: 0 0 1.25rem;
-    color: var(--ink);
-    font-size: 0.9rem;
+.pin-lock-dots {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
 }
 
-#pin-lock-input {
-    display: block;
-    width: 100%;
-    min-height: 44px;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background-color: var(--surface);
-    color: var(--ink);
-    font: inherit;
-    font-size: 1.5rem;
-    letter-spacing: 0.5rem;
-    text-align: center;
+.pin-lock-dot {
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    transition: background-color 0.1s ease, transform 0.1s ease;
 }
 
-#pin-lock-input:focus {
-    border-color: var(--sky-blue);
-    outline: 3px solid var(--sky-blue);
-    outline-offset: 0;
+.pin-lock-dot.is-filled {
+    background-color: #FFFFFF;
+    transform: scale(1.1);
 }
 
 .pin-lock-error {
     min-height: 1.25rem;
-    margin: 0.5rem 0 0;
-    color: var(--danger);
+    margin: 0 0 1rem;
+    color: #FCA5A5;
     font-size: 0.875rem;
     font-weight: 600;
 }
 
-.pin-lock-submit {
-    display: block;
-    width: 100%;
-    min-height: 44px;
-    margin-top: 1rem;
-    border: none;
-    border-radius: 4px;
-    background-color: var(--forest-green);
-    color: var(--on-accent);
+.pin-lock-keys {
+    display: grid;
+    grid-template-columns: repeat(3, 4.5rem);
+    justify-content: center;
+    gap: 1rem 1.5rem;
+}
+
+.pin-lock-key {
+    width: 4.5rem;
+    height: 4.5rem;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #FFFFFF;
     font: inherit;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 
-.pin-lock-submit:hover {
-    background-color: var(--fill-navy);
+.pin-lock-key:active {
+    border-color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
-.pin-lock-submit:focus-visible {
+.pin-lock-key:focus-visible {
     outline: 3px solid var(--sky-blue);
-    outline-offset: 2px;
+    outline-offset: 3px;
+}
+
+/* Backspace: just the symbol, no ring */
+.pin-lock-key-back {
+    border-color: transparent;
+    background-color: transparent;
+    font-size: 1.5rem;
 }
 
 .pin-lock-shake {
@@ -1001,9 +1008,35 @@ html.pin-locked body > *:not(#pin-lock-overlay) {
     75% { transform: translateX(0.5rem); }
 }
 
+@media (hover: hover) {
+    .pin-lock-key:hover {
+        background-color: rgba(255, 255, 255, 0.16);
+    }
+}
+
 @media (min-width: 48em) {
-    .pin-lock-card {
-        padding: 2.5rem 2rem;
+    .pin-lock-logo {
+        width: 7rem;
+    }
+
+    .pin-lock-card h2 {
+        font-size: 1.5rem;
+    }
+
+    .pin-lock-dot {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    .pin-lock-keys {
+        grid-template-columns: repeat(3, 5.25rem);
+        gap: 1.25rem 1.75rem;
+    }
+
+    .pin-lock-key {
+        width: 5.25rem;
+        height: 5.25rem;
+        font-size: 2rem;
     }
 }
 

@@ -73,6 +73,8 @@
         return;
     }
 
+    // A phone-style keypad: dots that fill as digits go in, round buttons 0-9 and backspace.
+    // It unlocks on its own once every digit is in; a physical keyboard works too.
     function buildOverlay() {
         var overlay = document.createElement("div");
         overlay.id = "pin-lock-overlay";
@@ -80,23 +82,37 @@
         overlay.setAttribute("aria-modal", "true");
         overlay.setAttribute("aria-labelledby", "pin-lock-title");
 
+        var dots = "";
+        for (var d = 0; d < PIN_LENGTH; d++) dots += '<span class="pin-lock-dot"></span>';
+        var keys = "";
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"].forEach(function (k) {
+            if (!k) keys += '<span class="pin-lock-key-gap" aria-hidden="true"></span>';
+            else if (k === "back") keys += '<button type="button" class="pin-lock-key pin-lock-key-back" data-key="back" aria-label="Delete">&#x232B;</button>';
+            else keys += '<button type="button" class="pin-lock-key" data-key="' + k + '">' + k + "</button>";
+        });
+
         overlay.innerHTML =
-            '<form class="pin-lock-card" id="pin-lock-form" autocomplete="off">' +
-                '<img class="pin-lock-logo" src="assets/ew-logo.svg" alt="" width="130" height="82">' +
+            '<div class="pin-lock-card">' +
+                '<img class="pin-lock-logo" src="assets/ew-logo.svg" alt="Earthwise" width="130" height="82">' +
                 '<h2 id="pin-lock-title">Enter PIN</h2>' +
-                '<p class="pin-lock-hint">Enter the ' + PIN_LENGTH + '-digit code.</p>' +
-                '<input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
-                    'maxlength="' + PIN_LENGTH + '" id="pin-lock-input" name="pin" aria-label="' + PIN_LENGTH + '-digit PIN" ' +
-                    'aria-describedby="pin-lock-error">' +
-                '<p class="pin-lock-error" id="pin-lock-error" aria-live="polite"></p>' +
-                '<button type="submit" class="pin-lock-submit">Unlock</button>' +
-            "</form>";
+                '<div class="pin-lock-dots" id="pin-lock-dots" role="status" aria-live="polite" aria-label="0 of ' + PIN_LENGTH + ' digits entered">' + dots + "</div>" +
+                '<p class="pin-lock-error" id="pin-lock-error" aria-live="assertive"></p>' +
+                '<div class="pin-lock-keys">' + keys + "</div>" +
+            "</div>";
 
         document.body.appendChild(overlay);
 
-        var form = document.getElementById("pin-lock-form");
-        var input = document.getElementById("pin-lock-input");
+        var dotsEl = document.getElementById("pin-lock-dots");
+        var dotEls = dotsEl.querySelectorAll(".pin-lock-dot");
         var error = document.getElementById("pin-lock-error");
+        var entered = "";
+
+        function paint() {
+            Array.prototype.forEach.call(dotEls, function (dot, i) {
+                dot.classList.toggle("is-filled", i < entered.length);
+            });
+            dotsEl.setAttribute("aria-label", entered.length + " of " + PIN_LENGTH + " digits entered");
+        }
 
         function hashOf(text) {
             var bytes = new TextEncoder().encode(SALT + text);
@@ -116,7 +132,7 @@
                 return;
             }
             checking = true;
-            hashOf(input.value).then(function (hash) {
+            hashOf(entered).then(function (hash) {
                 checking = false;
                 if (hash === PIN_HASH) unlock();
                 else wrong();
@@ -128,29 +144,48 @@
 
         function wrong() {
             error.textContent = "Incorrect PIN. Try again.";
-            input.value = "";
-            input.focus();
-            overlay.classList.remove("pin-lock-shake");
+            if (navigator.vibrate) navigator.vibrate(150);
+            dotsEl.classList.remove("pin-lock-shake");
             // restart the shake animation
-            void overlay.offsetWidth;
-            overlay.classList.add("pin-lock-shake");
+            void dotsEl.offsetWidth;
+            dotsEl.classList.add("pin-lock-shake");
+            // Let the full row of dots show for a moment before it clears
+            setTimeout(function () {
+                entered = "";
+                paint();
+            }, 300);
         }
 
-        form.addEventListener("submit", function (event) {
-            event.preventDefault();
-            tryUnlock();
-        });
-
-        // Auto-submit once every digit is entered, for quick entry on mobile
-        input.addEventListener("input", function () {
-            input.value = input.value.replace(/[^0-9]/g, "").slice(0, PIN_LENGTH);
-            error.textContent = "";
-            if (input.value.length === PIN_LENGTH) {
-                tryUnlock();
+        function press(key) {
+            if (checking) return;
+            if (key === "back") {
+                entered = entered.slice(0, -1);
+            } else if (entered.length < PIN_LENGTH) {
+                entered += key;
+                error.textContent = "";
             }
+            paint();
+            if (entered.length === PIN_LENGTH) tryUnlock();
+        }
+
+        overlay.querySelector(".pin-lock-keys").addEventListener("click", function (event) {
+            var key = event.target.closest("[data-key]");
+            if (key) press(key.getAttribute("data-key"));
         });
 
-        input.focus();
+        document.addEventListener("keydown", function onKey(event) {
+            if (!document.getElementById("pin-lock-overlay")) {
+                document.removeEventListener("keydown", onKey);
+                return;
+            }
+            if (/^[0-9]$/.test(event.key)) press(event.key);
+            else if (event.key === "Backspace") press("back");
+            else if (event.key === "Enter" && entered.length === PIN_LENGTH) tryUnlock();
+            else return;
+            event.preventDefault();
+        });
+
+        paint();
     }
 
     if (document.readyState === "loading") {
