@@ -1945,11 +1945,14 @@
 
     var FT_PER_M = 3.28084;
     var ON_ROUTE_M = 35, OFF_ROUTE_M = 70, OFF_ROUTE_S = 12;
-    var SAY_AHEAD_M = 150, SAY_NOW_M = 40;
+    var SAY_AHEAD_M = 150, SAY_NOW_M = 40, SHOW_BEFORE_SAY_MS = 2000;
+    var VIA_MAX_M = 600;  // how far to drive along highlighted streets between blocks that don't touch
     var navBanner = document.getElementById("mlv-nav-banner");
     var navIcon = document.getElementById("mlv-nav-icon");
     var navMain = document.getElementById("mlv-nav-main");
     var navSub = document.getElementById("mlv-nav-sub");
+    var navDist = document.getElementById("mlv-nav-dist");
+    var navThen = document.getElementById("mlv-nav-then");
     var navTools = document.getElementById("mlv-nav-tools");
     var navFollowBtn = document.getElementById("mlv-nav-follow");
     var navVoiceBtn = document.getElementById("mlv-nav-voice");
@@ -2009,7 +2012,25 @@
         }).sort(function (a, b) { return draft.blocks[a].t - draft.blocks[b].t; });
         if (!ids.length) return null;
         var xy = localXY(draft.blocks[ids[0]].g[0][0]);
-        var legs = [], prevEnd = null;
+
+        // Every highlighted block as a two-way street between its end points, to drive between
+        // blocks that don't touch along route streets (not just the ordered ones)
+        var adj = {};
+        Object.keys(draft.blocks).forEach(function (id) {
+            var g = draft.blocks[id].g, a = nodeKey(g[0]), z = nodeKey(g[g.length - 1]);
+            var len = lengths(g.map(xy));
+            var sh = { id: id, len: len[len.length - 1] };
+            (adj[a] = adj[a] || []).push({ to: z, sh: sh, sign: 1 });
+            (adj[z] = adj[z] || []).push({ to: a, sh: sh, sign: -1 });
+        });
+
+        var legs = [], prevEnd = null, prevEndLL = null;
+        function addLeg(id, g, via) {
+            var G = g.map(xy), cum = lengths(G);
+            legs.push({ id: id, n: draft.blocks[id].n || "", g: g, G: G, cum: cum, len: cum[cum.length - 1], via: !!via });
+            prevEnd = G[G.length - 1];
+            prevEndLL = g[g.length - 1];
+        }
         ids.forEach(function (id) {
             var b = draft.blocks[id], g = b.g.slice(), dir = directionOf(b);
             if (dir === -1) g.reverse();
@@ -2018,9 +2039,16 @@
                 var s = xy(g[0]), e = xy(g[g.length - 1]);
                 if (Math.hypot(e[0] - prevEnd[0], e[1] - prevEnd[1]) < Math.hypot(s[0] - prevEnd[0], s[1] - prevEnd[1])) g.reverse();
             }
-            var G = g.map(xy), cum = lengths(G);
-            legs.push({ id: id, n: b.n || "", g: g, G: G, cum: cum, len: cum[cum.length - 1] });
-            prevEnd = G[G.length - 1];
+            // Not touching the last block: go there along highlighted streets when there's a short way
+            if (prevEndLL && nodeKey(prevEndLL) !== nodeKey(g[0])) {
+                var path = shortestPath(adj, nodeKey(prevEndLL), nodeKey(g[0]), VIA_MAX_M);
+                if (path) path.forEach(function (e) {
+                    var vg = draft.blocks[e.sh.id].g.slice();
+                    if (e.sign < 0) vg.reverse();
+                    addLeg(e.sh.id, vg, true);
+                });
+            }
+            addLeg(id, g, false);
         });
         var steps = [];
         legs.forEach(function (leg, i) {
@@ -2072,12 +2100,36 @@
         return best;
     }
 
-    function setBanner(icon, main, sub, warn) {
+    // extra: { dist: the big countdown to the turn, then: the step after it }
+    function setBanner(icon, main, sub, warn, extra) {
+        extra = extra || {};
         navBanner.hidden = false;
         navBanner.classList.toggle("is-warning", !!warn);
         navIcon.textContent = icon;
+        navDist.textContent = extra.dist || "";
         navMain.textContent = main;
         navSub.textContent = sub || "";
+        navThen.textContent = extra.then || "";
+        navThen.hidden = !extra.then;
+        if (!extra.turnAt) showTurn(null);
+    }
+
+    // The upcoming turn marked on the map where it happens, so it can be seen coming
+    function showTurn(at, icon) {
+        if (!nav) return;
+        if (!at) {
+            if (nav.turn) { map.removeLayer(nav.turn); nav.turn = null; }
+            return;
+        }
+        var html = '<span class="mlv-turn-ring"></span><span class="mlv-turn-icon">' + icon + "</span>";
+        if (!nav.turn) {
+            nav.turn = L.marker(at, { interactive: false, keyboard: false, zIndexOffset: 900,
+                icon: L.divIcon({ className: "mlv-turn", html: html, iconSize: [40, 40], iconAnchor: [20, 20] }) }).addTo(map);
+        } else {
+            nav.turn.setLatLng(at);
+            var el = nav.turn.getElement();
+            if (el) el.querySelector(".mlv-turn-icon").textContent = icon;
+        }
     }
 
     function speak(text) {
@@ -2175,23 +2227,37 @@
             // Last step: the rest of the way to the end
             var left = leg.len - best.along;
             for (i = best.i + 1; i < legs.length; i++) left += legs[i].len;
+            var lastLeg = legs[legs.length - 1];
+            var endAt = lastLeg.g[lastLeg.g.length - 1];
             if (left < 25) {
                 setBanner(TURN_ICONS.end, "End of route", "That's the last highlighted street.");
                 if (nav.said !== "end") { speak("You've reached the end of the route."); nav.said = "end"; }
             } else {
-                setBanner(TURN_ICONS.straight, "On " + streetName(leg.n), "End of route in " + distText(left));
+                setBanner(TURN_ICONS.end, "End of route", "Now on " + streetName(leg.n), false, { dist: distText(left), turnAt: true });
+                showTurn(endAt, TURN_ICONS.end);
             }
             return;
         }
         var next = steps[step.next], toTurn = leg.len - best.along;
         for (i = best.i + 1; i < next.first; i++) toTurn += legs[i].len;
         var text = stepText(next);
-        setBanner(TURN_ICONS[next.turn] || TURN_ICONS.straight, text, distText(toTurn) + "  ·  now on " + streetName(leg.n));
+        var icon = TURN_ICONS[next.turn] || TURN_ICONS.straight;
+        var after = next.next != null ? steps[next.next] : null;
+        var then = after ? "Then " + (TURN_ICONS[after.turn] || TURN_ICONS.straight) + "  " + stepText(after)
+            : "Then the end of the route";
+        setBanner(icon, text, "Now on " + streetName(leg.n), false, { dist: distText(toTurn), then: then, turnAt: true });
+        showTurn(legs[next.first].g[0], icon);
+        // The early prompt waits until the turn has been on screen a moment, so it's seen first
+        if (nav.showing !== step.next) {
+            nav.showing = step.next;
+            nav.showingSince = now;
+        }
+        var seenLongEnough = now - nav.showingSince >= SHOW_BEFORE_SAY_MS;
         // Voice: once well ahead, once close (each step only once)
         if (toTurn <= SAY_NOW_M && nav.said !== step.next + "now") {
             speak(text + ".");
             nav.said = step.next + "now";
-        } else if (toTurn <= SAY_AHEAD_M && toTurn > SAY_NOW_M && nav.said !== step.next + "ahead" && nav.said !== step.next + "now") {
+        } else if (toTurn <= SAY_AHEAD_M && toTurn > SAY_NOW_M && seenLongEnough && nav.said !== step.next + "ahead" && nav.said !== step.next + "now") {
             speak("In " + distText(toTurn).replace("ft", "feet").replace("mi", "miles") + ", " + text.charAt(0).toLowerCase() + text.slice(1) + ".");
             nav.said = step.next + "ahead";
         }
@@ -2249,6 +2315,7 @@
         if (n.wake) n.wake.release().catch(function () {});
         if (n.me) map.removeLayer(n.me);
         if (n.ring) map.removeLayer(n.ring);
+        if (n.turn) map.removeLayer(n.turn);
         if (window.speechSynthesis) window.speechSynthesis.cancel();
         navBanner.hidden = true;
         navTools.hidden = true;

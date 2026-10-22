@@ -4571,8 +4571,8 @@ label.cp-house-row {
     left: 0.5rem;
     z-index: 1000;
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.375rem;
     padding: 0.625rem 0.875rem;
     border-radius: 8px;
     background-color: #043960;
@@ -4586,6 +4586,76 @@ label.cp-house-row {
 
 .mlv-nav-banner.is-warning {
     background-color: #9a3412;
+}
+
+/* The turn coming up: its arrow, a big countdown, the turn, the street you're on */
+.mlv-nav-now {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.mlv-nav-dist {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.mlv-nav-dist:empty {
+    display: none;
+}
+
+/* The turn after that */
+.mlv-nav-then {
+    margin: 0;
+    padding-top: 0.375rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.mlv-nav-then[hidden] {
+    display: none;
+}
+
+/* The upcoming turn on the map: the turn's arrow in a navy disc with a pulsing ring */
+.mlv-turn {
+    position: relative;
+}
+
+.mlv-turn-icon {
+    position: absolute;
+    inset: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #FFFFFF;
+    border-radius: 50%;
+    background-color: #043960;
+    color: #FFFFFF;
+    font-size: 1.1rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.mlv-turn-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid #043960;
+    border-radius: 50%;
+    animation: mlv-turn-pulse 1.6s ease-out infinite;
+}
+
+@keyframes mlv-turn-pulse {
+    0% { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mlv-turn-ring {
+        animation: none;
+    }
 }
 
 .mlv-nav-icon {
