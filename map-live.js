@@ -438,12 +438,34 @@
 
     // Sets d (1 along the block's points, -1 against, 2 both) and t on every highlighted block.
     // Blocks are replaced, not changed, so undo snapshots keep their own copies.
+    // At 30 seconds apart, the trail's points miss short blocks. Between two slow points close
+    // enough that the truck likely stayed on one street, points every DENSE_M along the line
+    // between them carry that line's direction (time spread evenly between the two).
+    var DENSE_M = 10, DENSE_MAX_M = 120;
+    function densify(trail, P, V) {
+        var outP = [], outV = [], outT = [];
+        for (var i = 0; i < trail.length; i++) {
+            outP.push(P[i]); outV.push(V[i]); outT.push(trail[i][3]);
+            if (i === trail.length - 1 || trail[i][2] > SLOW_MPH || trail[i + 1][2] > SLOW_MPH) continue;
+            var a = P[i], b = P[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+            if (len < 2 * DENSE_M || len > DENSE_MAX_M) continue;
+            var v = [dx / len, dy / len], n = Math.floor(len / DENSE_M);
+            for (var k = 1; k < n; k++) {
+                outP.push([a[0] + dx * k / n, a[1] + dy * k / n]);
+                outV.push(v);
+                outT.push(trail[i][3] + (trail[i + 1][3] - trail[i][3]) * k / n);
+            }
+        }
+        return { P: outP, V: outV, T: outT };
+    }
+
     function computeDirections(draft) {
         var trail = draft.trail || [];
         var ids = Object.keys(draft.blocks);
         if (trail.length < 3 || !ids.length) return;
         var xy = localXY(trail[0][0]);
-        var P = trail.map(xy), V = travelVectors(trail, P);
+        var dense = densify(trail, trail.map(xy), travelVectors(trail, trail.map(xy)));
+        var P = dense.P, V = dense.V, T = dense.T;
         ids.forEach(function (id) {
             var b = draft.blocks[id], G = b.g.map(xy), cum = lengths(G), len = cum[cum.length - 1];
             var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -470,7 +492,7 @@
                 if (dot > AGREE) plus++;
                 else if (dot < -AGREE) minus++;
                 else continue;
-                if (first === null) first = trail[k][3];
+                if (first === null) first = Math.round(T[k]);
             }
             var dir = 0;
             if (plus && minus) dir = plus >= 3 * minus ? 1 : minus >= 3 * plus ? -1 : 2;
@@ -598,6 +620,8 @@
         strokeGroup = L.layerGroup().addTo(map);
         arrowGroup = L.layerGroup().addTo(map);
         endsGroup = L.layerGroup().addTo(map);
+        // Moving the map by hand while navigating stops it following the truck
+        map.on("dragstart", function () { if (nav && nav.follow) setFollow(false); });
         // Arrows are spaced on screen, so zooming re-spaces them
         map.on("zoomend", function () {
             if (ed && ((ed.draft.show || {}).arrows || (ed.editing && ed.mode === "arrows"))) syncExtras();
@@ -770,6 +794,7 @@
 
     function open(route, options) {
         options = options || {};
+        stopNav();
         var token = ++openToken;
         setupMap();
         if (!dialog.open) {
@@ -1213,6 +1238,7 @@
             else if (what === "reimport") { importFor = ed.route; fileInput.click(); }
             else if (what === "publish") openPublish();
             else if (what === "print") printRoute(ed.route, b);
+            else if (what === "navigate") startNav();
             else if (what === "markers" || what === "arrows") {
                 ed.undo.push(snapshot());
                 ed.redo = [];
@@ -1242,6 +1268,7 @@
     document.getElementById("mlv-close").addEventListener("click", function () { if (dialog.open) dialog.close(); });
 
     dialog.addEventListener("close", function () {
+        stopNav();
         openToken++;
         flushSave();
         if (ed && map) clearLayers();
@@ -1487,6 +1514,343 @@
         else publishDialogEl.close();
         shareFile(file);
     });
+
+    /* ---------- Navigation ---------- */
+    /* Shows where the truck is on the route and what's next. The highlighted blocks with a
+       first-driven time (t, from the GPS trail) are put in driving order, each turned the way it
+       was driven. Back-to-back blocks on the same street, without a sharp turn between, are one
+       step; each new step starts with a turn worked out from the change in direction. Blocks the
+       trail never confirmed aren't in the order (they still show on the map).
+
+       Each position fix finds the block the truck is on, looking ahead of the last one first so
+       a street driven twice doesn't send it back, and measures to the next step. Away from every
+       highlighted block for a while, it says so and names the nearest route street. Voice reads
+       each turn once well ahead and again close up (off by default). The screen is kept on, and
+       Follow Me keeps the truck centered until the map is moved by hand. */
+
+    var FT_PER_M = 3.28084;
+    var ON_ROUTE_M = 35, OFF_ROUTE_M = 70, OFF_ROUTE_S = 12;
+    var SAY_AHEAD_M = 150, SAY_NOW_M = 40;
+    var navBanner = document.getElementById("mlv-nav-banner");
+    var navIcon = document.getElementById("mlv-nav-icon");
+    var navMain = document.getElementById("mlv-nav-main");
+    var navSub = document.getElementById("mlv-nav-sub");
+    var navTools = document.getElementById("mlv-nav-tools");
+    var navFollowBtn = document.getElementById("mlv-nav-follow");
+    var navVoiceBtn = document.getElementById("mlv-nav-voice");
+    var nav = null;
+    var navVoiceOn = false; // remembered for the session
+
+    var TURN_ICONS = { straight: "↑", slightLeft: "↖", slightRight: "↗", left: "←", right: "→", uturn: "↶", goto: "➜", end: "⚑", none: "•" };
+
+    function distText(m) {
+        var ft = m * FT_PER_M;
+        if (ft < 1000) return Math.max(50, Math.round(ft / 50) * 50) + " ft";
+        var mi = m / 1609.34;
+        return (mi < 10 ? mi.toFixed(1) : String(Math.round(mi))) + " mi";
+    }
+
+    function streetName(n) {
+        return n || "the unnamed street";
+    }
+
+    // Degrees clockwise from north at the start or end of a line, in flat meters
+    function bearingOf(G, atEnd) {
+        var a = atEnd ? G[Math.max(0, G.length - 2)] : G[0], b = atEnd ? G[G.length - 1] : G[Math.min(1, G.length - 1)];
+        return Math.atan2(b[0] - a[0], b[1] - a[1]) * 180 / Math.PI;
+    }
+
+    function turnBetween(fromDeg, toDeg) {
+        var d = ((toDeg - fromDeg + 540) % 360) - 180; // -180..180, positive is to the right
+        var a = Math.abs(d);
+        if (a < 25) return "straight";
+        if (a < 60) return d > 0 ? "slightRight" : "slightLeft";
+        if (a < 150) return d > 0 ? "right" : "left";
+        return "uturn";
+    }
+
+    function stepText(step) {
+        var name = streetName(step.name);
+        switch (step.turn) {
+            case "start": return "Start on " + name;
+            // A jump to a section that doesn't join on: where it lies, not a turn
+            case "goto": return step.sameStreet ? "Continue to the next stretch of " + name
+                : "Head to " + name + (step.side ? ", " + step.side : "");
+            case "straight": return "Continue onto " + name;
+            case "slightLeft": return "Bear left onto " + name;
+            case "slightRight": return "Bear right onto " + name;
+            case "left": return "Turn left onto " + name;
+            case "right": return "Turn right onto " + name;
+            case "uturn": return step.sameStreet ? "Turn around on " + name : "Turn around onto " + name;
+            default: return name;
+        }
+    }
+
+    // The driving order: legs (one block each, turned the way it was driven) and steps (runs of legs)
+    function buildPlan(draft) {
+        var ids = Object.keys(draft.blocks).filter(function (id) {
+            var b = draft.blocks[id];
+            return b.t != null && directionOf(b);
+        }).sort(function (a, b) { return draft.blocks[a].t - draft.blocks[b].t; });
+        if (!ids.length) return null;
+        var xy = localXY(draft.blocks[ids[0]].g[0][0]);
+        var legs = [], prevEnd = null;
+        ids.forEach(function (id) {
+            var b = draft.blocks[id], g = b.g.slice(), dir = directionOf(b);
+            if (dir === -1) g.reverse();
+            // Driven both ways: start from whichever end is nearer where the last block ended
+            else if (dir === 2 && prevEnd) {
+                var s = xy(g[0]), e = xy(g[g.length - 1]);
+                if (Math.hypot(e[0] - prevEnd[0], e[1] - prevEnd[1]) < Math.hypot(s[0] - prevEnd[0], s[1] - prevEnd[1])) g.reverse();
+            }
+            var G = g.map(xy), cum = lengths(G);
+            legs.push({ id: id, n: b.n || "", g: g, G: G, cum: cum, len: cum[cum.length - 1] });
+            prevEnd = G[G.length - 1];
+        });
+        var steps = [];
+        legs.forEach(function (leg, i) {
+            leg.step = steps.length;
+            if (i === 0) {
+                steps.push({ first: 0, name: leg.n, turn: "start" });
+                return;
+            }
+            var prev = legs[i - 1], last = steps[steps.length - 1];
+            var a = prev.G[prev.G.length - 1], b = leg.G[0];
+            var gap = Math.hypot(b[0] - a[0], b[1] - a[1]);
+            var turn = turnBetween(bearingOf(prev.G, true), bearingOf(leg.G, false));
+            var same = leg.n && leg.n === prev.n;
+            if (same && gap < 60 && turn !== "uturn") {
+                leg.step = steps.length - 1;
+                return;
+            }
+            var side = null;
+            if (gap >= 60) {
+                var toward = turnBetween(bearingOf(prev.G, true), Math.atan2(b[0] - a[0], b[1] - a[1]) * 180 / Math.PI);
+                side = toward === "straight" ? "ahead" : toward === "uturn" ? "behind you"
+                    : /Left|left/.test(toward) ? "on the left" : "on the right";
+            }
+            steps.push({ first: i, name: leg.n, turn: gap >= 60 ? "goto" : turn, sameStreet: same, side: side });
+            last.next = steps.length - 1;
+        });
+        return { legs: legs, steps: steps, xy: xy };
+    }
+
+    // Distance from a point to a leg, and how far along it the nearest spot is
+    function onLeg(leg, p) {
+        var best = Infinity, along = 0;
+        for (var j = 1; j < leg.G.length; j++) {
+            var ax = leg.G[j - 1][0], ay = leg.G[j - 1][1], dx = leg.G[j][0] - ax, dy = leg.G[j][1] - ay, l2 = dx * dx + dy * dy;
+            var t = l2 ? Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / l2)) : 0;
+            var d = Math.hypot(ax + t * dx - p[0], ay + t * dy - p[1]);
+            if (d < best) { best = d; along = leg.cum[j - 1] + t * Math.sqrt(l2); }
+        }
+        return { d: best, along: along };
+    }
+
+    function nearestRouteStreet(p) {
+        var best = null;
+        Object.keys(ed.draft.blocks).forEach(function (id) {
+            var b = ed.draft.blocks[id], xy = nav.xy;
+            var d = onLeg({ G: b.g.map(xy), cum: lengths(b.g.map(xy)) }, p).d;
+            if (!best || d < best.d) best = { d: d, n: b.n };
+        });
+        return best;
+    }
+
+    function setBanner(icon, main, sub, warn) {
+        navBanner.hidden = false;
+        navBanner.classList.toggle("is-warning", !!warn);
+        navIcon.textContent = icon;
+        navMain.textContent = main;
+        navSub.textContent = sub || "";
+    }
+
+    function speak(text) {
+        if (!navVoiceOn || !window.speechSynthesis) return;
+        try {
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance(text);
+            u.lang = "en-US";
+            window.speechSynthesis.speak(u);
+        } catch (e) { /* no voice on this device */ }
+    }
+
+    function keepAwake() {
+        if (!nav || nav.wake || !navigator.wakeLock || document.visibilityState !== "visible") return;
+        navigator.wakeLock.request("screen").then(function (lock) {
+            if (!nav) { lock.release(); return; }
+            nav.wake = lock;
+            lock.addEventListener("release", function () { if (nav && nav.wake === lock) nav.wake = null; });
+        }).catch(function () { /* not allowed here; the screen may dim */ });
+    }
+    document.addEventListener("visibilitychange", keepAwake);
+
+    var ME_ICON = '<span class="mlv-me-cone"></span><span class="mlv-me-dot"></span>';
+
+    function showMe(ll, accuracy, heading) {
+        if (!nav.me) {
+            nav.me = L.marker(ll, { interactive: false, keyboard: false, zIndexOffset: 1000,
+                icon: L.divIcon({ className: "mlv-me", html: ME_ICON, iconSize: [44, 44], iconAnchor: [22, 22] }) }).addTo(map);
+            nav.ring = L.circle(ll, { radius: accuracy, interactive: false, stroke: false, fillColor: "#1E90FF", fillOpacity: 0.12 }).addTo(map);
+        } else {
+            nav.me.setLatLng(ll);
+            nav.ring.setLatLng(ll).setRadius(accuracy);
+        }
+        var cone = nav.me.getElement() && nav.me.getElement().querySelector(".mlv-me-cone");
+        if (cone) {
+            cone.style.display = heading == null ? "none" : "";
+            if (heading != null) cone.style.transform = "rotate(" + heading.toFixed(0) + "deg)";
+        }
+    }
+
+    function onFix(pos) {
+        if (!nav || !ed) return;
+        var c = pos.coords, ll = L.latLng(c.latitude, c.longitude);
+        nav.lastFixAt = Date.now();
+        var p = nav.xy([c.latitude, c.longitude]);
+        // Heading: the device's while moving, else from the last fix if it moved enough
+        var heading = c.heading != null && !isNaN(c.heading) && (c.speed == null || c.speed > 1) ? c.heading : null;
+        if (heading == null && nav.lastP && Math.hypot(p[0] - nav.lastP[0], p[1] - nav.lastP[1]) > 8) {
+            heading = Math.atan2(p[0] - nav.lastP[0], p[1] - nav.lastP[1]) * 180 / Math.PI;
+        }
+        if (heading == null) heading = nav.heading;
+        if (!nav.lastP || Math.hypot(p[0] - nav.lastP[0], p[1] - nav.lastP[1]) > 8) nav.lastP = p;
+        nav.heading = heading;
+        showMe(ll, Math.min(c.accuracy || 20, 200), heading);
+        if (nav.follow) map.setView(ll, Math.max(map.getZoom(), 17), { animate: true });
+        update(p, c.accuracy || 20, pos.timestamp || Date.now());
+    }
+
+    function update(p, accuracy, now) {
+        if (!nav.plan) {
+            setBanner(TURN_ICONS.none, "Showing where you are", "Turn-by-turn needs this map's driving order: Replace GPS Trail, then publish again.");
+            return;
+        }
+        var legs = nav.plan.legs, steps = nav.plan.steps, near = Math.max(ON_ROUTE_M, Math.min(accuracy, 60));
+        // Ahead of the last block first (a street driven twice mustn't pull it back), then anywhere
+        var best = null, from = Math.max(0, nav.idx - 2), to = Math.min(legs.length - 1, nav.idx + 25), i, hit;
+        for (i = from; i <= to; i++) {
+            hit = onLeg(legs[i], p);
+            if (hit.d <= near && (!best || hit.d < best.d - 5)) best = { i: i, d: hit.d, along: hit.along };
+        }
+        if (!best) {
+            for (i = 0; i < legs.length; i++) {
+                hit = onLeg(legs[i], p);
+                if (hit.d <= near && (!best || hit.d < best.d)) best = { i: i, d: hit.d, along: hit.along };
+            }
+        }
+        if (!best) {
+            if (!nav.offSince) nav.offSince = now;
+            var routeStreet = nearestRouteStreet(p);
+            var where = routeStreet ? streetName(routeStreet.n) + ", " + distText(routeStreet.d) : "";
+            if (!nav.started) {
+                setBanner(TURN_ICONS.goto, "Head to the route", where ? "Nearest route street: " + where : "");
+            } else if (now - nav.offSince > OFF_ROUTE_S * 1000) {
+                setBanner("!", "Off route", where ? "Nearest route street: " + where : "", true);
+                if (!nav.offSaid) { speak("Off route."); nav.offSaid = true; }
+            }
+            return;
+        }
+        nav.started = true;
+        nav.offSince = null;
+        nav.offSaid = false;
+        nav.idx = best.i;
+        var leg = legs[best.i], step = steps[leg.step];
+        if (step.next == null) {
+            // Last step: the rest of the way to the end
+            var left = leg.len - best.along;
+            for (i = best.i + 1; i < legs.length; i++) left += legs[i].len;
+            if (left < 25) {
+                setBanner(TURN_ICONS.end, "End of route", "That's the last highlighted street.");
+                if (nav.said !== "end") { speak("You've reached the end of the route."); nav.said = "end"; }
+            } else {
+                setBanner(TURN_ICONS.straight, "On " + streetName(leg.n), "End of route in " + distText(left));
+            }
+            return;
+        }
+        var next = steps[step.next], toTurn = leg.len - best.along;
+        for (i = best.i + 1; i < next.first; i++) toTurn += legs[i].len;
+        var text = stepText(next);
+        setBanner(TURN_ICONS[next.turn] || TURN_ICONS.straight, text, distText(toTurn) + "  ·  now on " + streetName(leg.n));
+        // Voice: once well ahead, once close (each step only once)
+        if (toTurn <= SAY_NOW_M && nav.said !== step.next + "now") {
+            speak(text + ".");
+            nav.said = step.next + "now";
+        } else if (toTurn <= SAY_AHEAD_M && toTurn > SAY_NOW_M && nav.said !== step.next + "ahead" && nav.said !== step.next + "now") {
+            speak("In " + distText(toTurn).replace("ft", "feet").replace("mi", "miles") + ", " + text.charAt(0).toLowerCase() + text.slice(1) + ".");
+            nav.said = step.next + "ahead";
+        }
+    }
+
+    function setFollow(on) {
+        if (!nav) return;
+        nav.follow = on;
+        navFollowBtn.setAttribute("aria-pressed", String(on));
+        if (on && nav.me) map.setView(nav.me.getLatLng(), Math.max(map.getZoom(), 17));
+    }
+
+    function startNav() {
+        if (!ed || nav) return;
+        if (!navigator.geolocation) {
+            say("This device can't share its location.");
+            return;
+        }
+        flushSave();
+        nav = {
+            wasEditing: ed.editing, plan: buildPlan(ed.draft), idx: 0, follow: true,
+            xy: null, me: null, ring: null, watch: null, wake: null, said: null, started: false
+        };
+        nav.xy = nav.plan ? nav.plan.xy : localXY(map.getCenter().lat);
+        ed.editing = false;
+        ed.action = null;
+        editTools.hidden = viewTools.hidden = true;
+        legendRow.hidden = true;
+        navTools.hidden = false;
+        map.dragging.enable();
+        mapEl.classList.remove("is-drawing");
+        showTrail(false);
+        syncExtras();
+        setFollow(true);
+        navVoiceBtn.setAttribute("aria-pressed", String(navVoiceOn));
+        navVoiceBtn.textContent = "Voice: " + (navVoiceOn ? "On" : "Off");
+        setBanner(TURN_ICONS.none, "Finding your location…", "");
+        say(nav.plan ? nav.plan.steps.length + " steps on this route." : "Showing your location.");
+        keepAwake();
+        nav.watch = navigator.geolocation.watchPosition(onFix, function (err) {
+            if (!nav) return;
+            if (err.code !== 1 && nav.lastFixAt && Date.now() - nav.lastFixAt < 20000) return;
+            setBanner("!", err.code === 1 ? "Location is turned off for Route IQ" : "Can't find your location",
+                err.code === 1 ? "Allow location for this site in the browser's settings, then tap Navigate again." : "Waiting for a GPS signal…", true);
+        }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 });
+        requestAnimationFrame(function () { map.invalidateSize(); });
+    }
+
+    function stopNav() {
+        if (!nav) return;
+        var n = nav;
+        nav = null;
+        if (n.watch != null) navigator.geolocation.clearWatch(n.watch);
+        if (n.wake) n.wake.release().catch(function () {});
+        if (n.me) map.removeLayer(n.me);
+        if (n.ring) map.removeLayer(n.ring);
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        navBanner.hidden = true;
+        navTools.hidden = true;
+        if (ed && dialog.open) {
+            if (n.wasEditing) startEditing();
+            else setView();
+        }
+    }
+
+    navFollowBtn.addEventListener("click", function () { if (nav) setFollow(!nav.follow); });
+    navVoiceBtn.addEventListener("click", function () {
+        navVoiceOn = !navVoiceOn;
+        navVoiceBtn.setAttribute("aria-pressed", String(navVoiceOn));
+        navVoiceBtn.textContent = "Voice: " + (navVoiceOn ? "On" : "Off");
+        if (navVoiceOn) speak("Voice directions on.");
+        else if (window.speechSynthesis) window.speechSynthesis.cancel();
+    });
+    document.getElementById("mlv-nav-stop").addEventListener("click", stopNav);
 
     /* ---------- Print Map ---------- */
     /* An 11x17 landscape handout drawn from OpenStreetMap, so street names print. Each sheet is

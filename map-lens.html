@@ -163,8 +163,16 @@
 
         <div class="mlv-map-wrap">
             <div class="mlv-map" id="mlv-map"></div>
+            <div class="mlv-nav-banner" id="mlv-nav-banner" role="status" aria-live="polite" hidden>
+                <span class="mlv-nav-icon" id="mlv-nav-icon" aria-hidden="true"></span>
+                <div class="mlv-nav-text">
+                    <p class="mlv-nav-main" id="mlv-nav-main"></p>
+                    <p class="mlv-nav-sub" id="mlv-nav-sub"></p>
+                </div>
+            </div>
             <div class="mlv-more" id="mlv-more" hidden>
                 <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
+                <button type="button" class="ml-tool" data-more="navigate">Navigate</button>
                 <button type="button" class="ml-tool" data-more="markers">Start/End Pins: On</button>
                 <button type="button" class="ml-tool" data-more="ends">Reset Start/End</button>
                 <button type="button" class="ml-tool" data-more="arrows">Direction Arrows: Off</button>
@@ -202,9 +210,17 @@
         </div>
 
         <div class="mlv-toolbar" id="mlv-view-tools" hidden>
+            <button type="button" class="ml-tool ml-tool-accent" data-more="navigate">Navigate</button>
             <button type="button" class="ml-tool" data-more="fit">Fit to Route</button>
             <button type="button" class="ml-tool" data-more="print">Print Map</button>
-            <button type="button" class="ml-tool ml-tool-accent" id="mlv-edit">Edit Map</button>
+            <button type="button" class="ml-tool" id="mlv-edit">Edit Map</button>
+        </div>
+
+        <div class="mlv-toolbar" id="mlv-nav-tools" hidden>
+            <button type="button" class="ml-tool" id="mlv-nav-follow" aria-pressed="true">Follow Me</button>
+            <button type="button" class="ml-tool" id="mlv-nav-voice" aria-pressed="false">Voice: Off</button>
+            <button type="button" class="ml-tool" data-more="fit">Whole Route</button>
+            <button type="button" class="ml-tool mlv-nav-stop" id="mlv-nav-stop">Stop</button>
         </div>
     </dialog>
 
