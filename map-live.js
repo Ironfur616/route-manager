@@ -327,7 +327,7 @@
     }
 
     function wayFilter() {
-        return '["highway"~"^(' + HIGHWAYS + ')$"]["service"!~"^(parking_aisle|drive-through|driveway)$"]["access"!~"^(private|no)$"]';
+        return '["highway"~"^(' + HIGHWAYS + ')$"]["service"!~"^(parking_aisle|drive-through|driveway)$"]';
     }
 
     function cellsQuery(points) {
@@ -359,7 +359,8 @@
     }
 
     function streetsKey(route) {
-        return new URL("./streets/" + encodeURIComponent(routeKey(route)), location.href).href;
+        // v2: private roads included
+        return new URL("./streets/v2/" + encodeURIComponent(routeKey(route)), location.href).href;
     }
 
     function cachedWays(route) {
@@ -587,9 +588,9 @@
     var legendLabel = document.getElementById("mlv-legend-label");
     var legendInput = document.getElementById("mlv-legend-input");
 
-    var map = null, hlRenderer = null, trailRenderer = null;
+    var map = null, hlRenderer = null, trailRenderer = null, streetsRenderer = null;
     var trailGroup = null, strokeGroup = null, liveStroke = null;
-    var arrowGroup = null, endsGroup = null;
+    var arrowGroup = null, endsGroup = null, streetsLayer = null;
     var blockLayers = {};
 
     function say(text) {
@@ -617,6 +618,9 @@
         hl.style.mixBlendMode = "multiply";
         hl.style.opacity = "0.6";
         trailRenderer = L.canvas({ pane: "mlvTrail" });
+        // The downloaded streets, faint, under everything else: what Streets mode can tap
+        map.createPane("mlvStreets").style.zIndex = 405;
+        streetsRenderer = L.canvas({ pane: "mlvStreets" });
         hlRenderer = L.canvas({ pane: "mlvHighlight", padding: 0.5 });
         trailGroup = L.layerGroup();
         strokeGroup = L.layerGroup().addTo(map);
@@ -698,12 +702,15 @@
             });
         }
         if (show.markers) {
+            var canDrag = ed.editing && ed.mode === "move";
             [["start", "Start"], ["end", "End"]].forEach(function (pair) {
                 var at = ed.draft[pair[0]];
                 if (!at) return;
                 var m = L.marker(at, {
-                    draggable: ed.editing, keyboard: false, interactive: ed.editing,
-                    title: ed.editing ? "Drag to move the " + pair[1].toLowerCase() : pair[1],
+                    // Dragged in Move mode only: in the other tools a tap on a pin goes through to
+                    // the street under it (pins sit right on route streets)
+                    draggable: canDrag, keyboard: false, interactive: canDrag,
+                    title: canDrag ? "Drag to move the " + pair[1].toLowerCase() : pair[1] + (ed.editing ? " (use Move to drag)" : ""),
                     icon: L.divIcon({ className: "mlv-end mlv-end-" + pair[0], html: "<span>" + pair[1] + "</span>", iconSize: [60, 28], iconAnchor: [30, 14] })
                 });
                 m.on("dragend", function () {
@@ -741,6 +748,7 @@
         trailGroup.clearLayers();
         arrowGroup.clearLayers();
         endsGroup.clearLayers();
+        if (streetsLayer) { map.removeLayer(streetsLayer); streetsLayer = null; }
         if (liveStroke) { map.removeLayer(liveStroke); liveStroke = null; }
     }
 
@@ -858,6 +866,7 @@
         map.dragging.enable();
         showTrail(false);
         syncExtras();
+        syncStreets();
         say(statusText({ lib: ed.state.lib, draft: null }));
         requestAnimationFrame(function () { map.invalidateSize(); });
     }
@@ -913,6 +922,7 @@
             ed.ways = {};
             ways.forEach(function (w) { ed.ways[w.id] = w; });
             ed.blocks = buildBlocks(ways);
+            resetStreetsLayer();
             streetsNote(ed.blocks.length ? "" : "No streets loaded yet. Use ⋯ → Load Streets Here.");
         }).catch(function (err) {
             console.error(err);
@@ -937,6 +947,7 @@
             compactWays(json).forEach(function (w) { ed.ways[w.id] = w; });
             var ways = Object.keys(ed.ways).map(function (id) { return ed.ways[id]; });
             ed.blocks = buildBlocks(ways);
+            resetStreetsLayer();
             ed.streetsPromise = Promise.resolve();
             cacheWays(route, ways);
             streetsNote("");
@@ -948,6 +959,25 @@
 
     /* ---------- Tools ---------- */
 
+    // Shown while picking streets, so it's clear what can be tapped and where the download ends
+    function syncStreets() {
+        var want = !!(ed && ed.editing && ed.mode === "blocks" && ed.blocks && ed.blocks.length);
+        if (want && !streetsLayer) {
+            streetsLayer = L.layerGroup(ed.blocks.map(function (b) {
+                return L.polyline(b.g, { renderer: streetsRenderer, color: "#475569", weight: 2, opacity: 0.45, dashArray: "4 4", interactive: false });
+            })).addTo(map);
+        } else if (!want && streetsLayer) {
+            map.removeLayer(streetsLayer);
+            streetsLayer = null;
+        }
+    }
+
+    function resetStreetsLayer() {
+        if (streetsLayer) map.removeLayer(streetsLayer);
+        streetsLayer = null;
+        syncStreets();
+    }
+
     function setMode(mode) {
         ed.mode = mode;
         dialog.querySelectorAll("[data-mode]").forEach(function (b) {
@@ -958,6 +988,7 @@
         mapEl.classList.toggle("is-drawing", mode !== "move");
         syncColor();
         syncExtras();
+        syncStreets();
         if (mode === "arrows") say("Tap a highlighted block to change its arrow: one way, the other way, both ways, none.");
     }
 
@@ -1022,7 +1053,8 @@
         changed();
     }
 
-    // The nearest of `items` (each { g, bb }) within px of the point, or null
+    // The nearest of `items` (each { g, bb }) within px of the point, or null; its distance in
+    // screen pixels is left in nearest.d
     function nearest(items, latlng, px) {
         var cp = map.latLngToContainerPoint(latlng);
         var corner = map.containerPointToLatLng([cp.x + px, cp.y + px]);
@@ -1039,6 +1071,7 @@
                 prev = next;
             }
         });
+        nearest.d = bestD;
         return best;
     }
 
@@ -1049,10 +1082,15 @@
         });
     }
 
-    // Blocks mode at one point. A highlighted block wins over the street under it, so a highlight
-    // made from differently cut streets can still be cleared or recolored.
+    // Blocks mode at one point: whichever is nearer the finger, a highlighted block or a downloaded
+    // street. (Near an intersection, the street just highlighted is within reach too, and used to
+    // win over the cross street actually tapped.) A tie goes to the highlight, so one made from
+    // differently cut streets can still be cleared or recolored.
     function blocksAt(latlng, first) {
-        var hit = nearest(highlightedItems(), latlng, HIT_PX);
+        var hit = nearest(highlightedItems(), latlng, HIT_PX), hitD = nearest.d;
+        var street = ed.blocks ? nearest(ed.blocks.filter(function (b) { return !ed.draft.blocks[b.id]; }), latlng, HIT_PX) : null;
+        var streetD = nearest.d;
+        if (hit && street && streetD < hitD - 3) hit = null;
         if (hit) {
             var b = ed.draft.blocks[hit.id];
             if (b.c === ed.color) {
@@ -1070,8 +1108,10 @@
             if (first) say(ed.streetsPromise ? "Streets are still downloading…" : "No streets loaded here. Use ⋯ → Load Streets Here.");
             return;
         }
-        var street = nearest(ed.blocks, latlng, HIT_PX);
-        if (!street || ed.draft.blocks[street.id]) return;
+        if (!street) {
+            if (first) say("No downloaded street there (the faint gray lines can be tapped). Try ⋯ → Load Streets Here, or Draw.");
+            return;
+        }
         ed.draft.blocks[street.id] = { c: ed.color, n: street.n, g: street.g };
         ed.action.touched[street.id] = true;
         ed.action.changed = true;
@@ -1826,6 +1866,7 @@
         mapEl.classList.remove("is-drawing");
         showTrail(false);
         syncExtras();
+        syncStreets();
         setFollow(true);
         navVoiceBtn.setAttribute("aria-pressed", String(navVoiceOn));
         navVoiceBtn.textContent = "Voice: " + (navVoiceOn ? "On" : "Off");
