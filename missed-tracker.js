@@ -39,8 +39,14 @@
         { value: "open", label: "Open" },
         { value: "notified", label: "Customer notified" },
         { value: "district_notified", label: "Collections area notified"},
+        // Being looked into as a Root Cause Assessment: flagged orange with a cone, not counted as Open
+        { value: "rca", label: "Under RCA Investigation" },
         { value: "resolved", label: "Resolved" }
     ];
+    var CONE_ICON = '<svg class="mt-cone" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M10.1 2.5h3.8l5 15.5H5.1z" fill="currentColor"/>' +
+        '<path d="M8.5 8h7l1 3h-9zM6.9 13h10.2l1 3H5.9z" fill="#C2410C"/>' +
+        '<rect x="2.5" y="18" width="19" height="3.5" rx="1.2" fill="currentColor"/></svg>';
     var YELLOW_TAG_REASON = "Customer issued a yellow tag";
 
     var form = document.getElementById("mt-form");
@@ -254,8 +260,9 @@
         var cutoffStr = recentCutoff();
         var repeats = Object.keys(counts).filter(function (k) { return k && counts[k] > 1; }).length;
 
+        // Misses under RCA investigation are being handled, so they aren't counted as Open
         document.getElementById("stat-open").textContent =
-            entries.filter(function (e) { return e.status !== "resolved"; }).length;
+            entries.filter(function (e) { return e.status !== "resolved" && e.status !== "rca"; }).length;
         document.getElementById("stat-week").textContent =
             entries.filter(function (e) { return e.date >= cutoffStr; }).length;
         document.getElementById("stat-repeat").textContent = repeats;
@@ -310,13 +317,20 @@
 
         var chips = el("div", "mt-chips");
         if (isYellow) chips.appendChild(el("span", "mt-chip mt-chip-yellow-tag", "🏷 Yellow Tag"));
+        if (e.status === "rca") {
+            var rcaFlag = el("span", "mt-chip mt-chip-rca");
+            rcaFlag.innerHTML = CONE_ICON;
+            rcaFlag.appendChild(document.createTextNode("Under RCA Investigation"));
+            chips.appendChild(rcaFlag);
+        }
         if (e.contactedBoro) chips.appendChild(el("span", "mt-chip mt-chip-boro", "⚑ Boro / Twp contacted"));
         // The yellow tag reason already gets its own badge above, so it's left out here to avoid repeating it
         (e.reasons || []).filter(function (r) { return r !== YELLOW_TAG_REASON; }).forEach(function (r) {
             chips.appendChild(el("span", "mt-chip mt-chip-reason", r));
         });
         chips.appendChild(el("span", "mt-chip", e.service));
-        chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
+        // Under RCA already has its flag above
+        if (e.status !== "rca") chips.appendChild(el("span", "mt-chip mt-chip-status", labelFor(STATUSES, e.status)));
         var times = counts[addressKey(e.address)];
         if (times > 1) chips.appendChild(el("span", "mt-chip mt-chip-repeat", times + " misses at this address"));
         // From the route's county house list: where the cans go, or a house that isn't on the list

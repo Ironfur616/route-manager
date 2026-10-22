@@ -36,6 +36,7 @@
     --purple-fill: #5B2C83;
     --good-bg: #E8F5EC;
     --pending-bg: #FFF3E6;
+    --rca-orange: #EA580C;
     --yellow-bg: #FFFBEB;
     --mark-bg: #FFE58A;
 }
@@ -69,6 +70,7 @@
     --purple-fill: #6a3a96;
     --good-bg: #183a28;
     --pending-bg: #3b2a16;
+    --rca-orange: #F97316;
     --yellow-bg: #35300f;
     --mark-bg: #7a6500;
 }
@@ -1474,6 +1476,10 @@ body.shell {
     border-left-color: var(--forest-green);
 }
 
+.mt-entry.mt-status-rca {
+    border-left-color: var(--rca-orange);
+}
+
 .mt-entry-head {
     display: flex;
     flex-wrap: wrap;
@@ -1528,6 +1534,21 @@ body.shell {
     border: none;
     background-color: #F2B705;
     color: #3D2B00;
+}
+
+/* Under RCA Investigation: a filled orange flag with a construction cone */
+.mt-chip-rca {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: none;
+    background-color: #EA580C;
+    color: #FFFFFF;
+}
+
+.mt-chip-rca .mt-cone {
+    flex: none;
+    color: #FFFFFF;
 }
 
 /* Boro / Twp contacted: filled purple flag. Only the badge changes; the card's color still follows its status. */

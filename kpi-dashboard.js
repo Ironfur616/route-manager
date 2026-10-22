@@ -338,7 +338,8 @@
 
         c.appendChild(tiles([
             { label: "Misses", value: num(list.length), delta: delta },
-            { label: "Open now", value: num(all.filter(function (e) { return e.status !== "resolved"; }).length), note: "All dates" },
+            { label: "Open now", value: num(all.filter(function (e) { return e.status !== "resolved" && e.status !== "rca"; }).length), note: "All dates" },
+            { label: "Under RCA", value: num(all.filter(function (e) { return e.status === "rca"; }).length), note: "All dates" },
             { label: "Resolved", value: percent(resolved.length, list.length), note: num(resolved.length) + " of " + num(list.length) },
             { label: "Avg time to resolve", value: avg == null ? "—" : duration(avg),
                 note: timed.length ? "From " + num(timed.length) + " with resolve times" : "No resolve times yet" },
